@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Healthcare Hospitals - Services</title>
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="images/favicon.png" />
+
+  <!-- Bootstrap CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet">
+  <link href="vendor/fontawesome/css/font-awesome.min.css" rel="stylesheet">
+  <link href="css/animate.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== General Styling ===== */
+    body,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    a {
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+   /* ===== Navbar ===== */
+.navbar {
+  background: #1976d2;
+  padding: 0.8rem 1rem;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand img {
+  height: 45px;
+  width: 45px;
+  margin-right: 10px;
+  border-radius: 25%;
+  background: white;
+  padding: 31px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.navbar-brand h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.navbar-nav .nav-item .nav-link h6 {
+  margin: 0;
+}
+
+    /* ===== Buttons ===== */
+    .btn-skin {
+      background-color: #09278b;
+      border-color: #3498db;
+      color: #fff;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .btn-skin:hover {
+      background-color: #5dade2;
+      color: #fff;
+    }
+
+    /* ===== Intro Section ===== */
+    #intro {
+      background: linear-gradient(to right, #85c1e9, #3498db);
+      padding: 1px 0;
+      color: #fff;
+    }
+
+    /* Reduce width */
+    #intro .container {
+      max-width: 1100px;
+    }
+
+    #intro h2 {
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    #intro h4 {
+      font-size: 20px;
+      margin-bottom: 30px;
+      color: #eaf2f8;
+    }
+
+    .lead-list li {
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    .well-trans {
+      background: transparent;
+      color: #fff;
+    }
+
+    /* Boxes Section */
+    #boxes {
+      background: #d6eaf8;
+      padding: 80px 0;
+    }
+
+    .box {
+      background: #fff;
+      padding: 30px 20px;
+      border-radius: 12px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .box:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .bg-skin {
+      color: #fff;
+      background-color: #3498db;
+      border-radius: 50%;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: inline-block;
+      transition: all 0.3s;
+    }
+
+    .bg-skin:hover {
+      background-color: #5dade2;
+    }
+
+    /* Services Section */
+    #service {
+      background: #f0f8ff;
+      padding: 80px 0;
+    }
+
+    .service-box {
+      margin-bottom: 40px;
+      text-align: left;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .service-box:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .service-icon span {
+      display: inline-block;
+      margin-bottom: 15px;
+      color: #3498db;
+      transition: all 0.3s;
+    }
+
+    .service-icon span:hover {
+      color: #1abc9c;
+    }
+
+    /* Footer */
+    footer {
+      background: #1976d2;
+      padding: 60px 0;
+      color: #fff;
+    }
+
+    footer h5 {
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    footer p,
+    footer li,
+    footer a {
+      color: #eaf2f8;
+      font-size: 14px;
+    }
+
+    footer a:hover {
+      color: #ffd700;
+    }
+
+    .company-social li {
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    .company-social li a {
+      color: #fff;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .company-social li a:hover {
+      color: #ffd700;
+    }
+
+    /* Responsive Images */
+    .img-responsive {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+<body>
+     <!-- ===== Navbar ===== -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background: #1976d2; padding: 0.8rem 1rem;">
+  <div class="container">
+    <!-- Logo + Brand Name -->
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="images/medical-logo - Copy.jpg" alt="Hospital Logo" style="
+        height: 45px; 
+        width: 45px; 
+        margin-right: 10px; 
+        border-radius: 50%; 
+        background: white; 
+        padding: 4px; 
+        box-shadow: 0 2px 6px rgba(240, 239, 239, 0.3);">
+      <h1 style="font-size: 2.5rem; font-weight: 700; margin: 2; color: #fff;">
+        <i class="fa fa-user-plus"></i> HETHCARE HOSPITAL
+      </h1>
+    </a>
+
+    
+
+    <!-- Navbar Links -->
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item" style="margin-right: 20px;">
+          <a class="nav-link" href="index.php"><h6 class="m-0 text-white">HOME</h6></a>
+        
+        <li class="nav-item" style="margin-right: 20px;">
+          <a class="nav-link" href="services.html"><h6 class="m-0 text-white">ABOUT US</h6></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="contact.html"><h6 class="m-0 text-white">CONTACT</h6></a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <!-- Intro Section -->
+    <section id="intro">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-lg-6"><br><br><br><br>
+            <h2>HELTHCARE HOSPITALS</h2>
+            <h4>Providing the best quality healthcare for you</h4>
+            <div class="well-trans">
+              <ul class="lead-list">
+                <li><span class="fa fa-check-square-o fa-2x"></span> <strong>Affordable monthly premium packages</strong><br>Lorem ipsum dolor sit amet</li>
+                <li><span class="fa fa-check-square-o fa-2x"></span> <strong>Choose your favourite services</strong><br>Lorem ipsum dolor sit amet</li>
+                <li><span class="fa fa-check-square-o fa-2x"></span> <strong>Friendly environment</strong><br>Lorem ipsum dolor sit amet</li>
+              </ul>
+              <p class="text-right">
+                <a href="#" class="btn btn-skin btn-lg">Learn more <i class="fa fa-angle-right"></i></a>
+              </p>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <img src="images/img-4.png" class="img-responsive" alt="Hospital">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Boxes Section -->
+    <section id="boxes">
+      <div class="container">
+        <div class="row text-center">
+          <div class="col-sm-3">
+            <div class="box wow fadeInUp" data-wow-delay="0.3s">
+              <i class="fa fa-check fa-3x bg-skin"></i>
+              <h4>Make an appointment</h4>
+              <p>Lorem ipsum dolor sit amet, nec te mollis utroque honestatis.</p>
+            </div>
+          </div>
+          <div class="col-sm-3">
+            <div class="box wow fadeInUp" data-wow-delay="0.5s">
+              <i class="fa fa-list-alt fa-3x bg-skin"></i>
+              <h4>Choose your package</h4>
+              <p>Lorem ipsum dolor sit amet, nec te mollis utroque honestatis.</p>
+            </div>
+          </div>
+          <div class="col-sm-3">
+            <div class="box wow fadeInUp" data-wow-delay="0.7s">
+              <i class="fa fa-user-md fa-3x bg-skin"></i>
+              <h4>Help by specialist</h4>
+              <p>Lorem ipsum dolor sit amet, nec te mollis utroque honestatis.</p>
+            </div>
+          </div>
+          <div class="col-sm-3">
+            <div class="box wow fadeInUp" data-wow-delay="0.9s">
+              <i class="fa fa-hospital-o fa-3x bg-skin"></i>
+              <h4>Get diagnostic report</h4>
+              <p>Lorem ipsum dolor sit amet, nec te mollis utroque honestatis.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="service">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <img src="images/img1.png" class="img-responsive" alt="Medical Services">
+          </div>
+          <div class="col-md-3">
+            <div class="service-box wow fadeInRight" data-wow-delay="0.1s">
+              <div class="service-icon"><span class="fa fa-stethoscope fa-3x"></span></div>
+              <h5>Medical checkup</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+            <div class="service-box wow fadeInRight" data-wow-delay="0.2s">
+              <div class="service-icon"><span class="fa fa-wheelchair fa-3x"></span></div>
+              <h5>Nursing Services</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+            <div class="service-box wow fadeInRight" data-wow-delay="0.3s">
+              <div class="service-icon"><span class="fa fa-plus-square fa-3x"></span></div>
+              <h5>Pharmacy</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="service-box wow fadeInRight" data-wow-delay="0.1s">
+              <div class="service-icon"><span class="fa fa-h-square fa-3x"></span></div>
+              <h5>Gyn Care</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+            <div class="service-box wow fadeInRight" data-wow-delay="0.2s">
+              <div class="service-icon"><span class="fa fa-filter fa-3x"></span></div>
+              <h5>Neurology</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+            <div class="service-box wow fadeInRight" data-wow-delay="0.3s">
+              <div class="service-icon"><span class="fa fa-heartbeat fa-3x"></span></div>
+              <h5>Sleep Center</h5>
+              <p>Vestibulum tincidunt enim in pharetra malesuada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <div class="row">
+          <div class="col-md-4">
+            <h5>About Helthcarel Hospitals</h5>
+            <p>Lorem ipsum dolor sit amet, ne nam purto nihil impetus, an facilisi accommodare sea.</p>
+            <h5>Information</h5>
+            <ul>
+              <li><a href="#">Home</a></li>
+              <li><a href="#">Laboratory</a></li>
+              <li><a href="#">Medical treatment</a></li>
+              <li><a href="#">Terms & conditions</a></li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <h5>Helthcare Hospitals</h5>
+            <p>Nam leo lorem, tincidunt id risus ut, ornare tincidunt naqunc sit amet.</p>
+            <ul>
+              <li><i class="fa fa-calendar-o"></i> Monday - Saturday, 8am to 10pm</li>
+              <li><i class="fa fa-phone"></i> +94 0888 904 711</li>
+              <li><i class="fa fa-envelope-o"></i>helthcarel@hospitals.com</li>
+            </ul>
+          </div>
+          <div class="col-md-4">
+            <h5>Our location</h5>
+            <p>284/1 Kandy Road, Kiribathgoda</p>
+            <h5>Follow us</h5>
+            <ul class="company-social">
+              <li><a href="#"><i class="fa fa-facebook"></i></a></li>
+              <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+              <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+              <li><a href="#"><i class="fa fa-vimeo-square"></i></a></li>
+              <li><a href="#"><i class="fa fa-dribbble"></i></a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Core JS -->
+  <script src="js/jquery.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.easing.min.js"></script>
+  <script src="js/wow.min.js"></script>
+  <script src="js/jquery.scrollTo.js"></script>
+  <script src="js/jquery.appear.js"></script>
+  <script src="js/stellar.js"></script>
+  <script src="plugins/cubeportfolio/js/jquery.cubeportfolio.min.js"></script>
+  <script src="js/owl.carousel.min.js"></script>
+  <script src="js/nivo-lightbox.min.js"></script>
+  <script src="js/custom.js"></script>
+</body>
+
+</html>

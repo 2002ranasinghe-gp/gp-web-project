@@ -1,0 +1,138 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  
+  body {
+    display: flex;
+    height: 100vh;
+    background-color: #f5f7fa;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    width: 250px;
+    background-color: #fff;
+    border-right: 1px solid #ddd;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .profile {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 auto 10px;
+  }
+  
+  .logout-btn {
+    background-color: #9bd1ff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  .logout-btn:hover {
+    background-color: #80c3ff;
+  }
+  
+  .menu {
+    list-style: none;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .menu li {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.3s;
+  }
+  
+  .menu li:hover,
+  .menu .active {
+    background-color: #e7f3ff;
+  }
+  
+  /* Main content */
+  .main {
+    flex: 1;
+    padding: 20px;
+  }
+  
+  .header {
+    background-color: #b9e2e0;
+    border-radius: 12px;
+    padding: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+  }
+  
+  .header h1 {
+    color: #1e4593;
+  }
+  
+  .date {
+    text-align: right;
+  }
+  
+  /* Status cards */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+  
+  .card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  
+  .card h2 {
+    color: #1e4593;
+    margin-bottom: 8px;
+  }
+  
+  /* Table */
+  .booking table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  
+  .booking th,
+  .booking td {
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .booking th {
+    background-color: #f0f5ff;
+  }
+  
+  .booking h3 {
+    margin-bottom: 15px;
+  }
+  
