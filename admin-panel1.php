@@ -61,127 +61,372 @@
             color: white;
         }
         
-        .dashboard-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center/cover;
-            opacity: 0.05;
-            z-index: 0;
-            border-radius: 10px;
-        }
-        
-        .dashboard-content {
+        /* NEW CREATIVE DASHBOARD STYLES */
+        .dashboard-container {
+            padding: 20px;
             position: relative;
-            z-index: 1;
-            padding: 15px;
         }
         
-        .dash-card {
-            height: 150px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-radius: 12px;
-            transition: transform 0.3s, box-shadow 0.3s;
+        .dashboard-welcome {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            margin-bottom: 25px;
             position: relative;
             overflow: hidden;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            border: none;
         }
         
-        .dash-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        .dashboard-welcome::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            transform: translate(50px, -50px);
         }
         
-        .dash-icon {
-            width: 40px;
-            margin-bottom: 8px;
-            filter: brightness(0) invert(1);
-        }
-        
-        .card-title {
-            font-size: 1rem;
-            margin-bottom: 8px;
+        .dashboard-welcome h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
             font-weight: 600;
-            text-align: center;
         }
         
-        .card-value {
-            font-size: 2.2rem;
-            font-weight: bold;
-            line-height: 1.2;
+        .dashboard-welcome p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 0;
         }
         
-        .stats-card {
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 15px;
-            color: white;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        .dashboard-time {
+            position: absolute;
+            right: 25px;
+            top: 25px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
         }
         
-        .stats-icon {
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #eef2f7;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
             font-size: 1.5rem;
-            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .stat-content {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #2c3e50;
+        }
+        
+        .stat-title {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .stat-change {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stat-change.positive {
+            color: #27ae60;
+        }
+        
+        .stat-change.negative {
+            color: #e74c3c;
+        }
+        
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
         }
         
         .chart-container {
             background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #eef2f7;
         }
         
         .chart-container h5 {
             font-size: 1.1rem;
             margin-bottom: 15px;
+            color: #2c3e50;
             font-weight: 600;
         }
         
-        .quick-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        .activity-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .activity-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #eef2f7;
+        }
+        
+        .activity-card h5 {
+            font-size: 1.1rem;
             margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-text {
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+            color: #2c3e50;
+        }
+        
+        .activity-time {
+            font-size: 0.75rem;
+            color: #95a5a6;
+        }
+        
+        .appointment-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .appointment-table th {
+            background: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            font-weight: 600;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .appointment-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 0.85rem;
+        }
+        
+        .appointment-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .doctor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .doctor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        
+        .doctor-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .doctor-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .doctor-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .doctor-specialty {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        
+        .doctor-status {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .status-available {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-busy {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
         }
         
         .quick-action-btn {
-            flex: 1;
-            min-width: 110px;
-            padding: 8px;
-            border-radius: 6px;
             background: white;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #eef2f7;
+            border-radius: 10px;
+            padding: 15px;
             text-align: center;
-            transition: all 0.3s;
             cursor: pointer;
+            transition: all 0.3s;
             text-decoration: none;
-            color: var(--dark);
-            font-size: 0.85rem;
+            color: #2c3e50;
         }
         
         .quick-action-btn:hover {
             background: var(--primary);
             color: white;
             text-decoration: none;
+            border-color: var(--primary);
         }
         
         .quick-action-btn i {
-            font-size: 1.2rem;
-            margin-bottom: 5px;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
         }
         
+        .quick-action-text {
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 992px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .activity-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-welcome {
+                padding: 20px;
+            }
+            
+            .dashboard-time {
+                position: relative;
+                right: auto;
+                top: auto;
+                margin-top: 10px;
+                display: inline-block;
+            }
+        }
+        
+        /* Other existing styles remain the same */
         .status-badge {
-            padding: 4px 8px;
-            border-radius: 15px;
-            font-size: 0.75rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: bold;
         }
         
@@ -200,51 +445,6 @@
             color: #c62828;
         }
         
-        .status-available {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .status-occupied {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        
-        .status-sent {
-            background-color: #e3f2fd;
-            color: #1565c0;
-        }
-        
-        .status-sms-sent {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .status-sent-external {
-            background-color: #fff3e0;
-            color: #ef6c00;
-        }
-        
-        .recent-activity {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .activity-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 0.9rem;
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
-        .activity-time {
-            font-size: 0.75rem;
-            color: var(--secondary);
-        }
-        
         .form-container {
             max-width: 600px;
             margin: 0 auto;
@@ -252,89 +452,25 @@
         
         .action-btn {
             margin: 2px;
-            font-size: 0.8rem;
-            padding: 4px 8px;
         }
         
-        .pharmacy-type-btn {
-            width: 100%;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-        
-        h4 {
-            font-size: 1.4rem;
+        /* Fixed Pharmacy Email Display */
+        .fixed-pharmacy-email {
+            background-color: #fff3e0;
+            border: 1px solid #ffcc80;
+            padding: 10px;
+            border-radius: 5px;
             margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
         }
         
-        h5 {
-            font-size: 1.2rem;
-            margin-bottom: 12px;
+        .fixed-pharmacy-email i {
+            color: #ff9800;
+            margin-right: 8px;
         }
         
-        .modal-title {
-            font-size: 1.2rem;
-        }
-        
-        @media (max-width: 992px) {
-            .dash-card {
-                height: 140px;
-            }
-            
-            .card-value {
-                font-size: 1.8rem;
-            }
-            
-            .card-title {
-                font-size: 0.9rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .dashboard-content {
-                padding: 10px;
-            }
-            
-            .dash-card {
-                height: 130px;
-                margin-bottom: 10px;
-            }
-            
-            .card-value {
-                font-size: 1.6rem;
-            }
-            
-            .quick-action-btn {
-                min-width: 90px;
-                padding: 6px;
-                font-size: 0.8rem;
-            }
-            
-            .chart-container {
-                padding: 12px;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .dash-card {
-                height: 120px;
-                width: 100% !important;
-            }
-            
-            .quick-action-btn {
-                min-width: 100%;
-            }
-            
-            .card-value {
-                font-size: 1.5rem;
-            }
-            
-            .dashboard-content h4 {
-                font-size: 1.2rem;
-            }
-        }
-        
-        /* New Styles for Patient Registration */
+        /* Patient Registration Styles */
         .patient-registration-card {
             margin-bottom: 20px;
             border: 1px solid #e0e0e0;
@@ -359,42 +495,6 @@
             color: #0066cc;
             margin-top: 8px;
             font-size: 0.9rem;
-        }
-        
-        /* Fixed Pharmacy Email Display */
-        .fixed-pharmacy-email {
-            background-color: #fff3e0;
-            border: 1px solid #ffcc80;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .fixed-pharmacy-email i {
-            color: #ff9800;
-            margin-right: 8px;
-        }
-        
-        /* SMS Preview */
-        .sms-preview {
-            background-color: #e8f5e9;
-            border: 1px solid #c8e6c9;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            font-size: 0.85rem;
-        }
-        
-        /* Updated Dashboard Title */
-        .dashboard-title {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #2c3e50;
-            font-weight: 600;
         }
     </style>
 </head>
@@ -456,129 +556,160 @@
 
             <div class="col-md-9">
                 <div class="tab-content">
-                    <!-- Dashboard -->
+                    <!-- CREATIVE DASHBOARD -->
                     <div class="tab-pane fade show active" id="dash-tab">
-                        <div class="dashboard-bg"></div>
-                        <div class="dashboard-content">
-                            <h4 class="dashboard-title">Dashboard Overview</h4>
+                        <div class="dashboard-container">
+                            <!-- Welcome Section -->
+                            <div class="dashboard-welcome">
+                                <h3>Welcome back, Admin!</h3>
+                                <p>Here's what's happening with your hospital today.</p>
+                                <div class="dashboard-time" id="current-time"></div>
+                            </div>
                             
                             <!-- Quick Actions -->
-                            <div class="quick-actions">
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
-                                    <i class="fa fa-user-md"></i>
-                                    <div>Add Doctor</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
-                                    <i class="fa fa-id-badge"></i>
-                                    <div>Manage Staff</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#app-tab">
-                                    <i class="fa fa-calendar"></i>
-                                    <div>View Appointments</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#pay-tab">
-                                    <i class="fa fa-credit-card"></i>
-                                    <div>Payments</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#room-tab">
-                                    <i class="fa fa-bed"></i>
-                                    <div>Rooms/Beds</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="modal" data-target="#deleteDoctorModal">
-                                    <i class="fa fa-trash"></i>
-                                    <div>Delete Doctor</div>
-                                </a>
+                            <div class="chart-container">
+                                <h5>Quick Actions</h5>
+                                <div class="quick-actions-grid">
+                                    <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
+                                        <i class="fa fa-user-md"></i>
+                                        <div class="quick-action-text">Add Doctor</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
+                                        <i class="fa fa-id-badge"></i>
+                                        <div class="quick-action-text">Manage Staff</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#app-tab">
+                                        <i class="fa fa-calendar"></i>
+                                        <div class="quick-action-text">View Appointments</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#pay-tab">
+                                        <i class="fa fa-credit-card"></i>
+                                        <div class="quick-action-text">Payments</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#room-tab">
+                                        <i class="fa fa-bed"></i>
+                                        <div class="quick-action-text">Rooms/Beds</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="modal" data-target="#deleteDoctorModal">
+                                        <i class="fa fa-trash"></i>
+                                        <div class="quick-action-text">Delete Doctor</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#pres-tab">
+                                        <i class="fa fa-prescription"></i>
+                                        <div class="quick-action-text">Prescriptions</div>
+                                    </a>
+                                    <a class="quick-action-btn" data-toggle="list" href="#sched-tab">
+                                        <i class="fa fa-clock"></i>
+                                        <div class="quick-action-text">Schedules</div>
+                                    </a>
+                                </div>
                             </div>
                             
                             <!-- Stats Cards -->
-                            <div class="row">
-                                <div class="col-md-3 col-sm-6">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #1976d2);">
-                                        <i class="fa fa-user-md dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Total Doctors</h5>
-                                            <h3 class="card-value" id="total-doctors">8</h3>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        <i class="fa fa-user-md"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-title">TOTAL DOCTORS</div>
+                                        <div class="stat-value" id="total-doctors">8</div>
+                                        <div class="stat-change positive">
+                                            <i class="fa fa-arrow-up mr-1"></i> 2 new this month
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3 col-sm-6">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #2196f3);">
-                                        <i class="fa fa-users dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Total Patients</h5>
-                                            <h3 class="card-value" id="total-patients">10</h3>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                        <i class="fa fa-users"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-title">TOTAL PATIENTS</div>
+                                        <div class="stat-value" id="total-patients">10</div>
+                                        <div class="stat-change positive">
+                                            <i class="fa fa-arrow-up mr-1"></i> 3 new today
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3 col-sm-6">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #42a5f5);">
-                                        <i class="fa fa-calendar dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Appointments</h5>
-                                            <h3 class="card-value" id="total-appointments">10</h3>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                                        <i class="fa fa-calendar"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-title">TODAY'S APPOINTMENTS</div>
+                                        <div class="stat-value" id="today-appointments-count">3</div>
+                                        <div class="stat-change positive">
+                                            <i class="fa fa-check mr-1"></i> 2 completed
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3 col-sm-6">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #64b5f6);">
-                                        <i class="fa fa-id-badge dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Staff Members</h5>
-                                            <h3 class="card-value" id="total-staff">2</h3>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                                        <i class="fa fa-credit-card"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-title">TODAY'S REVENUE</div>
+                                        <div class="stat-value">Rs. 1,850</div>
+                                        <div class="stat-change positive">
+                                            <i class="fa fa-arrow-up mr-1"></i> 15% increase
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <!-- Charts and Additional Stats -->
-                            <div class="row mt-3">
-                                <div class="col-md-8">
-                                    <div class="chart-container">
-                                        <h5>Appointments Overview</h5>
-                                        <canvas id="appointmentsChart" height="200"></canvas>
-                                    </div>
+                            <!-- Charts Section -->
+                            <div class="charts-row">
+                                <div class="chart-container">
+                                    <h5>Appointments Overview</h5>
+                                    <canvas id="appointmentsChart" height="250"></canvas>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="chart-container">
-                                        <h5>Department Distribution</h5>
-                                        <canvas id="departmentChart" height="200"></canvas>
-                                    </div>
+                                <div class="chart-container">
+                                    <h5>Department Distribution</h5>
+                                    <canvas id="departmentChart" height="250"></canvas>
                                 </div>
                             </div>
                             
-                            <!-- Recent Activity -->
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <div class="chart-container">
-                                        <h5>Recent Activity</h5>
-                                        <div class="recent-activity" id="recent-activity">
-                                            <!-- Activity items will be populated by JavaScript -->
-                                        </div>
+                            <!-- Activity Section -->
+                            <div class="activity-section">
+                                <div class="activity-card">
+                                    <h5>Recent Activity <span class="badge badge-primary">New</span></h5>
+                                    <div class="activity-list" id="recent-activity">
+                                        <!-- Activity items will be populated by JavaScript -->
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="chart-container">
-                                        <h5>Today's Appointments</h5>
-                                        <table class="table table-sm table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Time</th>
-                                                    <th>Patient</th>
-                                                    <th>Doctor</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="today-appointments">
-                                                <!-- Today's appointments will be populated by JavaScript -->
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                
+                                <div class="activity-card">
+                                    <h5>Today's Appointments</h5>
+                                    <table class="appointment-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Patient</th>
+                                                <th>Doctor</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="today-appointments">
+                                            <!-- Today's appointments will be populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Doctors Online -->
+                            <div class="chart-container">
+                                <h5>Available Doctors Today</h5>
+                                <div class="doctor-grid" id="available-doctors">
+                                    <!-- Available doctors will be populated by JavaScript -->
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Doctors -->
+                    <!-- Doctors Tab (Same as before) -->
                     <div class="tab-pane fade" id="doc-tab">
                         <h4>Doctors List</h4>
                         <div class="d-flex justify-content-between mb-3">
@@ -611,7 +742,7 @@
                         </nav>
                     </div>
 
-                    <!-- Patients -->
+                    <!-- Patients Tab (Same as before) -->
                     <div class="tab-pane fade" id="pat-tab">
                         <!-- Patient Registration Form -->
                         <div class="patient-registration-card">
@@ -757,7 +888,7 @@
                         </nav>
                     </div>
 
-                    <!-- Appointments -->
+                    <!-- Appointments Tab (Same as before) -->
                     <div class="tab-pane fade" id="app-tab">
                         <h4>Appointments</h4>
                         <div class="d-flex justify-content-between mb-3">
@@ -793,7 +924,7 @@
                         </nav>
                     </div>
 
-                    <!-- Prescriptions -->
+                    <!-- Prescriptions Tab (Same as before) -->
                     <div class="tab-pane fade" id="pres-tab">
                         <h4>Prescriptions</h4>
                         <div class="d-flex justify-content-between mb-3">
@@ -830,7 +961,7 @@
                         </nav>
                     </div>
 
-                    <!-- Payments -->
+                    <!-- Payments Tab (Same as before) -->
                     <div class="tab-pane fade" id="pay-tab">
                         <h4>Payments</h4>
                         <form method="post" class="form-inline mb-2" id="payment-search-form">
@@ -870,7 +1001,7 @@
                         </nav>
                     </div>
 
-                    <!-- Staff Schedules -->
+                    <!-- Staff Schedules Tab (Same as before) -->
                     <div class="tab-pane fade" id="sched-tab">
                         <h4>Staff Schedules</h4>
                         <div class="d-flex justify-content-between mb-3">
@@ -902,7 +1033,7 @@
                         </nav>
                     </div>
 
-                    <!-- Rooms / Beds -->
+                    <!-- Rooms / Beds Tab (Same as before) -->
                     <div class="tab-pane fade" id="room-tab">
                         <h4>Rooms / Beds</h4>
                         <div class="d-flex justify-content-between mb-3">
@@ -935,7 +1066,7 @@
                         </nav>
                     </div>
 
-                    <!-- Staff Management (now includes Doctor Management) -->
+                    <!-- Staff Management Tab (Same as before) -->
                     <div class="tab-pane fade" id="staff-tab">
                         <h4>Staff & Doctor Management</h4>
                         <div class="row mb-4">
@@ -1070,7 +1201,7 @@
         </div>
     </div>
 
-    <!-- Delete Doctor Modal -->
+    <!-- Delete Doctor Modal (Same as before) -->
     <div class="modal fade" id="deleteDoctorModal" tabindex="-1" role="dialog" aria-labelledby="deleteDoctorModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm" role="document">
             <div class="modal-content">
@@ -1098,7 +1229,7 @@
         </div>
     </div>
 
-    <!-- Prescription Delivery Selection Modal -->
+    <!-- Prescription Delivery Selection Modal (Same as before) -->
     <div class="modal fade" id="prescriptionDeliveryModal" tabindex="-1" role="dialog" aria-labelledby="prescriptionDeliveryModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm" role="document">
             <div class="modal-content">
@@ -1121,7 +1252,7 @@
         </div>
     </div>
 
-    <!-- SMS to Patient Modal -->
+    <!-- SMS to Patient Modal (Same as before) -->
     <div class="modal fade" id="smsToPatientModal" tabindex="-1" role="dialog" aria-labelledby="smsToPatientModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -1157,7 +1288,7 @@
         </div>
     </div>
 
-    <!-- Hospital Pharmacy Email Modal -->
+    <!-- Hospital Pharmacy Email Modal (Same as before) -->
     <div class="modal fade" id="hospitalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="hospitalPharmacyModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -1211,35 +1342,35 @@
                 {pid: 10, fname: 'Peter', lname: 'Norvig', gender: 'Male', dob: '1965-04-12', email: 'peter@gmail.com', contact: '0734567890', address: '741 Ocean Dr, Matara', emergencyContact: '0738901234', national_id: 'NIC789789789', password: 'peter123', cpassword: 'peter123'}
             ],
             doctors: [
-                {id: 'DOC001', username: 'ashok', password: 'ashok123', email: 'ashok@gmail.com', spec: 'General', docFees: 500},
-                {id: 'DOC002', username: 'arun', password: 'arun123', email: 'arun@gmail.com', spec: 'Cardiologist', docFees: 600},
-                {id: 'DOC003', username: 'Dinesh', password: 'dinesh123', email: 'dinesh@gmail.com', spec: 'General', docFees: 700},
-                {id: 'DOC004', username: 'Ganesh', password: 'ganesh123', email: 'ganesh@gmail.com', spec: 'Pediatrician', docFees: 550},
-                {id: 'DOC005', username: 'Kumar', password: 'kumar123', email: 'kumar@gmail.com', spec: 'Pediatrician', docFees: 800},
-                {id: 'DOC006', username: 'Amit', password: 'amit123', email: 'amit@gmail.com', spec: 'Cardiologist', docFees: 1000},
-                {id: 'DOC007', username: 'Abbis', password: 'abbis123', email: 'abbis@gmail.com', spec: 'Neurologist', docFees: 1500},
-                {id: 'DOC008', username: 'Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', spec: 'Pediatrician', docFees: 450}
+                {id: 'DOC001', username: 'Dr. Ashok', password: 'ashok123', email: 'ashok@gmail.com', spec: 'General', docFees: 500, available: true},
+                {id: 'DOC002', username: 'Dr. Arun', password: 'arun123', email: 'arun@gmail.com', spec: 'Cardiologist', docFees: 600, available: true},
+                {id: 'DOC003', username: 'Dr. Dinesh', password: 'dinesh123', email: 'dinesh@gmail.com', spec: 'General', docFees: 700, available: false},
+                {id: 'DOC004', username: 'Dr. Ganesh', password: 'ganesh123', email: 'ganesh@gmail.com', spec: 'Pediatrician', docFees: 550, available: true},
+                {id: 'DOC005', username: 'Dr. Kumar', password: 'kumar123', email: 'kumar@gmail.com', spec: 'Pediatrician', docFees: 800, available: true},
+                {id: 'DOC006', username: 'Dr. Amit', password: 'amit123', email: 'amit@gmail.com', spec: 'Cardiologist', docFees: 1000, available: false},
+                {id: 'DOC007', username: 'Dr. Abbis', password: 'abbis123', email: 'abbis@gmail.com', spec: 'Neurologist', docFees: 1500, available: true},
+                {id: 'DOC008', username: 'Dr. Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', spec: 'Pediatrician', docFees: 450, available: true}
             ],
             appointments: [
-                {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 2, pid: 2, national_id: 'NIC987654321', fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', doctor: 'Ganesh', docFees: 550, appdate: '2025-10-30', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 3, pid: 3, national_id: 'NIC111222333', fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', doctor: 'Dinesh', docFees: 700, appdate: '2025-11-01', apptime: '09:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 4, pid: 4, national_id: 'NIC444555666', fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', doctor: 'Amit', docFees: 1000, appdate: '2025-11-02', apptime: '14:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 5, pid: 5, national_id: 'NIC777888999', fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', doctor: 'Kumar', docFees: 800, appdate: '2025-11-03', apptime: '16:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 6, pid: 6, national_id: 'NIC123123123', fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', doctor: 'Abbis', docFees: 1500, appdate: '2025-11-04', apptime: '12:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 7, pid: 7, national_id: 'NIC321321321', fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', doctor: 'Tiwary', docFees: 450, appdate: '2025-11-05', apptime: '10:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 8, pid: 8, national_id: 'NIC456456456', fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', doctor: 'Ganesh', docFees: 550, appdate: '2025-11-06', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 9, pid: 9, national_id: 'NIC654654654', fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', doctor: 'Kumar', docFees: 800, appdate: '2025-11-07', apptime: '15:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 10, pid: 10, national_id: 'NIC789789789', fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', doctor: 'Ganesh', docFees: 500, appdate: '2025-11-08', apptime: '09:00:00', userStatus: 1, doctorStatus: 1}
+                {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Dr. Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 0},
+                {ID: 2, pid: 2, national_id: 'NIC987654321', fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', doctor: 'Dr. Ganesh', docFees: 550, appdate: '2025-10-30', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 3, pid: 3, national_id: 'NIC111222333', fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', doctor: 'Dr. Dinesh', docFees: 700, appdate: '2025-11-01', apptime: '09:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 4, pid: 4, national_id: 'NIC444555666', fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', doctor: 'Dr. Amit', docFees: 1000, appdate: '2025-11-02', apptime: '14:00:00', userStatus: 1, doctorStatus: 0},
+                {ID: 5, pid: 5, national_id: 'NIC777888999', fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', doctor: 'Dr. Kumar', docFees: 800, appdate: '2025-11-03', apptime: '16:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 6, pid: 6, national_id: 'NIC123123123', fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', doctor: 'Dr. Abbis', docFees: 1500, appdate: '2025-11-04', apptime: '12:00:00', userStatus: 1, doctorStatus: 0},
+                {ID: 7, pid: 7, national_id: 'NIC321321321', fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', doctor: 'Dr. Tiwary', docFees: 450, appdate: '2025-11-05', apptime: '10:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 8, pid: 8, national_id: 'NIC456456456', fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', doctor: 'Dr. Ganesh', docFees: 550, appdate: '2025-11-06', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 9, pid: 9, national_id: 'NIC654654654', fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', doctor: 'Dr. Kumar', docFees: 800, appdate: '2025-11-07', apptime: '15:00:00', userStatus: 1, doctorStatus: 1},
+                {ID: 10, pid: 10, national_id: 'NIC789789789', fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', doctor: 'Dr. Ganesh', docFees: 500, appdate: '2025-11-08', apptime: '09:00:00', userStatus: 1, doctorStatus: 1}
             ],
             prescriptions: [
-                {id: 1, doctor: 'Ganesh', pid: 1, ID: 1, fname: 'Ram', lname: 'Kumar', national_id: 'NIC123456789', appdate: '2025-10-29', apptime: '10:00:00', disease: 'Fever', allergy: 'None', prescription: 'Take paracetamol 500mg twice daily', emailStatus: 'Not Sent'},
-                {id: 2, doctor: 'Ganesh', pid: 2, ID: 2, fname: 'Alia', lname: 'Bhatt', national_id: 'NIC987654321', appdate: '2025-10-30', apptime: '11:00:00', disease: 'Cold', allergy: 'None', prescription: 'Take vitamin C and rest', emailStatus: 'SMS Sent'}
+                {id: 1, doctor: 'Dr. Ganesh', pid: 1, ID: 1, fname: 'Ram', lname: 'Kumar', national_id: 'NIC123456789', appdate: '2025-10-29', apptime: '10:00:00', disease: 'Fever', allergy: 'None', prescription: 'Take paracetamol 500mg twice daily', emailStatus: 'Not Sent'},
+                {id: 2, doctor: 'Dr. Ganesh', pid: 2, ID: 2, fname: 'Alia', lname: 'Bhatt', national_id: 'NIC987654321', appdate: '2025-10-30', apptime: '11:00:00', disease: 'Cold', allergy: 'None', prescription: 'Take vitamin C and rest', emailStatus: 'SMS Sent'}
             ],
             payments: [
-                {id: 1, pid: 1, app_id: 1, national_id: 'NIC123456789', patient_name: 'Ram Kumar', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-10-29', pay_status: 'Paid'},
-                {id: 2, pid: 2, app_id: 2, national_id: 'NIC987654321', patient_name: 'Alia Bhatt', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-10-30', pay_status: 'Paid'},
-                {id: 3, pid: 3, app_id: 3, national_id: 'NIC111222333', patient_name: 'Shahrukh Khan', doctor: 'Dinesh', fees: 700.00, pay_date: '2025-11-01', pay_status: 'Pending'}
+                {id: 1, pid: 1, app_id: 1, national_id: 'NIC123456789', patient_name: 'Ram Kumar', doctor: 'Dr. Ganesh', fees: 500.00, pay_date: '2025-10-29', pay_status: 'Paid'},
+                {id: 2, pid: 2, app_id: 2, national_id: 'NIC987654321', patient_name: 'Alia Bhatt', doctor: 'Dr. Ganesh', fees: 550.00, pay_date: '2025-10-30', pay_status: 'Paid'},
+                {id: 3, pid: 3, app_id: 3, national_id: 'NIC111222333', patient_name: 'Shahrukh Khan', doctor: 'Dr. Dinesh', fees: 700.00, pay_date: '2025-11-01', pay_status: 'Pending'}
             ],
             staff: [
                 {id: 'STF001', name: 'Ramesh', role: 'Nurse', email: 'ramesh@gmail.com', contact: '0771112222', password: 'ramesh123'},
@@ -1268,6 +1399,10 @@
 
         // Initialize dashboard with data
         document.addEventListener('DOMContentLoaded', function() {
+            // Set current time
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 60000); // Update every minute
+            
             // Set dashboard counts
             updateDashboardCounts();
             
@@ -1287,6 +1422,9 @@
             // Set up today's appointments
             populateTodayAppointments();
             
+            // Populate available doctors
+            populateAvailableDoctors();
+            
             // Initialize charts
             initializeCharts();
             
@@ -1303,12 +1441,69 @@
             populateDoctorSelect();
         });
 
+        // Update current time
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('current-time').textContent = 
+                now.toLocaleDateString('en-US', options);
+        }
+
         // Update dashboard counts
         function updateDashboardCounts() {
             document.getElementById('total-doctors').textContent = database.doctors.length;
             document.getElementById('total-patients').textContent = database.patients.length;
-            document.getElementById('total-appointments').textContent = database.appointments.length;
-            document.getElementById('total-staff').textContent = database.staff.length;
+            
+            // Calculate today's appointments
+            const today = new Date().toISOString().split('T')[0];
+            const todayAppointments = database.appointments.filter(app => app.appdate === today);
+            document.getElementById('today-appointments-count').textContent = todayAppointments.length;
+            
+            // Calculate completed appointments
+            const completedAppointments = todayAppointments.filter(app => app.doctorStatus === 1);
+            
+            // Calculate revenue for today
+            let todayRevenue = 0;
+            completedAppointments.forEach(app => {
+                todayRevenue += app.docFees;
+            });
+            
+            // Update revenue if needed
+            const revenueElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+            if (revenueElement) {
+                revenueElement.textContent = `Rs. ${todayRevenue.toLocaleString()}`;
+            }
+        }
+
+        // Populate available doctors
+        function populateAvailableDoctors() {
+            const container = document.getElementById('available-doctors');
+            container.innerHTML = '';
+            
+            database.doctors.forEach(doctor => {
+                const doctorCard = document.createElement('div');
+                doctorCard.className = 'doctor-card';
+                
+                const initials = doctor.username.split(' ').map(n => n[0]).join('');
+                
+                doctorCard.innerHTML = `
+                    <div class="doctor-avatar">${initials}</div>
+                    <div class="doctor-name">${doctor.username}</div>
+                    <div class="doctor-specialty">${doctor.spec}</div>
+                    <div class="doctor-status ${doctor.available ? 'status-available' : 'status-busy'}">
+                        ${doctor.available ? 'Available' : 'Busy'}
+                    </div>
+                `;
+                
+                container.appendChild(doctorCard);
+            });
         }
 
         // Function to populate patients table
@@ -1493,6 +1688,78 @@
             });
         }
 
+        // Function to populate recent activity
+        function populateRecentActivity() {
+            const container = document.getElementById('recent-activity');
+            container.innerHTML = '';
+            
+            // Create activity items
+            const activities = [
+                {icon: 'fa-user-plus', text: 'New patient registered', time: 'Just now', color: '#27ae60'},
+                {icon: 'fa-calendar-check', text: 'Appointment scheduled with Dr. Ganesh', time: '2 hours ago', color: '#3498db'},
+                {icon: 'fa-credit-card', text: 'Payment received from Patient ID: 4', time: '5 hours ago', color: '#9b59b6'},
+                {icon: 'fa-prescription', text: 'Prescription added by Dr. Dinesh', time: '1 day ago', color: '#e74c3c'},
+                {icon: 'fa-user-md', text: 'New doctor added: Dr. Smith', time: '2 days ago', color: '#f39c12'},
+                {icon: 'fa-calendar-times', text: 'Appointment cancelled by Patient ID: 4', time: '3 days ago', color: '#95a5a6'}
+            ];
+            
+            activities.forEach(activity => {
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+                item.innerHTML = `
+                    <div class="activity-icon" style="background: ${activity.color}20; color: ${activity.color};">
+                        <i class="fa ${activity.icon}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">${activity.text}</div>
+                        <div class="activity-time">${activity.time}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Function to populate today's appointments
+        function populateTodayAppointments() {
+            const tbody = document.getElementById('today-appointments');
+            tbody.innerHTML = '';
+            
+            // Get today's date
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Filter today's appointments
+            const todayAppointments = database.appointments.filter(app => app.appdate === today);
+            
+            if (todayAppointments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No appointments for today</td></tr>';
+                return;
+            }
+            
+            // Sort by time
+            todayAppointments.sort((a, b) => a.apptime.localeCompare(b.apptime));
+            
+            // Take only 5 appointments for display
+            const displayAppointments = todayAppointments.slice(0, 5);
+            
+            displayAppointments.forEach(appointment => {
+                const status = appointment.doctorStatus === 1 ? 
+                    (appointment.userStatus === 1 ? 'Active' : 'Cancelled by Patient') : 
+                    'Cancelled by Doctor';
+                
+                const statusClass = status === 'Active' ? 'status-active' : 'status-cancelled';
+                const time = appointment.apptime.substring(0, 5); // Get HH:MM format
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${time}</td>
+                    <td>${appointment.fname} ${appointment.lname}</td>
+                    <td>${appointment.doctor}</td>
+                    <td><span class="status-badge ${statusClass}">${status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
         // Function to populate prescriptions table
         function populatePrescriptionsTable() {
             const tbody = document.getElementById('prescriptions-table-body');
@@ -1638,68 +1905,6 @@
             });
         }
 
-        // Function to populate recent activity
-        function populateRecentActivity() {
-            const container = document.getElementById('recent-activity');
-            container.innerHTML = '';
-            
-            // Create activity items
-            const activities = [
-                {text: 'New appointment scheduled', details: 'Patient: Ram Kumar with Dr. Ganesh', time: '2 hours ago'},
-                {text: 'Payment received', details: 'Patient ID: 4, Amount: Rs. 700', time: '5 hours ago'},
-                {text: 'Prescription added', details: 'Dr. Dinesh for Patient ID: 4', time: '1 day ago'},
-                {text: 'New patient registered', details: 'dinuvi ranasinghe', time: '2 days ago'},
-                {text: 'Appointment cancelled', details: 'Patient ID: 4 with Dr. Ganesh', time: '3 days ago'}
-            ];
-            
-            activities.forEach(activity => {
-                const item = document.createElement('div');
-                item.className = 'activity-item';
-                item.innerHTML = `
-                    <div class="d-flex justify-content-between">
-                        <div><strong>${activity.text}</strong></div>
-                        <div class="activity-time">${activity.time}</div>
-                    </div>
-                    <div>${activity.details}</div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // Function to populate today's appointments
-        function populateTodayAppointments() {
-            const tbody = document.getElementById('today-appointments');
-            tbody.innerHTML = '';
-            
-            // Get today's date
-            const today = new Date().toISOString().split('T')[0];
-            
-            // Filter today's appointments
-            const todayAppointments = database.appointments.filter(app => app.appdate === today);
-            
-            if (todayAppointments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No appointments for today</td></tr>';
-                return;
-            }
-            
-            todayAppointments.forEach(appointment => {
-                const status = appointment.doctorStatus === 1 ? 
-                    (appointment.userStatus === 1 ? 'Active' : 'Cancelled by Patient') : 
-                    'Cancelled by Doctor';
-                
-                const statusClass = status === 'Active' ? 'status-active' : 'status-cancelled';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${appointment.apptime}</td>
-                    <td>${appointment.fname} ${appointment.lname}</td>
-                    <td>${appointment.doctor}</td>
-                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
         // Function to populate doctor select dropdown
         function populateDoctorSelect() {
             const select = document.getElementById('doctor-select');
@@ -1718,31 +1923,38 @@
             // Appointments Chart
             const appointmentsCtx = document.getElementById('appointmentsChart').getContext('2d');
             const appointmentsChart = new Chart(appointmentsCtx, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: ['Oct 29', 'Oct 30', 'Nov 1', 'Nov 2', 'Nov 3', 'Nov 4'],
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
                         label: 'Appointments',
-                        data: [1, 1, 1, 1, 1, 1],
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        data: [12, 19, 15, 22, 18, 10, 7],
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    },
                     plugins: {
                         legend: {
                             display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
@@ -1757,26 +1969,22 @@
                 specCount[doctor.spec] = (specCount[doctor.spec] || 0) + 1;
             });
             
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)'
+            ];
+            
             const departmentChart = new Chart(departmentCtx, {
-                type: 'doughnut',
+                type: 'pie',
                 data: {
                     labels: Object.keys(specCount),
                     datasets: [{
                         data: Object.values(specCount),
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.5)',
-                            'rgba(54, 162, 235, 0.5)',
-                            'rgba(255, 206, 86, 0.5)',
-                            'rgba(75, 192, 192, 0.5)',
-                            'rgba(153, 102, 255, 0.5)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)'
-                        ],
+                        backgroundColor: colors.slice(0, Object.keys(specCount).length),
                         borderWidth: 1
                     }]
                 },
@@ -1919,11 +2127,12 @@
             
             const newDoctor = {
                 id: formData.get('doctorId'),
-                username: formData.get('doctor'),
+                username: 'Dr. ' + formData.get('doctor'),
                 password: password,
                 email: formData.get('demail'),
                 spec: formData.get('special'),
-                docFees: parseInt(formData.get('docFees'))
+                docFees: parseInt(formData.get('docFees')),
+                available: true
             };
             
             // Check if doctor already exists
@@ -1941,6 +2150,7 @@
             populateStaffTable();
             updateDashboardCounts();
             populateDoctorSelect();
+            populateAvailableDoctors();
             
             // Reset form
             form.reset();
@@ -1983,6 +2193,7 @@
             populateStaffTable();
             updateDashboardCounts();
             populateDoctorSelect();
+            populateAvailableDoctors();
             
             // Reset form
             form.reset();
@@ -2014,6 +2225,7 @@
                     populateStaffTable();
                     updateDashboardCounts();
                     populateDoctorSelect();
+                    populateAvailableDoctors();
                     
                     // Add to recent activity
                     addRecentActivity(`Doctor deleted: ${doctorName} (ID: ${doctorIdValue})`);
@@ -2034,6 +2246,7 @@
                     populateDoctorsTable();
                     populateStaffTable();
                     populateDoctorSelect();
+                    populateAvailableDoctors();
                     addRecentActivity(`Doctor edited: ${oldName} name changed to ${newName} (ID: ${doctorId})`);
                 }
                 
@@ -2043,6 +2256,7 @@
                     populateDoctorsTable();
                     populateStaffTable();
                     populateDoctorSelect();
+                    populateAvailableDoctors();
                 }
                 
                 const newFees = prompt('Edit fees:', doctor.docFees);
@@ -2367,18 +2581,23 @@ Status: ${prescription.emailStatus}
             const activityItem = document.createElement('div');
             activityItem.className = 'activity-item';
             
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
             activityItem.innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <div><strong>${activityText}</strong></div>
+                <div class="activity-icon" style="background: #3498db20; color: #3498db;">
+                    <i class="fa fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-text">${activityText}</div>
                     <div class="activity-time">Just now</div>
                 </div>
             `;
             
             // Add to the top of the activity list
             container.insertBefore(activityItem, container.firstChild);
+            
+            // If there are more than 6 items, remove the last one
+            if (container.children.length > 6) {
+                container.removeChild(container.lastChild);
+            }
         }
 
         // Function to view room details
