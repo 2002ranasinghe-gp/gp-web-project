@@ -266,6 +266,31 @@
                 font-size: 2.5rem; /* Adjusted for small screens */
             }
         }
+        
+        /* New Styles for Patient Registration */
+        .patient-registration-card {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: linear-gradient(135deg, #2196f3, #21cbf3);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        
+        .generated-nic {
+            background-color: #f0f8ff;
+            border: 1px solid #b3e0ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -483,6 +508,117 @@
 
                     <!-- Patients -->
                     <div class="tab-pane fade" id="pat-tab">
+                        <!-- Patient Registration Form -->
+                        <div class="patient-registration-card">
+                            <div class="card-header-custom">
+                                <i class="fa fa-user-plus mr-2"></i>Register New Patient
+                            </div>
+                            <div class="card-body">
+                                <form id="add-patient-form">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientFirstName">First Name *</label>
+                                                <input type="text" class="form-control" id="patientFirstName" name="fname" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientLastName">Last Name *</label>
+                                                <input type="text" class="form-control" id="patientLastName" name="lname" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientGender">Gender *</label>
+                                                <select class="form-control" id="patientGender" name="gender" required>
+                                                    <option value="">Select Gender</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientDOB">Date of Birth *</label>
+                                                <input type="date" class="form-control" id="patientDOB" name="dob" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientEmail">Email Address *</label>
+                                                <input type="email" class="form-control" id="patientEmail" name="email" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientContact">Contact Number *</label>
+                                                <input type="tel" class="form-control" id="patientContact" name="contact" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientAddress">Address</label>
+                                                <textarea class="form-control" id="patientAddress" name="address" rows="2"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientEmergencyContact">Emergency Contact</label>
+                                                <input type="tel" class="form-control" id="patientEmergencyContact" name="emergencyContact">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientPassword">Password *</label>
+                                                <input type="password" class="form-control" id="patientPassword" name="password" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patientConfirmPassword">Confirm Password *</label>
+                                                <input type="password" class="form-control" id="patientConfirmPassword" name="cpassword" onkeyup="checkPatientPassword()" required>
+                                                <small id="patientPasswordMessage" class="form-text"></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Generated NIC Display -->
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="generated-nic">
+                                                <i class="fa fa-id-card mr-2"></i>
+                                                <span id="generatedNICDisplay">NIC will be generated after registration</span>
+                                            </div>
+                                            <small class="text-muted">Note: NIC (National ID) is automatically generated by the system</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-success" onclick="addPatient()">
+                                            <i class="fa fa-user-plus mr-1"></i> Register Patient
+                                        </button>
+                                        <button type="reset" class="btn btn-secondary ml-2">
+                                            <i class="fa fa-refresh mr-1"></i> Reset Form
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
                         <h4>Patients List</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="patient-search" placeholder="Search patients..." onkeyup="filterTable('patient-search', 'patients-table-body')">
@@ -497,7 +633,8 @@
                                     <th>Gender</th>
                                     <th>Email</th>
                                     <th>Contact</th>
-                                    <th>National ID</th>
+                                    <th>Date of Birth</th>
+                                    <th>NIC (Auto-generated)</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-table-body">
@@ -950,6 +1087,18 @@
     <script>
         // Database simulation
         let database = {
+            patients: [
+                {pid: 1, fname: 'Ram', lname: 'Kumar', gender: 'Male', dob: '1990-05-15', email: 'ram@gmail.com', contact: '0771234567', address: '123 Main St, Colombo', emergencyContact: '0779876543', national_id: 'NIC123456789', password: 'ram123', cpassword: 'ram123'},
+                {pid: 2, fname: 'Alia', lname: 'Bhatt', gender: 'Female', dob: '1995-08-22', email: 'alia@gmail.com', contact: '0779876543', address: '456 Park Ave, Kandy', emergencyContact: '0771234567', national_id: 'NIC987654321', password: 'alia123', cpassword: 'alia123'},
+                {pid: 3, fname: 'Shahrukh', lname: 'Khan', gender: 'Male', dob: '1985-11-02', email: 'shahrukh@gmail.com', contact: '0712345678', address: '789 Beach Rd, Galle', emergencyContact: '0718765432', national_id: 'NIC111222333', password: 'shahrukh123', cpassword: 'shahrukh123'},
+                {pid: 4, fname: 'Kishan', lname: 'Lal', gender: 'Male', dob: '1978-03-30', email: 'kishan@gmail.com', contact: '0765432198', address: '321 Hill St, Negombo', emergencyContact: '0761234987', national_id: 'NIC444555666', password: 'kishan123', cpassword: 'kishan123'},
+                {pid: 5, fname: 'Gautam', lname: 'Shankararam', gender: 'Male', dob: '1992-07-18', email: 'gautam@gmail.com', contact: '0754321876', address: '654 River Rd, Jaffna', emergencyContact: '0756789123', national_id: 'NIC777888999', password: 'gautam123', cpassword: 'gautam123'},
+                {pid: 6, fname: 'Sushant', lname: 'Singh', gender: 'Male', dob: '1988-01-25', email: 'sushant@gmail.com', contact: '0787654321', address: '987 Lake View, Anuradhapura', emergencyContact: '0781234567', national_id: 'NIC123123123', password: 'sushant123', cpassword: 'sushant123'},
+                {pid: 7, fname: 'Nancy', lname: 'Deborah', gender: 'Female', dob: '1993-09-14', email: 'nancy@gmail.com', contact: '0723456789', address: '147 Temple Rd, Polonnaruwa', emergencyContact: '0729876543', national_id: 'NIC321321321', password: 'nancy123', cpassword: 'nancy123'},
+                {pid: 8, fname: 'Kenny', lname: 'Sebastian', gender: 'Male', dob: '1980-12-05', email: 'kenny@gmail.com', contact: '0745678901', address: '258 Market St, Trincomalee', emergencyContact: '0741098765', national_id: 'NIC456456456', password: 'kenny123', cpassword: 'kenny123'},
+                {pid: 9, fname: 'William', lname: 'Blake', gender: 'Male', dob: '1975-06-28', email: 'william@gmail.com', contact: '0798765432', address: '369 Garden Rd, Ratnapura', emergencyContact: '0792345678', national_id: 'NIC654654654', password: 'william123', cpassword: 'william123'},
+                {pid: 10, fname: 'Peter', lname: 'Norvig', gender: 'Male', dob: '1965-04-12', email: 'peter@gmail.com', contact: '0734567890', address: '741 Ocean Dr, Matara', emergencyContact: '0738901234', national_id: 'NIC789789789', password: 'peter123', cpassword: 'peter123'}
+            ],
             doctors: [
                 {id: 'DOC001', username: 'ashok', password: 'ashok123', email: 'ashok@gmail.com', spec: 'General', docFees: 500},
                 {id: 'DOC002', username: 'arun', password: 'arun123', email: 'arun@gmail.com', spec: 'Cardiologist', docFees: 600},
@@ -959,18 +1108,6 @@
                 {id: 'DOC006', username: 'Amit', password: 'amit123', email: 'amit@gmail.com', spec: 'Cardiologist', docFees: 1000},
                 {id: 'DOC007', username: 'Abbis', password: 'abbis123', email: 'abbis@gmail.com', spec: 'Neurologist', docFees: 1500},
                 {id: 'DOC008', username: 'Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', spec: 'Pediatrician', docFees: 450}
-            ],
-            patients: [
-                {pid: 1, fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', national_id: 'NIC123456789', password: 'ram123', cpassword: 'ram123'},
-                {pid: 2, fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', national_id: 'NIC987654321', password: 'alia123', cpassword: 'alia123'},
-                {pid: 3, fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', national_id: 'NIC111222333', password: 'shahrukh123', cpassword: 'shahrukh123'},
-                {pid: 4, fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', national_id: 'NIC444555666', password: 'kishan123', cpassword: 'kishan123'},
-                {pid: 5, fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', national_id: 'NIC777888999', password: 'gautam123', cpassword: 'gautam123'},
-                {pid: 6, fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', national_id: 'NIC123123123', password: 'sushant123', cpassword: 'sushant123'},
-                {pid: 7, fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', national_id: 'NIC321321321', password: 'nancy123', cpassword: 'nancy123'},
-                {pid: 8, fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', national_id: 'NIC456456456', password: 'kenny123', cpassword: 'kenny123'},
-                {pid: 9, fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', national_id: 'NIC654654654', password: 'william123', cpassword: 'william123'},
-                {pid: 10, fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', national_id: 'NIC789789789', password: 'peter123', cpassword: 'peter123'}
             ],
             appointments: [
                 {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 0},
@@ -1007,7 +1144,8 @@
                 {id: 3, room_no: '102', bed_no: '1', type: 'VIP', status: 'Available'},
                 {id: 4, room_no: '102', bed_no: '2', type: 'VIP', status: 'Occupied'},
                 {id: 5, room_no: '103', bed_no: '1', type: 'ICU', status: 'Available'}
-            ]
+            ],
+            nicCounter: 100000000 // Starting counter for NIC generation
         };
 
         // Current prescription being processed
@@ -1059,6 +1197,138 @@
             document.getElementById('total-staff').textContent = database.staff.length;
         }
 
+        // Function to populate patients table
+        function populatePatientsTable() {
+            const tbody = document.getElementById('patients-table-body');
+            tbody.innerHTML = '';
+            
+            database.patients.forEach(patient => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${patient.pid}</td>
+                    <td>${patient.fname}</td>
+                    <td>${patient.lname}</td>
+                    <td>${patient.gender}</td>
+                    <td>${patient.email}</td>
+                    <td>${patient.contact}</td>
+                    <td>${patient.dob || 'N/A'}</td>
+                    <td><span class="badge badge-info">${patient.national_id}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Function to generate unique NIC
+        function generateNIC() {
+            // Increment the NIC counter
+            database.nicCounter++;
+            
+            // Format the NIC with leading zeros to make it 12 digits total
+            const nicNumber = database.nicCounter.toString().padStart(9, '0');
+            
+            // Return NIC in format: NIC + 9 digits
+            return `NIC${nicNumber}`;
+        }
+
+        // Function to add a new patient
+        function addPatient() {
+            const form = document.getElementById('add-patient-form');
+            const formData = new FormData(form);
+            
+            // Get form values
+            const fname = formData.get('fname');
+            const lname = formData.get('lname');
+            const gender = formData.get('gender');
+            const dob = formData.get('dob');
+            const email = formData.get('email');
+            const contact = formData.get('contact');
+            const address = formData.get('address');
+            const emergencyContact = formData.get('emergencyContact');
+            const password = formData.get('password');
+            const cpassword = formData.get('cpassword');
+            
+            // Validate required fields
+            if (!fname || !lname || !gender || !dob || !email || !contact || !password || !cpassword) {
+                alert('Please fill in all required fields!');
+                return;
+            }
+            
+            // Validate password match
+            if (password !== cpassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+            
+            // Check if email already exists
+            const existingPatient = database.patients.find(p => p.email === email);
+            if (existingPatient) {
+                alert('A patient with this email already exists!');
+                return;
+            }
+            
+            // Generate new patient ID
+            const newPid = database.patients.length > 0 ? 
+                Math.max(...database.patients.map(p => p.pid)) + 1 : 1;
+            
+            // Generate NIC automatically
+            const generatedNIC = generateNIC();
+            
+            // Create new patient object
+            const newPatient = {
+                pid: newPid,
+                fname: fname,
+                lname: lname,
+                gender: gender,
+                dob: dob,
+                email: email,
+                contact: contact,
+                address: address || '',
+                emergencyContact: emergencyContact || '',
+                national_id: generatedNIC, // Auto-generated NIC
+                password: password,
+                cpassword: cpassword
+            };
+            
+            // Add to database
+            database.patients.push(newPatient);
+            
+            // Update UI
+            populatePatientsTable();
+            updateDashboardCounts();
+            
+            // Show generated NIC
+            document.getElementById('generatedNICDisplay').innerHTML = 
+                `<strong>Generated NIC:</strong> ${generatedNIC}`;
+            
+            // Reset form (but keep the generated NIC displayed)
+            form.reset();
+            document.getElementById('patientPasswordMessage').innerText = '';
+            
+            // Add to recent activity
+            addRecentActivity(`New patient registered: ${fname} ${lname} (NIC: ${generatedNIC})`);
+            
+            // Show success message
+            alert(`Patient registered successfully!\n\nPatient ID: ${newPid}\nGenerated NIC: ${generatedNIC}\n\nPlease note the NIC for future reference.`);
+            
+            // Scroll to patient list
+            document.getElementById('patients-table-body').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Function to check patient password match
+        function checkPatientPassword() {
+            let pass = document.getElementById('patientPassword').value;
+            let cpass = document.getElementById('patientConfirmPassword').value;
+            const message = document.getElementById('patientPasswordMessage');
+            
+            if (pass === cpass) {
+                message.style.color = '#28a745';
+                message.innerText = 'Passwords match';
+            } else {
+                message.style.color = '#dc3545';
+                message.innerText = 'Passwords do not match';
+            }
+        }
+
         // Function to populate doctors table
         function populateDoctorsTable() {
             const tbody = document.getElementById('doctors-table-body');
@@ -1076,26 +1346,6 @@
                         <button class="btn btn-sm btn-warning action-btn" onclick="editDoctor('${doctor.id}')">Edit</button>
                         <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctorPrompt('${doctor.id}')">Delete</button>
                     </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to populate patients table
-        function populatePatientsTable() {
-            const tbody = document.getElementById('patients-table-body');
-            tbody.innerHTML = '';
-            
-            database.patients.forEach(patient => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${patient.pid}</td>
-                    <td>${patient.fname}</td>
-                    <td>${patient.lname}</td>
-                    <td>${patient.gender}</td>
-                    <td>${patient.email}</td>
-                    <td>${patient.contact}</td>
-                    <td>${patient.national_id}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1798,6 +2048,11 @@
         // Setup form submissions
         function setupFormSubmissions() {
             // Prevent default form submission
+            document.getElementById('add-patient-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addPatient();
+            });
+            
             document.getElementById('add-doctor-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 addDoctor();
