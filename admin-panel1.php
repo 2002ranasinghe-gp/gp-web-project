@@ -24,6 +24,7 @@
             padding-top: 70px;
             background-color: #f5f7fb;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px; /* Increased base font size */
         }
         
         .bg-primary { 
@@ -32,7 +33,11 @@
         
         .navbar-brand { 
             font-weight: bold;
-            font-size: 1.5rem;
+            font-size: 1.8rem; /* Increased */
+        }
+        
+        .list-group-item {
+            font-size: 1.1rem; /* Increased */
         }
         
         .list-group-item.active {
@@ -54,11 +59,29 @@
         .table {
             width: 100%;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 1.1rem; /* Increased */
         }
         
         .table th {
             background-color: var(--primary);
             color: white;
+            font-size: 1.2rem; /* Increased */
+        }
+        
+        h3, h4, h5 {
+            font-weight: 600;
+        }
+        
+        h3 {
+            font-size: 2.2rem; /* Increased */
+        }
+        
+        h4 {
+            font-size: 1.8rem; /* Increased */
+        }
+        
+        h5 {
+            font-size: 1.5rem; /* Increased */
         }
         
         .dashboard-bg {
@@ -105,13 +128,13 @@
         }
         
         .card-title {
-            font-size: 1.2rem;
+            font-size: 1.3rem; /* Increased */
             margin-bottom: 10px;
             font-weight: 600;
         }
         
         .card-value {
-            font-size: 3.5rem; /* Increased from 2rem to 3.5rem */
+            font-size: 3.5rem; /* Increased */
             font-weight: bold;
         }
         
@@ -155,6 +178,7 @@
             cursor: pointer;
             text-decoration: none;
             color: var(--dark);
+            font-size: 1rem; /* Increased */
         }
         
         .quick-action-btn:hover {
@@ -166,7 +190,7 @@
         .status-badge {
             padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.9rem; /* Increased */
             font-weight: bold;
         }
         
@@ -183,6 +207,21 @@
         .status-cancelled {
             background-color: #ffebee;
             color: #c62828;
+        }
+        
+        .status-cancelled-patient {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .status-cancelled-doctor {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .status-cancelled-admin {
+            background-color: #e3f2fd;
+            color: #1565c0;
         }
         
         .status-available {
@@ -218,14 +257,11 @@
         .activity-item {
             padding: 10px 0;
             border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
+            font-size: 1rem; /* Increased */
         }
         
         .activity-time {
-            font-size: 0.8rem;
+            font-size: 0.9rem; /* Increased */
             color: var(--secondary);
         }
         
@@ -236,11 +272,82 @@
         
         .action-btn {
             margin: 2px;
+            font-size: 1rem; /* Increased */
         }
         
         .pharmacy-type-btn {
             width: 100%;
             margin-bottom: 10px;
+            font-size: 1.1rem; /* Increased */
+        }
+        
+        .form-control {
+            font-size: 1.1rem; /* Increased */
+        }
+        
+        label {
+            font-size: 1.1rem; /* Increased */
+            font-weight: 500;
+        }
+        
+        .btn {
+            font-size: 1.1rem; /* Increased */
+        }
+        
+        .modal-title {
+            font-size: 1.5rem; /* Increased */
+        }
+        
+        .modal-body {
+            font-size: 1.1rem; /* Increased */
+        }
+        
+        .patient-registration-card {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: linear-gradient(135deg, #2196f3, #21cbf3);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.3rem; /* Increased */
+        }
+        
+        .generated-nic {
+            background-color: #f0f8ff;
+            border: 1px solid #b3e0ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-top: 10px;
+            font-size: 1.2rem; /* Increased */
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-bar {
+            position: relative;
+        }
+        
+        .search-bar .form-control {
+            padding-right: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .search-bar .search-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1.2rem;
         }
         
         @media (max-width: 992px) {
@@ -250,6 +357,10 @@
             
             .card-value {
                 font-size: 2.8rem; /* Adjusted for medium screens */
+            }
+            
+            body {
+                font-size: 15px; /* Slightly smaller on tablets */
             }
         }
         
@@ -265,31 +376,18 @@
             .card-value {
                 font-size: 2.5rem; /* Adjusted for small screens */
             }
-        }
-        
-        /* New Styles for Patient Registration */
-        .patient-registration-card {
-            margin-bottom: 30px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .card-header-custom {
-            background: linear-gradient(135deg, #2196f3, #21cbf3);
-            color: white;
-            padding: 15px 20px;
-            font-weight: bold;
-        }
-        
-        .generated-nic {
-            background-color: #f0f8ff;
-            border: 1px solid #b3e0ff;
-            padding: 10px;
-            border-radius: 5px;
-            font-weight: bold;
-            color: #0066cc;
-            margin-top: 10px;
+            
+            body {
+                font-size: 14px; /* Slightly smaller on mobile */
+            }
+            
+            h3 {
+                font-size: 1.8rem;
+            }
+            
+            h4 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -473,12 +571,23 @@
                         </div>
                     </div>
 
-                    <!-- Doctors -->
+                    <!-- Doctors - Action column removed -->
                     <div class="tab-pane fade" id="doc-tab">
                         <h4>Doctors List</h4>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="doctor-search" placeholder="Search doctors..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('doctors-table-body', 'doctors')">Export</button>
+                        <div class="search-container">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="search-bar">
+                                        <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name or ID..." onkeyup="filterDoctors()">
+                                        <i class="fa fa-search search-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="exportDoctors()">
+                                        <i class="fa fa-download mr-2"></i>Export Doctors
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <table class="table table-hover table-bordered">
                             <thead>
@@ -487,8 +596,8 @@
                                     <th>Name</th>
                                     <th>Specialization</th>
                                     <th>Email</th>
-                                    <th>Fees</th>
-                                    <th>Actions</th>
+                                    <th>Fees (Rs.)</th>
+                                    <th>Contact Number</th>
                                 </tr>
                             </thead>
                             <tbody id="doctors-table-body">
@@ -655,22 +764,34 @@
                     <!-- Appointments -->
                     <div class="tab-pane fade" id="app-tab">
                         <h4>Appointments</h4>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('appointments-table-body', 'appointments')">Export</button>
+                        <div class="search-container">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="search-bar">
+                                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments by patient name, doctor name, or ID..." onkeyup="filterAppointments()">
+                                        <i class="fa fa-search search-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="exportAppointments()">
+                                        <i class="fa fa-download mr-2"></i>Export Appointments
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <table class="table table-hover table-bordered">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Appointment ID</th>
                                     <th>Patient ID</th>
                                     <th>Patient Name</th>
                                     <th>National ID</th>
                                     <th>Doctor</th>
-                                    <th>Fees</th>
+                                    <th>Fees (Rs.)</th>
                                     <th>Date</th>
                                     <th>Time</th>
                                     <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="appointments-table-body">
@@ -842,15 +963,19 @@
                                     <div class="card-body">
                                         <form id="add-doctor-form">
                                             <div class="form-group">
-                                                <label>Doctor ID</label>
+                                                <label>Doctor ID *</label>
                                                 <input type="text" name="doctorId" class="form-control" required>
                                             </div>
                                             <div class="form-group">
-                                                <label>Name</label>
+                                                <label>Name *</label>
                                                 <input type="text" name="doctor" class="form-control" onkeydown="return alphaOnly(event)" required>
                                             </div>
                                             <div class="form-group">
-                                                <label>Specialization</label>
+                                                <label>Contact Number *</label>
+                                                <input type="tel" name="doctorContact" class="form-control" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Specialization *</label>
                                                 <select name="special" class="form-control" required>
                                                     <option value="">Select Specialization</option>
                                                     <option value="General">General Physician</option>
@@ -863,20 +988,20 @@
                                                 </select>
                                             </div>
                                             <div class="form-group">
-                                                <label>Email</label>
+                                                <label>Email *</label>
                                                 <input type="email" name="demail" class="form-control" required>
                                             </div>
                                             <div class="form-group">
-                                                <label>Password</label>
+                                                <label>Password *</label>
                                                 <input type="password" id="dpassword" name="dpassword" class="form-control" required>
                                             </div>
                                             <div class="form-group">
-                                                <label>Confirm Password</label>
+                                                <label>Confirm Password *</label>
                                                 <input type="password" id="cdpassword" class="form-control" onkeyup="checkPassword()" required>
                                                 <small id="message"></small>
                                             </div>
                                             <div class="form-group">
-                                                <label>Fees (Rs.)</label>
+                                                <label>Fees (Rs.) *</label>
                                                 <input type="number" name="docFees" class="form-control" required>
                                             </div>
                                             <button type="button" class="btn btn-success btn-block" onclick="addDoctor()">Add Doctor</button>
@@ -993,6 +1118,50 @@
         </div>
     </div>
 
+    <!-- Cancel Appointment Modal -->
+    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog" aria-labelledby="cancelAppointmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelAppointmentModalLabel">Cancel Appointment</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="cancel-appointment-form">
+                        <div class="form-group">
+                            <label for="cancellationReason">Cancellation Reason</label>
+                            <textarea class="form-control" id="cancellationReason" rows="3" placeholder="Enter reason for cancellation"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Cancelled By</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByAdmin" value="admin" checked>
+                                    <label class="form-check-label" for="cancelledByAdmin">Admin</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByPatient" value="patient">
+                                    <label class="form-check-label" for="cancelledByPatient">Patient</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByDoctor" value="doctor">
+                                    <label class="form-check-label" for="cancelledByDoctor">Doctor</label>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="appointmentToCancelId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmCancelAppointment()">Cancel Appointment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Prescription Delivery Selection Modal -->
     <div class="modal fade" id="prescriptionDeliveryModal" tabindex="-1" role="dialog" aria-labelledby="prescriptionDeliveryModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -1009,7 +1178,7 @@
                         <i class="fa fa-mobile"></i> Send SMS to Patient
                     </button>
                     <button type="button" class="btn btn-warning pharmacy-type-btn" onclick="selectDeliveryMethod('external')">
-                        <i class="fa fa-medkit"></i> Send to External Pharmacy
+                        <i class="fa fa-medkit"></i> Send to Heth Care Hospital Pharmacy
                     </button>
                 </div>
             </div>
@@ -1046,35 +1215,36 @@
         </div>
     </div>
 
-    <!-- External Pharmacy Email Modal -->
-    <div class="modal fade" id="externalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="externalPharmacyModalLabel" aria-hidden="true">
+    <!-- Hospital Pharmacy Email Modal -->
+    <div class="modal fade" id="hospitalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="hospitalPharmacyModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="externalPharmacyModalLabel">Send to External Pharmacy</h5>
+                    <h5 class="modal-title" id="hospitalPharmacyModalLabel">Send to Heth Care Hospital Pharmacy</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form id="externalPharmacyForm">
+                    <form id="hospitalPharmacyForm">
                         <div class="form-group">
-                            <label for="externalRecipientEmail">Pharmacy Email Address</label>
-                            <input type="email" class="form-control" id="externalRecipientEmail" placeholder="Enter pharmacy email address">
+                            <label for="hospitalRecipientEmail">Pharmacy Email Address</label>
+                            <input type="email" class="form-control" id="hospitalRecipientEmail" value="helthcarepharmacypp1@gmail.com" readonly>
+                            <small class="text-muted">This email is automatically set to Heth Care Hospital Pharmacy</small>
                         </div>
                         <div class="form-group">
-                            <label for="externalEmailSubject">Subject</label>
-                            <input type="text" class="form-control" id="externalEmailSubject" value="Prescription from Heth Care Hospital">
+                            <label for="hospitalEmailSubject">Subject</label>
+                            <input type="text" class="form-control" id="hospitalEmailSubject" value="Prescription from Heth Care Hospital">
                         </div>
                         <div class="form-group">
-                            <label for="externalEmailMessage">Prescription Details</label>
-                            <textarea class="form-control" id="externalEmailMessage" rows="10" readonly></textarea>
+                            <label for="hospitalEmailMessage">Prescription Details</label>
+                            <textarea class="form-control" id="hospitalEmailMessage" rows="10" readonly></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" id="sendExternalEmailBtn">Send to External Pharmacy</button>
+                    <button type="button" class="btn btn-warning" id="sendHospitalEmailBtn">Send to Hospital Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1100,26 +1270,26 @@
                 {pid: 10, fname: 'Peter', lname: 'Norvig', gender: 'Male', dob: '1965-04-12', email: 'peter@gmail.com', contact: '0734567890', address: '741 Ocean Dr, Matara', emergencyContact: '0738901234', national_id: 'NIC789789789', password: 'peter123', cpassword: 'peter123'}
             ],
             doctors: [
-                {id: 'DOC001', username: 'ashok', password: 'ashok123', email: 'ashok@gmail.com', spec: 'General', docFees: 500},
-                {id: 'DOC002', username: 'arun', password: 'arun123', email: 'arun@gmail.com', spec: 'Cardiologist', docFees: 600},
-                {id: 'DOC003', username: 'Dinesh', password: 'dinesh123', email: 'dinesh@gmail.com', spec: 'General', docFees: 700},
-                {id: 'DOC004', username: 'Ganesh', password: 'ganesh123', email: 'ganesh@gmail.com', spec: 'Pediatrician', docFees: 550},
-                {id: 'DOC005', username: 'Kumar', password: 'kumar123', email: 'kumar@gmail.com', spec: 'Pediatrician', docFees: 800},
-                {id: 'DOC006', username: 'Amit', password: 'amit123', email: 'amit@gmail.com', spec: 'Cardiologist', docFees: 1000},
-                {id: 'DOC007', username: 'Abbis', password: 'abbis123', email: 'abbis@gmail.com', spec: 'Neurologist', docFees: 1500},
-                {id: 'DOC008', username: 'Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', spec: 'Pediatrician', docFees: 450}
+                {id: 'DOC001', username: 'Ashok', password: 'ashok123', email: 'ashok@gmail.com', contact: '0771110000', spec: 'General', docFees: 500},
+                {id: 'DOC002', username: 'Arun', password: 'arun123', email: 'arun@gmail.com', contact: '0772220000', spec: 'Cardiologist', docFees: 600},
+                {id: 'DOC003', username: 'Dinesh', password: 'dinesh123', email: 'dinesh@gmail.com', contact: '0773330000', spec: 'General', docFees: 700},
+                {id: 'DOC004', username: 'Ganesh', password: 'ganesh123', email: 'ganesh@gmail.com', contact: '0774440000', spec: 'Pediatrician', docFees: 550},
+                {id: 'DOC005', username: 'Kumar', password: 'kumar123', email: 'kumar@gmail.com', contact: '0775550000', spec: 'Pediatrician', docFees: 800},
+                {id: 'DOC006', username: 'Amit', password: 'amit123', email: 'amit@gmail.com', contact: '0776660000', spec: 'Cardiologist', docFees: 1000},
+                {id: 'DOC007', username: 'Abbis', password: 'abbis123', email: 'abbis@gmail.com', contact: '0777770000', spec: 'Neurologist', docFees: 1500},
+                {id: 'DOC008', username: 'Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', contact: '0778880000', spec: 'Pediatrician', docFees: 450}
             ],
             appointments: [
-                {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 2, pid: 2, national_id: 'NIC987654321', fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', doctor: 'Ganesh', docFees: 550, appdate: '2025-10-30', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 3, pid: 3, national_id: 'NIC111222333', fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', doctor: 'Dinesh', docFees: 700, appdate: '2025-11-01', apptime: '09:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 4, pid: 4, national_id: 'NIC444555666', fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', doctor: 'Amit', docFees: 1000, appdate: '2025-11-02', apptime: '14:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 5, pid: 5, national_id: 'NIC777888999', fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', doctor: 'Kumar', docFees: 800, appdate: '2025-11-03', apptime: '16:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 6, pid: 6, national_id: 'NIC123123123', fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', doctor: 'Abbis', docFees: 1500, appdate: '2025-11-04', apptime: '12:00:00', userStatus: 1, doctorStatus: 0},
-                {ID: 7, pid: 7, national_id: 'NIC321321321', fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', doctor: 'Tiwary', docFees: 450, appdate: '2025-11-05', apptime: '10:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 8, pid: 8, national_id: 'NIC456456456', fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', doctor: 'Ganesh', docFees: 550, appdate: '2025-11-06', apptime: '11:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 9, pid: 9, national_id: 'NIC654654654', fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', doctor: 'Kumar', docFees: 800, appdate: '2025-11-07', apptime: '15:00:00', userStatus: 1, doctorStatus: 1},
-                {ID: 10, pid: 10, national_id: 'NIC789789789', fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', doctor: 'Ganesh', docFees: 500, appdate: '2025-11-08', apptime: '09:00:00', userStatus: 1, doctorStatus: 1}
+                {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 2, pid: 2, national_id: 'NIC987654321', fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', doctor: 'Ganesh', docFees: 550, appdate: '2025-10-30', apptime: '11:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 3, pid: 3, national_id: 'NIC111222333', fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', doctor: 'Dinesh', docFees: 700, appdate: '2025-11-01', apptime: '09:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 4, pid: 4, national_id: 'NIC444555666', fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', doctor: 'Amit', docFees: 1000, appdate: '2025-11-02', apptime: '14:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 5, pid: 5, national_id: 'NIC777888999', fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', doctor: 'Kumar', docFees: 800, appdate: '2025-11-03', apptime: '16:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 6, pid: 6, national_id: 'NIC123123123', fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', doctor: 'Abbis', docFees: 1500, appdate: '2025-11-04', apptime: '12:00:00', userStatus: 0, doctorStatus: 1, appointmentStatus: 'cancelled', cancelledBy: 'patient', cancellationReason: 'Patient not feeling well'},
+                {ID: 7, pid: 7, national_id: 'NIC321321321', fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', doctor: 'Tiwary', docFees: 450, appdate: '2025-11-05', apptime: '10:00:00', userStatus: 1, doctorStatus: 0, appointmentStatus: 'cancelled', cancelledBy: 'doctor', cancellationReason: 'Doctor emergency'},
+                {ID: 8, pid: 8, national_id: 'NIC456456456', fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', doctor: 'Ganesh', docFees: 550, appdate: '2025-11-06', apptime: '11:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 9, pid: 9, national_id: 'NIC654654654', fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', doctor: 'Kumar', docFees: 800, appdate: '2025-11-07', apptime: '15:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
+                {ID: 10, pid: 10, national_id: 'NIC789789789', fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', doctor: 'Ganesh', docFees: 500, appdate: '2025-11-08', apptime: '09:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''}
             ],
             prescriptions: [
                 {id: 1, doctor: 'Ganesh', pid: 1, ID: 1, fname: 'Ram', lname: 'Kumar', national_id: 'NIC123456789', appdate: '2025-10-29', apptime: '10:00:00', disease: 'Fever', allergy: 'None', prescription: 'Take paracetamol 500mg twice daily', emailStatus: 'Not Sent'},
@@ -1151,6 +1321,7 @@
         // Current prescription being processed
         let currentPrescriptionId = null;
         let currentPatientContact = '';
+        let currentAppointmentIdToCancel = null;
 
         // Initialize dashboard with data
         document.addEventListener('DOMContentLoaded', function() {
@@ -1329,7 +1500,7 @@
             }
         }
 
-        // Function to populate doctors table
+        // Function to populate doctors table (WITHOUT actions column)
         function populateDoctorsTable() {
             const tbody = document.getElementById('doctors-table-body');
             tbody.innerHTML = '';
@@ -1342,13 +1513,61 @@
                     <td>${doctor.spec}</td>
                     <td>${doctor.email}</td>
                     <td>Rs. ${doctor.docFees}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editDoctor('${doctor.id}')">Edit</button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctorPrompt('${doctor.id}')">Delete</button>
-                    </td>
+                    <td>${doctor.contact || 'N/A'}</td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Function to filter doctors by name or ID
+        function filterDoctors() {
+            const input = document.getElementById('doctor-search');
+            const filter = input.value.toLowerCase();
+            const tbody = document.getElementById('doctors-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                // Check Doctor ID (first cell) and Name (second cell)
+                if (cells.length > 1) {
+                    const doctorId = cells[0].textContent || cells[0].innerText;
+                    const doctorName = cells[1].textContent || cells[1].innerText;
+                    const specialization = cells[2].textContent || cells[2].innerText;
+                    
+                    if (doctorId.toLowerCase().includes(filter) || 
+                        doctorName.toLowerCase().includes(filter) ||
+                        specialization.toLowerCase().includes(filter)) {
+                        found = true;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+
+        // Function to export doctors
+        function exportDoctors() {
+            exportTable('doctors-table-body', 'doctors');
+        }
+
+        // Function to view doctor details
+        function viewDoctorDetails(doctorId) {
+            const doctor = database.doctors.find(d => d.id === doctorId);
+            
+            if (doctor) {
+                const message = `
+Doctor Details:
+ID: ${doctor.id}
+Name: ${doctor.username}
+Specialization: ${doctor.spec}
+Email: ${doctor.email}
+Contact: ${doctor.contact || 'N/A'}
+Fees: Rs. ${doctor.docFees}
+                `;
+                alert(message);
+            }
         }
 
         // Function to populate appointments table
@@ -1357,11 +1576,23 @@
             tbody.innerHTML = '';
             
             database.appointments.forEach(appointment => {
-                const status = appointment.doctorStatus === 1 ? 
-                    (appointment.userStatus === 1 ? 'Active' : 'Cancelled by Patient') : 
-                    'Cancelled by Doctor';
+                let status, statusClass;
                 
-                const statusClass = status === 'Active' ? 'status-active' : 'status-cancelled';
+                if (appointment.appointmentStatus === 'cancelled') {
+                    if (appointment.cancelledBy === 'patient') {
+                        status = 'Cancelled by Patient';
+                        statusClass = 'status-cancelled-patient';
+                    } else if (appointment.cancelledBy === 'doctor') {
+                        status = 'Cancelled by Doctor';
+                        statusClass = 'status-cancelled-doctor';
+                    } else if (appointment.cancelledBy === 'admin') {
+                        status = 'Cancelled by Admin';
+                        statusClass = 'status-cancelled-admin';
+                    }
+                } else {
+                    status = 'Active';
+                    statusClass = 'status-active';
+                }
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1374,9 +1605,150 @@
                     <td>${appointment.appdate}</td>
                     <td>${appointment.apptime}</td>
                     <td><span class="status-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        ${appointment.appointmentStatus === 'active' ? 
+                            `<button class="btn btn-sm btn-danger action-btn" onclick="cancelAppointment(${appointment.ID})">
+                                <i class="fa fa-times"></i> Cancel
+                            </button>` : 
+                            `<button class="btn btn-sm btn-secondary action-btn" disabled>
+                                <i class="fa fa-times"></i> Cancelled
+                            </button>`
+                        }
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewAppointmentDetails(${appointment.ID})">
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Function to filter appointments
+        function filterAppointments() {
+            const input = document.getElementById('appointment-search');
+            const filter = input.value.toLowerCase();
+            const tbody = document.getElementById('appointments-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                // Check multiple cells for search
+                if (cells.length > 3) {
+                    const appointmentId = cells[0].textContent || cells[0].innerText;
+                    const patientName = cells[2].textContent || cells[2].innerText;
+                    const doctorName = cells[4].textContent || cells[4].innerText;
+                    const patientId = cells[1].textContent || cells[1].innerText;
+                    
+                    if (appointmentId.toLowerCase().includes(filter) || 
+                        patientName.toLowerCase().includes(filter) ||
+                        doctorName.toLowerCase().includes(filter) ||
+                        patientId.toLowerCase().includes(filter)) {
+                        found = true;
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+
+        // Function to export appointments
+        function exportAppointments() {
+            exportTable('appointments-table-body', 'appointments');
+        }
+
+        // Function to view appointment details
+        function viewAppointmentDetails(appointmentId) {
+            const appointment = database.appointments.find(a => a.ID === appointmentId);
+            
+            if (appointment) {
+                let status;
+                if (appointment.appointmentStatus === 'cancelled') {
+                    if (appointment.cancelledBy === 'patient') {
+                        status = 'Cancelled by Patient';
+                    } else if (appointment.cancelledBy === 'doctor') {
+                        status = 'Cancelled by Doctor';
+                    } else if (appointment.cancelledBy === 'admin') {
+                        status = 'Cancelled by Admin';
+                    }
+                } else {
+                    status = 'Active';
+                }
+                
+                const message = `
+Appointment Details:
+ID: ${appointment.ID}
+Patient: ${appointment.fname} ${appointment.lname}
+Patient ID: ${appointment.pid}
+National ID: ${appointment.national_id}
+Doctor: ${appointment.doctor}
+Fees: Rs. ${appointment.docFees}
+Date: ${appointment.appdate}
+Time: ${appointment.apptime}
+Status: ${status}
+${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellationReason}` : ''}
+                `;
+                alert(message);
+            }
+        }
+
+        // Function to cancel appointment
+        function cancelAppointment(appointmentId) {
+            currentAppointmentIdToCancel = appointmentId;
+            
+            // Reset form
+            document.getElementById('cancellationReason').value = '';
+            document.getElementById('cancelledByAdmin').checked = true;
+            
+            // Show modal
+            $('#cancelAppointmentModal').modal('show');
+        }
+
+        // Function to confirm appointment cancellation
+        function confirmCancelAppointment() {
+            if (!currentAppointmentIdToCancel) return;
+            
+            const reason = document.getElementById('cancellationReason').value;
+            const cancelledBy = document.querySelector('input[name="cancelledBy"]:checked').value;
+            
+            // Find appointment
+            const appointmentIndex = database.appointments.findIndex(a => a.ID === currentAppointmentIdToCancel);
+            
+            if (appointmentIndex !== -1) {
+                // Update appointment
+                database.appointments[appointmentIndex].appointmentStatus = 'cancelled';
+                database.appointments[appointmentIndex].cancelledBy = cancelledBy;
+                database.appointments[appointmentIndex].cancellationReason = reason;
+                
+                // Update status fields based on who cancelled
+                if (cancelledBy === 'patient') {
+                    database.appointments[appointmentIndex].userStatus = 0;
+                } else if (cancelledBy === 'doctor') {
+                    database.appointments[appointmentIndex].doctorStatus = 0;
+                } else if (cancelledBy === 'admin') {
+                    // Admin cancellation - mark as cancelled by admin
+                    database.appointments[appointmentIndex].userStatus = 0;
+                }
+                
+                // Update UI
+                populateAppointmentsTable();
+                populateTodayAppointments();
+                updateDashboardCounts();
+                
+                // Close modal
+                $('#cancelAppointmentModal').modal('hide');
+                
+                // Add to recent activity
+                const appointment = database.appointments[appointmentIndex];
+                addRecentActivity(`Appointment cancelled: ID ${appointment.ID} (${appointment.fname} ${appointment.lname} with Dr. ${appointment.doctor}) - Cancelled by ${cancelledBy}`);
+                
+                // Show success message
+                alert(`Appointment ID ${currentAppointmentIdToCancel} has been cancelled successfully!`);
+                
+                // Reset
+                currentAppointmentIdToCancel = null;
+            }
         }
 
         // Function to populate prescriptions table
@@ -1393,9 +1765,9 @@
                 } else if (prescription.emailStatus === 'SMS Sent') {
                     statusClass = 'status-sms-sent';
                     statusText = 'SMS Sent';
-                } else if (prescription.emailStatus === 'External') {
+                } else if (prescription.emailStatus === 'Hospital Pharmacy') {
                     statusClass = 'status-sent-external';
-                    statusText = 'Sent to External';
+                    statusText = 'Sent to Hospital Pharmacy';
                 }
                 
                 const row = document.createElement('tr');
@@ -1442,7 +1814,7 @@
             });
         }
 
-        // Function to populate staff table (including doctors)
+        // Function to populate staff table (including doctors) - WITH actions column
         function populateStaffTable() {
             const tbody = document.getElementById('staff-table-body');
             tbody.innerHTML = '';
@@ -1455,10 +1827,17 @@
                     <td>${doctor.username}</td>
                     <td><span class="badge badge-primary">Doctor (${doctor.spec})</span></td>
                     <td>${doctor.email}</td>
-                    <td>Rs. ${doctor.docFees}</td>
+                    <td>${doctor.contact || 'Rs. ' + doctor.docFees}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editDoctor('${doctor.id}')">Edit</button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctorPrompt('${doctor.id}')">Delete</button>
+                        <button class="btn btn-sm btn-warning action-btn" onclick="editDoctorFromStaff('${doctor.id}')">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctorPrompt('${doctor.id}')">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewDoctorDetails('${doctor.id}')">
+                            <i class="fa fa-eye"></i> View
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -1480,6 +1859,48 @@
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Function to edit doctor from staff management
+        function editDoctorFromStaff(doctorId) {
+            const doctor = database.doctors.find(d => d.id === doctorId);
+            
+            if (doctor) {
+                // Create a modal or form for editing
+                const newName = prompt('Edit doctor name:', doctor.username);
+                if (newName !== null) {
+                    const oldName = doctor.username;
+                    doctor.username = newName;
+                    populateDoctorsTable();
+                    populateStaffTable();
+                    populateDoctorSelect();
+                    addRecentActivity(`Doctor edited: ${oldName} name changed to ${newName} (ID: ${doctorId})`);
+                }
+                
+                const newContact = prompt('Edit contact number:', doctor.contact || '');
+                if (newContact !== null) {
+                    doctor.contact = newContact;
+                    populateDoctorsTable();
+                    populateStaffTable();
+                }
+                
+                const newSpec = prompt('Edit specialization:', doctor.spec);
+                if (newSpec !== null) {
+                    doctor.spec = newSpec;
+                    populateDoctorsTable();
+                    populateStaffTable();
+                    populateDoctorSelect();
+                }
+                
+                const newFees = prompt('Edit fees:', doctor.docFees);
+                if (newFees !== null) {
+                    doctor.docFees = parseInt(newFees);
+                    populateDoctorsTable();
+                    populateStaffTable();
+                }
+                
+                alert('Doctor updated successfully!');
+            }
         }
 
         // Function to populate schedules table
@@ -1569,11 +1990,23 @@
             }
             
             todayAppointments.forEach(appointment => {
-                const status = appointment.doctorStatus === 1 ? 
-                    (appointment.userStatus === 1 ? 'Active' : 'Cancelled by Patient') : 
-                    'Cancelled by Doctor';
+                let status, statusClass;
                 
-                const statusClass = status === 'Active' ? 'status-active' : 'status-cancelled';
+                if (appointment.appointmentStatus === 'cancelled') {
+                    if (appointment.cancelledBy === 'patient') {
+                        status = 'Cancelled by Patient';
+                        statusClass = 'status-cancelled-patient';
+                    } else if (appointment.cancelledBy === 'doctor') {
+                        status = 'Cancelled by Doctor';
+                        statusClass = 'status-cancelled-doctor';
+                    } else if (appointment.cancelledBy === 'admin') {
+                        status = 'Cancelled by Admin';
+                        statusClass = 'status-cancelled-admin';
+                    }
+                } else {
+                    status = 'Active';
+                    statusClass = 'status-active';
+                }
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1796,6 +2229,7 @@
                 username: formData.get('doctor'),
                 password: password,
                 email: formData.get('demail'),
+                contact: formData.get('doctorContact'),
                 spec: formData.get('special'),
                 docFees: parseInt(formData.get('docFees'))
             };
@@ -1894,39 +2328,6 @@
                     
                     alert('Doctor deleted successfully!');
                 }
-            }
-        }
-
-        // Function to edit doctor
-        function editDoctor(doctorId) {
-            const doctor = database.doctors.find(d => d.id === doctorId);
-            if (doctor) {
-                const newName = prompt('Edit doctor name:', doctor.username);
-                if (newName) {
-                    const oldName = doctor.username;
-                    doctor.username = newName;
-                    populateDoctorsTable();
-                    populateStaffTable();
-                    populateDoctorSelect();
-                    addRecentActivity(`Doctor edited: ${oldName} name changed to ${newName} (ID: ${doctorId})`);
-                }
-                
-                const newSpec = prompt('Edit specialization:', doctor.spec);
-                if (newSpec) {
-                    doctor.spec = newSpec;
-                    populateDoctorsTable();
-                    populateStaffTable();
-                    populateDoctorSelect();
-                }
-                
-                const newFees = prompt('Edit fees:', doctor.docFees);
-                if (newFees) {
-                    doctor.docFees = parseInt(newFees);
-                    populateDoctorsTable();
-                    populateStaffTable();
-                }
-                
-                alert('Doctor updated successfully!');
             }
         }
 
@@ -2076,8 +2477,8 @@
 
         // Setup email functionality
         function setupEmailFunctionality() {
-            document.getElementById('sendExternalEmailBtn').addEventListener('click', function() {
-                sendEmailToExternalPharmacy();
+            document.getElementById('sendHospitalEmailBtn').addEventListener('click', function() {
+                sendEmailToHospitalPharmacy();
             });
         }
 
@@ -2115,7 +2516,7 @@
                 
                 // Store the message for use in both modals
                 document.getElementById('smsMessage').value = message;
-                document.getElementById('externalEmailMessage').value = formatEmailMessage(prescription);
+                document.getElementById('hospitalEmailMessage').value = formatEmailMessage(prescription);
                 
                 // Show delivery selection modal
                 $('#prescriptionDeliveryModal').modal('show');
@@ -2129,7 +2530,7 @@
             if (method === 'sms') {
                 $('#smsToPatientModal').modal('show');
             } else if (method === 'external') {
-                $('#externalPharmacyModal').modal('show');
+                $('#hospitalPharmacyModal').modal('show');
             }
         }
 
@@ -2203,14 +2604,14 @@ Status: ${prescription.emailStatus}
             }
         }
 
-        // Function to send email to external pharmacy
-        function sendEmailToExternalPharmacy() {
+        // Function to send email to hospital pharmacy
+        function sendEmailToHospitalPharmacy() {
             if (!currentPrescriptionId) return;
             
-            const pharmacyEmail = document.getElementById('externalRecipientEmail').value;
+            const pharmacyEmail = document.getElementById('hospitalRecipientEmail').value;
             
             if (!pharmacyEmail) {
-                alert('Please enter a valid pharmacy email address.');
+                alert('Pharmacy email is not set.');
                 return;
             }
             
@@ -2218,22 +2619,19 @@ Status: ${prescription.emailStatus}
             
             if (prescription) {
                 // Update prescription status
-                prescription.emailStatus = 'External';
+                prescription.emailStatus = 'Hospital Pharmacy';
                 
                 // Update the UI
                 populatePrescriptionsTable();
                 
                 // Show success message
-                alert(`Prescription sent to ${pharmacyEmail} successfully!`);
+                alert(`Prescription sent to Heth Care Hospital Pharmacy (${pharmacyEmail}) successfully!`);
                 
                 // Close the modal
-                $('#externalPharmacyModal').modal('hide');
+                $('#hospitalPharmacyModal').modal('hide');
                 
                 // Add to recent activity
-                addRecentActivity(`Prescription sent to External Pharmacy (${pharmacyEmail}) - Patient: ${prescription.fname} ${prescription.lname}`);
-                
-                // Reset the email field
-                document.getElementById('externalRecipientEmail').value = '';
+                addRecentActivity(`Prescription sent to Heth Care Hospital Pharmacy - Patient: ${prescription.fname} ${prescription.lname}`);
             }
         }
 
