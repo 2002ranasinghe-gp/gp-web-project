@@ -76,78 +76,87 @@
         .dashboard-content {
             position: relative;
             z-index: 1;
-            padding: 20px;
+            padding: 15px;
         }
         
         .dash-card {
-            height: 180px;
+            height: 150px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 15px;
+            border-radius: 12px;
             transition: transform 0.3s, box-shadow 0.3s;
             position: relative;
             overflow: hidden;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border: none;
         }
         
         .dash-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
         }
         
         .dash-icon {
-            width: 50px;
-            margin-bottom: 10px;
+            width: 40px;
+            margin-bottom: 8px;
             filter: brightness(0) invert(1);
         }
         
         .card-title {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+            font-size: 1rem;
+            margin-bottom: 8px;
             font-weight: 600;
+            text-align: center;
         }
         
         .card-value {
-            font-size: 3.5rem; /* Increased from 2rem to 3.5rem */
+            font-size: 2.2rem;
             font-weight: bold;
+            line-height: 1.2;
         }
         
         .stats-card {
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
             color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.08);
         }
         
         .stats-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
         }
         
         .chart-container {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+        }
+        
+        .chart-container h5 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: 600;
         }
         
         .quick-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 15px;
         }
         
         .quick-action-btn {
             flex: 1;
-            min-width: 120px;
-            padding: 10px;
-            border-radius: 8px;
+            min-width: 110px;
+            padding: 8px;
+            border-radius: 6px;
             background: white;
             border: 1px solid #e0e0e0;
             text-align: center;
@@ -155,6 +164,7 @@
             cursor: pointer;
             text-decoration: none;
             color: var(--dark);
+            font-size: 0.85rem;
         }
         
         .quick-action-btn:hover {
@@ -163,10 +173,15 @@
             text-decoration: none;
         }
         
+        .quick-action-btn i {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
         .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.75rem;
             font-weight: bold;
         }
         
@@ -211,13 +226,14 @@
         }
         
         .recent-activity {
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
         }
         
         .activity-item {
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #e0e0e0;
+            font-size: 0.9rem;
         }
         
         .activity-item:last-child {
@@ -225,7 +241,7 @@
         }
         
         .activity-time {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--secondary);
         }
         
@@ -236,25 +252,72 @@
         
         .action-btn {
             margin: 2px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
         }
         
         .pharmacy-type-btn {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        h4 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+        
+        h5 {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
         }
         
         @media (max-width: 992px) {
             .dash-card {
-                width: 48% !important;
+                height: 140px;
             }
             
             .card-value {
-                font-size: 2.8rem; /* Adjusted for medium screens */
+                font-size: 1.8rem;
+            }
+            
+            .card-title {
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-content {
+                padding: 10px;
+            }
+            
+            .dash-card {
+                height: 130px;
+                margin-bottom: 10px;
+            }
+            
+            .card-value {
+                font-size: 1.6rem;
+            }
+            
+            .quick-action-btn {
+                min-width: 90px;
+                padding: 6px;
+                font-size: 0.8rem;
+            }
+            
+            .chart-container {
+                padding: 12px;
             }
         }
         
         @media (max-width: 576px) {
             .dash-card {
+                height: 120px;
                 width: 100% !important;
             }
             
@@ -263,33 +326,75 @@
             }
             
             .card-value {
-                font-size: 2.5rem; /* Adjusted for small screens */
+                font-size: 1.5rem;
+            }
+            
+            .dashboard-content h4 {
+                font-size: 1.2rem;
             }
         }
         
         /* New Styles for Patient Registration */
         .patient-registration-card {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border: 1px solid #e0e0e0;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
         }
         
         .card-header-custom {
             background: linear-gradient(135deg, #2196f3, #21cbf3);
             color: white;
-            padding: 15px 20px;
+            padding: 12px 15px;
             font-weight: bold;
+            font-size: 1rem;
         }
         
         .generated-nic {
             background-color: #f0f8ff;
             border: 1px solid #b3e0ff;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
             font-weight: bold;
             color: #0066cc;
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+        
+        /* Fixed Pharmacy Email Display */
+        .fixed-pharmacy-email {
+            background-color: #fff3e0;
+            border: 1px solid #ffcc80;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .fixed-pharmacy-email i {
+            color: #ff9800;
+            margin-right: 8px;
+        }
+        
+        /* SMS Preview */
+        .sms-preview {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            padding: 10px;
+            border-radius: 5px;
             margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+        }
+        
+        /* Updated Dashboard Title */
+        .dashboard-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -315,7 +420,7 @@
     </nav>
 
     <div class="container-fluid">
-        <h3 class="text-center mb-4">ADMIN PANEL</h3>
+        <h3 class="text-center mb-4" style="font-size: 1.5rem;">ADMIN PANEL</h3>
         <div class="row">
             <div class="col-md-3">
                 <div class="list-group" id="list-tab" role="tablist">
@@ -355,39 +460,39 @@
                     <div class="tab-pane fade show active" id="dash-tab">
                         <div class="dashboard-bg"></div>
                         <div class="dashboard-content">
-                            <h4 class="mb-4 text-dark">Dashboard Overview</h4>
+                            <h4 class="dashboard-title">Dashboard Overview</h4>
                             
                             <!-- Quick Actions -->
                             <div class="quick-actions">
                                 <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
-                                    <i class="fa fa-user-md fa-2x mb-2"></i>
+                                    <i class="fa fa-user-md"></i>
                                     <div>Add Doctor</div>
                                 </a>
                                 <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
-                                    <i class="fa fa-id-badge fa-2x mb-2"></i>
+                                    <i class="fa fa-id-badge"></i>
                                     <div>Manage Staff</div>
                                 </a>
                                 <a class="quick-action-btn" data-toggle="list" href="#app-tab">
-                                    <i class="fa fa-calendar fa-2x mb-2"></i>
+                                    <i class="fa fa-calendar"></i>
                                     <div>View Appointments</div>
                                 </a>
                                 <a class="quick-action-btn" data-toggle="list" href="#pay-tab">
-                                    <i class="fa fa-credit-card fa-2x mb-2"></i>
+                                    <i class="fa fa-credit-card"></i>
                                     <div>Payments</div>
                                 </a>
                                 <a class="quick-action-btn" data-toggle="list" href="#room-tab">
-                                    <i class="fa fa-bed fa-2x mb-2"></i>
+                                    <i class="fa fa-bed"></i>
                                     <div>Rooms/Beds</div>
                                 </a>
                                 <a class="quick-action-btn" data-toggle="modal" data-target="#deleteDoctorModal">
-                                    <i class="fa fa-trash fa-2x mb-2"></i>
+                                    <i class="fa fa-trash"></i>
                                     <div>Delete Doctor</div>
                                 </a>
                             </div>
                             
                             <!-- Stats Cards -->
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-3 col-sm-6">
                                     <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #1976d2);">
                                         <i class="fa fa-user-md dash-icon"></i>
                                         <div class="card-body text-center">
@@ -396,7 +501,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-3 col-sm-6">
                                     <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #2196f3);">
                                         <i class="fa fa-users dash-icon"></i>
                                         <div class="card-body text-center">
@@ -405,7 +510,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-3 col-sm-6">
                                     <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #42a5f5);">
                                         <i class="fa fa-calendar dash-icon"></i>
                                         <div class="card-body text-center">
@@ -414,7 +519,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-3 col-sm-6">
                                     <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #64b5f6);">
                                         <i class="fa fa-id-badge dash-icon"></i>
                                         <div class="card-body text-center">
@@ -426,23 +531,23 @@
                             </div>
                             
                             <!-- Charts and Additional Stats -->
-                            <div class="row mt-4">
+                            <div class="row mt-3">
                                 <div class="col-md-8">
                                     <div class="chart-container">
                                         <h5>Appointments Overview</h5>
-                                        <canvas id="appointmentsChart" height="250"></canvas>
+                                        <canvas id="appointmentsChart" height="200"></canvas>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="chart-container">
                                         <h5>Department Distribution</h5>
-                                        <canvas id="departmentChart" height="250"></canvas>
+                                        <canvas id="departmentChart" height="200"></canvas>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Recent Activity -->
-                            <div class="row mt-4">
+                            <div class="row mt-3">
                                 <div class="col-md-6">
                                     <div class="chart-container">
                                         <h5>Recent Activity</h5>
@@ -454,7 +559,7 @@
                                 <div class="col-md-6">
                                     <div class="chart-container">
                                         <h5>Today's Appointments</h5>
-                                        <table class="table table-hover">
+                                        <table class="table table-sm table-hover">
                                             <thead>
                                                 <tr>
                                                     <th>Time</th>
@@ -478,9 +583,9 @@
                         <h4>Doctors List</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="doctor-search" placeholder="Search doctors..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('doctors-table-body', 'doctors')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('doctors-table-body', 'doctors')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>Doctor ID</th>
@@ -496,7 +601,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -519,13 +624,13 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientFirstName">First Name *</label>
-                                                <input type="text" class="form-control" id="patientFirstName" name="fname" required>
+                                                <input type="text" class="form-control form-control-sm" id="patientFirstName" name="fname" required>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientLastName">Last Name *</label>
-                                                <input type="text" class="form-control" id="patientLastName" name="lname" required>
+                                                <input type="text" class="form-control form-control-sm" id="patientLastName" name="lname" required>
                                             </div>
                                         </div>
                                     </div>
@@ -534,7 +639,7 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientGender">Gender *</label>
-                                                <select class="form-control" id="patientGender" name="gender" required>
+                                                <select class="form-control form-control-sm" id="patientGender" name="gender" required>
                                                     <option value="">Select Gender</option>
                                                     <option value="Male">Male</option>
                                                     <option value="Female">Female</option>
@@ -545,7 +650,7 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientDOB">Date of Birth *</label>
-                                                <input type="date" class="form-control" id="patientDOB" name="dob" required>
+                                                <input type="date" class="form-control form-control-sm" id="patientDOB" name="dob" required>
                                             </div>
                                         </div>
                                     </div>
@@ -554,13 +659,13 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientEmail">Email Address *</label>
-                                                <input type="email" class="form-control" id="patientEmail" name="email" required>
+                                                <input type="email" class="form-control form-control-sm" id="patientEmail" name="email" required>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientContact">Contact Number *</label>
-                                                <input type="tel" class="form-control" id="patientContact" name="contact" required>
+                                                <input type="tel" class="form-control form-control-sm" id="patientContact" name="contact" required>
                                             </div>
                                         </div>
                                     </div>
@@ -569,13 +674,13 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientAddress">Address</label>
-                                                <textarea class="form-control" id="patientAddress" name="address" rows="2"></textarea>
+                                                <textarea class="form-control form-control-sm" id="patientAddress" name="address" rows="2"></textarea>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientEmergencyContact">Emergency Contact</label>
-                                                <input type="tel" class="form-control" id="patientEmergencyContact" name="emergencyContact">
+                                                <input type="tel" class="form-control form-control-sm" id="patientEmergencyContact" name="emergencyContact">
                                             </div>
                                         </div>
                                     </div>
@@ -584,13 +689,13 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientPassword">Password *</label>
-                                                <input type="password" class="form-control" id="patientPassword" name="password" required>
+                                                <input type="password" class="form-control form-control-sm" id="patientPassword" name="password" required>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="patientConfirmPassword">Confirm Password *</label>
-                                                <input type="password" class="form-control" id="patientConfirmPassword" name="cpassword" onkeyup="checkPatientPassword()" required>
+                                                <input type="password" class="form-control form-control-sm" id="patientConfirmPassword" name="cpassword" onkeyup="checkPatientPassword()" required>
                                                 <small id="patientPasswordMessage" class="form-text"></small>
                                             </div>
                                         </div>
@@ -608,10 +713,10 @@
                                     </div>
                                     
                                     <div class="mt-3">
-                                        <button type="button" class="btn btn-success" onclick="addPatient()">
+                                        <button type="button" class="btn btn-success btn-sm" onclick="addPatient()">
                                             <i class="fa fa-user-plus mr-1"></i> Register Patient
                                         </button>
-                                        <button type="reset" class="btn btn-secondary ml-2">
+                                        <button type="reset" class="btn btn-secondary btn-sm ml-2">
                                             <i class="fa fa-refresh mr-1"></i> Reset Form
                                         </button>
                                     </div>
@@ -622,9 +727,9 @@
                         <h4>Patients List</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="patient-search" placeholder="Search patients..." onkeyup="filterTable('patient-search', 'patients-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('patients-table-body', 'patients')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('patients-table-body', 'patients')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -642,7 +747,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -657,9 +762,9 @@
                         <h4>Appointments</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('appointments-table-body', 'appointments')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('appointments-table-body', 'appointments')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -678,7 +783,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -693,9 +798,9 @@
                         <h4>Prescriptions</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('prescriptions-table-body', 'prescriptions')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('prescriptions-table-body', 'prescriptions')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>Doctor</th>
@@ -715,7 +820,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -729,14 +834,14 @@
                     <div class="tab-pane fade" id="pay-tab">
                         <h4>Payments</h4>
                         <form method="post" class="form-inline mb-2" id="payment-search-form">
-                            <input type="number" name="pid" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
-                            <button type="button" class="btn btn-success" onclick="searchPaymentsByPatient()">View Payments</button>
+                            <input type="number" name="pid" class="form-control form-control-sm mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
+                            <button type="button" class="btn btn-success btn-sm" onclick="searchPaymentsByPatient()">View Payments</button>
                         </form>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="payment-search" placeholder="Search payments..." onkeyup="filterTable('payment-search', 'payments-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('payments-table-body', 'payments')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('payments-table-body', 'payments')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -755,7 +860,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -770,9 +875,9 @@
                         <h4>Staff Schedules</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="schedule-search" placeholder="Search schedules..." onkeyup="filterTable('schedule-search', 'schedules-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('schedules-table-body', 'schedules')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('schedules-table-body', 'schedules')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -787,7 +892,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -802,9 +907,9 @@
                         <h4>Rooms / Beds</h4>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="room-search" placeholder="Search rooms..." onkeyup="filterTable('room-search', 'rooms-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('rooms-table-body', 'rooms')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('rooms-table-body', 'rooms')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -820,7 +925,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -836,22 +941,22 @@
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="card">
-                                    <div class="card-header bg-success text-white">
+                                    <div class="card-header bg-success text-white py-2">
                                         <i class="fa fa-user-md mr-2"></i>Add New Doctor
                                     </div>
                                     <div class="card-body">
                                         <form id="add-doctor-form">
                                             <div class="form-group">
                                                 <label>Doctor ID</label>
-                                                <input type="text" name="doctorId" class="form-control" required>
+                                                <input type="text" name="doctorId" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Name</label>
-                                                <input type="text" name="doctor" class="form-control" onkeydown="return alphaOnly(event)" required>
+                                                <input type="text" name="doctor" class="form-control form-control-sm" onkeydown="return alphaOnly(event)" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Specialization</label>
-                                                <select name="special" class="form-control" required>
+                                                <select name="special" class="form-control form-control-sm" required>
                                                     <option value="">Select Specialization</option>
                                                     <option value="General">General Physician</option>
                                                     <option value="Cardiologist">Cardiologist</option>
@@ -864,44 +969,44 @@
                                             </div>
                                             <div class="form-group">
                                                 <label>Email</label>
-                                                <input type="email" name="demail" class="form-control" required>
+                                                <input type="email" name="demail" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Password</label>
-                                                <input type="password" id="dpassword" name="dpassword" class="form-control" required>
+                                                <input type="password" id="dpassword" name="dpassword" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Confirm Password</label>
-                                                <input type="password" id="cdpassword" class="form-control" onkeyup="checkPassword()" required>
-                                                <small id="message"></small>
+                                                <input type="password" id="cdpassword" class="form-control form-control-sm" onkeyup="checkPassword()" required>
+                                                <small id="message" class="form-text"></small>
                                             </div>
                                             <div class="form-group">
                                                 <label>Fees (Rs.)</label>
-                                                <input type="number" name="docFees" class="form-control" required>
+                                                <input type="number" name="docFees" class="form-control form-control-sm" required>
                                             </div>
-                                            <button type="button" class="btn btn-success btn-block" onclick="addDoctor()">Add Doctor</button>
+                                            <button type="button" class="btn btn-success btn-sm btn-block" onclick="addDoctor()">Add Doctor</button>
                                         </form>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="card-header bg-primary text-white py-2">
                                         <i class="fa fa-plus-circle mr-2"></i>Add New Staff Member
                                     </div>
                                     <div class="card-body">
                                         <form id="add-staff-form">
                                             <div class="form-group">
                                                 <label>Staff ID</label>
-                                                <input type="text" name="staffId" class="form-control" required>
+                                                <input type="text" name="staffId" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Name</label>
-                                                <input type="text" name="staff" class="form-control" required>
+                                                <input type="text" name="staff" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Role</label>
-                                                <select name="role" class="form-control" required>
+                                                <select name="role" class="form-control form-control-sm" required>
                                                     <option value="">Select Role</option>
                                                     <option value="Nurse">Nurse</option>
                                                     <option value="Receptionist">Receptionist</option>
@@ -913,17 +1018,17 @@
                                             </div>
                                             <div class="form-group">
                                                 <label>Email</label>
-                                                <input type="email" name="semail" class="form-control" required>
+                                                <input type="email" name="semail" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Contact</label>
-                                                <input type="text" name="scontact" class="form-control" required>
+                                                <input type="text" name="scontact" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="form-group">
                                                 <label>Password</label>
-                                                <input type="password" name="spassword" class="form-control" required>
+                                                <input type="password" name="spassword" class="form-control form-control-sm" required>
                                             </div>
-                                            <button type="button" class="btn btn-primary btn-block" onclick="addStaff()">Add Staff Member</button>
+                                            <button type="button" class="btn btn-primary btn-sm btn-block" onclick="addStaff()">Add Staff Member</button>
                                         </form>
                                     </div>
                                 </div>
@@ -933,9 +1038,9 @@
                         <h5>Doctors & Staff List</h5>
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="staff-search" placeholder="Search by ID or Name..." onkeyup="filterStaffTable()">
-                            <button class="btn btn-primary" onclick="exportTable('staff-table-body', 'staff')">Export</button>
+                            <button class="btn btn-primary btn-sm" onclick="exportTable('staff-table-body', 'staff')">Export</button>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <table class="table table-hover table-bordered table-sm">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -951,7 +1056,7 @@
                             </tbody>
                         </table>
                         <nav>
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center pagination-sm">
                                 <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
                                 <li class="page-item active"><a class="page-link" href="#">1</a></li>
                                 <li class="page-item"><a class="page-link" href="#">2</a></li>
@@ -967,27 +1072,27 @@
 
     <!-- Delete Doctor Modal -->
     <div class="modal fade" id="deleteDoctorModal" tabindex="-1" role="dialog" aria-labelledby="deleteDoctorModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-sm" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header py-2">
                     <h5 class="modal-title" id="deleteDoctorModalLabel">Delete Doctor</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body py-2">
                     <form id="delete-doctor-form">
                         <div class="form-group">
                             <label>Select Doctor</label>
-                            <select name="doctorId" class="form-control" id="doctor-select" required>
+                            <select name="doctorId" class="form-control form-control-sm" id="doctor-select" required>
                                 <option value="">Select doctor to delete</option>
                             </select>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteDoctorFromDashboard()">Delete Doctor</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteDoctorFromDashboard()">Delete Doctor</button>
                 </div>
             </div>
         </div>
@@ -995,21 +1100,21 @@
 
     <!-- Prescription Delivery Selection Modal -->
     <div class="modal fade" id="prescriptionDeliveryModal" tabindex="-1" role="dialog" aria-labelledby="prescriptionDeliveryModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-sm" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header py-2">
                     <h5 class="modal-title" id="prescriptionDeliveryModalLabel">Send Prescription</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <p>Please select how to send this prescription:</p>
+                <div class="modal-body py-2">
+                    <p class="mb-2">Please select how to send this prescription:</p>
                     <button type="button" class="btn btn-success pharmacy-type-btn" onclick="selectDeliveryMethod('sms')">
                         <i class="fa fa-mobile"></i> Send SMS to Patient
                     </button>
                     <button type="button" class="btn btn-warning pharmacy-type-btn" onclick="selectDeliveryMethod('external')">
-                        <i class="fa fa-medkit"></i> Send to External Pharmacy
+                        <i class="fa fa-medkit"></i> Send to Hospital Pharmacy
                     </button>
                 </div>
             </div>
@@ -1020,61 +1125,67 @@
     <div class="modal fade" id="smsToPatientModal" tabindex="-1" role="dialog" aria-labelledby="smsToPatientModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header py-2">
                     <h5 class="modal-title" id="smsToPatientModalLabel">Send SMS to Patient</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body py-2">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> SMS will be sent to the patient's contact number.
+                    </div>
                     <form id="smsToPatientForm">
                         <div class="form-group">
                             <label for="patientContactNumber">Patient Contact Number</label>
-                            <input type="text" class="form-control" id="patientContactNumber" readonly>
+                            <input type="text" class="form-control form-control-sm" id="patientContactNumber" readonly>
                         </div>
                         <div class="form-group">
                             <label for="smsMessage">SMS Message</label>
-                            <textarea class="form-control" id="smsMessage" rows="10" readonly></textarea>
+                            <textarea class="form-control form-control-sm" id="smsMessage" rows="6" readonly></textarea>
+                        </div>
+                        <div class="sms-preview" id="smsPreview">
+                            <!-- SMS preview will be shown here -->
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="sendSmsBtn">Send SMS to Patient</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success btn-sm" id="sendSmsBtn">Send SMS to Patient</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- External Pharmacy Email Modal -->
-    <div class="modal fade" id="externalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="externalPharmacyModalLabel" aria-hidden="true">
+    <!-- Hospital Pharmacy Email Modal -->
+    <div class="modal fade" id="hospitalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="hospitalPharmacyModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="externalPharmacyModalLabel">Send to External Pharmacy</h5>
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="hospitalPharmacyModalLabel">Send to Hospital Pharmacy</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <form id="externalPharmacyForm">
+                <div class="modal-body py-2">
+                    <div class="fixed-pharmacy-email">
+                        <i class="fa fa-envelope"></i>
+                        Prescription will be sent to: <strong>healthcarepharmacypp1@gmail.com</strong>
+                    </div>
+                    <form id="hospitalPharmacyForm">
                         <div class="form-group">
-                            <label for="externalRecipientEmail">Pharmacy Email Address</label>
-                            <input type="email" class="form-control" id="externalRecipientEmail" placeholder="Enter pharmacy email address">
+                            <label for="hospitalEmailSubject">Subject</label>
+                            <input type="text" class="form-control form-control-sm" id="hospitalEmailSubject" value="Prescription from Heth Care Hospital">
                         </div>
                         <div class="form-group">
-                            <label for="externalEmailSubject">Subject</label>
-                            <input type="text" class="form-control" id="externalEmailSubject" value="Prescription from Heth Care Hospital">
-                        </div>
-                        <div class="form-group">
-                            <label for="externalEmailMessage">Prescription Details</label>
-                            <textarea class="form-control" id="externalEmailMessage" rows="10" readonly></textarea>
+                            <label for="hospitalEmailMessage">Prescription Details</label>
+                            <textarea class="form-control form-control-sm" id="hospitalEmailMessage" rows="8" readonly></textarea>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" id="sendExternalEmailBtn">Send to External Pharmacy</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning btn-sm" id="sendHospitalEmailBtn">Send to Hospital Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1151,6 +1262,9 @@
         // Current prescription being processed
         let currentPrescriptionId = null;
         let currentPatientContact = '';
+        
+        // Fixed Hospital Pharmacy Email
+        const HOSPITAL_PHARMACY_EMAIL = 'healthcarepharmacypp1@gmail.com';
 
         // Initialize dashboard with data
         document.addEventListener('DOMContentLoaded', function() {
@@ -1395,7 +1509,7 @@
                     statusText = 'SMS Sent';
                 } else if (prescription.emailStatus === 'External') {
                     statusClass = 'status-sent-external';
-                    statusText = 'Sent to External';
+                    statusText = 'Sent to Pharmacy';
                 }
                 
                 const row = document.createElement('tr');
@@ -1617,12 +1731,18 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
                                 stepSize: 1
                             }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     }
                 }
@@ -1661,7 +1781,13 @@
                     }]
                 },
                 options: {
-                    responsive: true
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
                 }
             });
         }
@@ -2076,8 +2202,8 @@
 
         // Setup email functionality
         function setupEmailFunctionality() {
-            document.getElementById('sendExternalEmailBtn').addEventListener('click', function() {
-                sendEmailToExternalPharmacy();
+            document.getElementById('sendHospitalEmailBtn').addEventListener('click', function() {
+                sendEmailToHospitalPharmacy();
             });
         }
 
@@ -2111,11 +2237,18 @@
                     document.getElementById('patientContactNumber').value = patient.contact;
                 }
                 
-                const message = formatSMSMessage(prescription);
+                const smsMessage = formatSMSMessage(prescription);
+                const emailMessage = formatEmailMessage(prescription);
                 
                 // Store the message for use in both modals
-                document.getElementById('smsMessage').value = message;
-                document.getElementById('externalEmailMessage').value = formatEmailMessage(prescription);
+                document.getElementById('smsMessage').value = smsMessage;
+                document.getElementById('hospitalEmailMessage').value = emailMessage;
+                
+                // Update SMS preview
+                document.getElementById('smsPreview').innerHTML = `
+                    <strong>SMS Preview:</strong><br>
+                    ${smsMessage.replace(/\n/g, '<br>')}
+                `;
                 
                 // Show delivery selection modal
                 $('#prescriptionDeliveryModal').modal('show');
@@ -2129,7 +2262,8 @@
             if (method === 'sms') {
                 $('#smsToPatientModal').modal('show');
             } else if (method === 'external') {
-                $('#externalPharmacyModal').modal('show');
+                // Changed to hospital pharmacy modal
+                $('#hospitalPharmacyModal').modal('show');
             }
         }
 
@@ -2193,7 +2327,7 @@ Status: ${prescription.emailStatus}
                 populatePrescriptionsTable();
                 
                 // Show success message
-                alert(`SMS sent to patient's contact number (${currentPatientContact}) successfully!`);
+                alert(`SMS sent to patient's contact number (${currentPatientContact}) successfully!\n\nMessage sent:\n${document.getElementById('smsMessage').value}`);
                 
                 // Close the modal
                 $('#smsToPatientModal').modal('hide');
@@ -2203,16 +2337,9 @@ Status: ${prescription.emailStatus}
             }
         }
 
-        // Function to send email to external pharmacy
-        function sendEmailToExternalPharmacy() {
+        // Function to send email to hospital pharmacy
+        function sendEmailToHospitalPharmacy() {
             if (!currentPrescriptionId) return;
-            
-            const pharmacyEmail = document.getElementById('externalRecipientEmail').value;
-            
-            if (!pharmacyEmail) {
-                alert('Please enter a valid pharmacy email address.');
-                return;
-            }
             
             const prescription = database.prescriptions.find(p => p.id === currentPrescriptionId);
             
@@ -2224,16 +2351,13 @@ Status: ${prescription.emailStatus}
                 populatePrescriptionsTable();
                 
                 // Show success message
-                alert(`Prescription sent to ${pharmacyEmail} successfully!`);
+                alert(`Prescription sent to Hospital Pharmacy (${HOSPITAL_PHARMACY_EMAIL}) successfully!\n\nSubject: ${document.getElementById('hospitalEmailSubject').value}`);
                 
                 // Close the modal
-                $('#externalPharmacyModal').modal('hide');
+                $('#hospitalPharmacyModal').modal('hide');
                 
                 // Add to recent activity
-                addRecentActivity(`Prescription sent to External Pharmacy (${pharmacyEmail}) - Patient: ${prescription.fname} ${prescription.lname}`);
-                
-                // Reset the email field
-                document.getElementById('externalRecipientEmail').value = '';
+                addRecentActivity(`Prescription sent to Hospital Pharmacy (${HOSPITAL_PHARMACY_EMAIL}) - Patient: ${prescription.fname} ${prescription.lname}`);
             }
         }
 
