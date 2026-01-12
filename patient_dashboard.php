@@ -157,7 +157,7 @@ $prescriptions_result = mysqli_query($con, $prescriptions_query);
         </ul>
       </li>
       
-      <li data-target="settings">⚙️ Settings</li>
+      <li data-target="settings">⚙️SETINGGGGGGGGGGGGGGGGGG</li>
       <li><a href="logout.php" style="color: white; text-decoration: none;">🚪 Logout</a></li>
     </ul>
   </div>
