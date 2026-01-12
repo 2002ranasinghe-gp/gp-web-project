@@ -4,7 +4,7 @@ session_start();
 
 //===========================
 // Database Connection
-//===========================
+//========================
 $con = mysqli_connect("localhost","root","","myhmsdb");
 if(!$con){
     die("Database connection failed: " . mysqli_connect_error());
@@ -335,7 +335,7 @@ switch($page){
         echo "</tbody></table></div>";
         break;
 
-    //===========================
+    //======
     case 'appointments':
         $result = $con->query("SELECT a.ID, p.fname, p.lname, p.national_id, a.doctor, a.appdate, a.apptime, a.userStatus, a.doctorStatus 
                                FROM appointmenttb a 
