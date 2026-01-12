@@ -273,6 +273,14 @@
         .action-btn {
             margin: 2px;
             font-size: 1rem; /* Increased */
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
         .pharmacy-type-btn {
@@ -350,6 +358,51 @@
             font-size: 1.2rem;
         }
         
+        .search-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .search-option-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .search-option-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .search-option-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .search-option-btn.active:hover {
+            background: var(--primary);
+        }
+        
+        .payment-details-modal .detail-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .payment-details-modal .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .payment-details-modal .detail-value {
+            color: #212529;
+        }
+        
         @media (max-width: 992px) {
             .dash-card {
                 width: 48% !important;
@@ -387,6 +440,10 @@
             
             h4 {
                 font-size: 1.5rem;
+            }
+            
+            .search-options {
+                flex-direction: column;
             }
         }
     </style>
@@ -873,26 +930,58 @@
                     <!-- Payments -->
                     <div class="tab-pane fade" id="pay-tab">
                         <h4>Payments</h4>
-                        <form method="post" class="form-inline mb-2" id="payment-search-form">
-                            <input type="number" name="pid" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
-                            <button type="button" class="btn btn-success" onclick="searchPaymentsByPatient()">View Payments</button>
-                        </form>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="payment-search" placeholder="Search payments..." onkeyup="filterTable('payment-search', 'payments-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('payments-table-body', 'payments')">Export</button>
+                        
+                        <!-- Search Options -->
+                        <div class="search-options mb-3">
+                            <div class="search-option-btn active" onclick="setPaymentSearchMode('patientId')">
+                                <i class="fa fa-user mr-2"></i>Search by Patient ID
+                            </div>
+                            <div class="search-option-btn" onclick="setPaymentSearchMode('nic')">
+                                <i class="fa fa-id-card mr-2"></i>Search by NIC
+                            </div>
+                            <div class="search-option-btn" onclick="setPaymentSearchMode('all')">
+                                <i class="fa fa-list mr-2"></i>Show All Payments
+                            </div>
                         </div>
+                        
+                        <!-- Search Forms -->
+                        <div id="patientId-search-form" class="mb-3">
+                            <form method="post" class="form-inline">
+                                <input type="number" name="pid" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
+                                <button type="button" class="btn btn-success" onclick="searchPaymentsByPatient()">
+                                    <i class="fa fa-search mr-1"></i> Search Payments
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div id="nic-search-form" class="mb-3" style="display: none;">
+                            <div class="search-bar">
+                                <input type="text" class="form-control" id="payment-nic-search" placeholder="Search payments by NIC only..." onkeyup="filterPaymentsByNIC()">
+                                <i class="fa fa-search search-icon"></i>
+                                <small class="text-muted form-text">Search by National ID (NIC) only</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-3">
+                            <div></div>
+                            <button class="btn btn-primary" onclick="exportPayments()">
+                                <i class="fa fa-download mr-2"></i>Export Payments
+                            </button>
+                        </div>
+                        
                         <table class="table table-hover table-bordered">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Payment ID</th>
                                     <th>Patient ID</th>
                                     <th>Appointment ID</th>
                                     <th>Patient Name</th>
                                     <th>National ID</th>
                                     <th>Doctor</th>
-                                    <th>Fees</th>
+                                    <th>Fees (Rs.)</th>
                                     <th>Date</th>
                                     <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="payments-table-body">
@@ -1271,6 +1360,91 @@
         </div>
     </div>
 
+    <!-- Payment Details Modal -->
+    <div class="modal fade" id="paymentDetailsModal" tabindex="-1" role="dialog" aria-labelledby="paymentDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="paymentDetailsModalLabel">Payment Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body payment-details-modal">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detail-row">
+                                <span class="detail-label">Payment ID:</span>
+                                <span class="detail-value" id="detail-payment-id"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Patient ID:</span>
+                                <span class="detail-value" id="detail-patient-id"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Patient Name:</span>
+                                <span class="detail-value" id="detail-patient-name"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">National ID (NIC):</span>
+                                <span class="detail-value" id="detail-national-id"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Appointment ID:</span>
+                                <span class="detail-value" id="detail-appointment-id"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-row">
+                                <span class="detail-label">Doctor:</span>
+                                <span class="detail-value" id="detail-doctor"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Fees:</span>
+                                <span class="detail-value" id="detail-fees"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Payment Date:</span>
+                                <span class="detail-value" id="detail-payment-date"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value" id="detail-status"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Payment Method:</span>
+                                <span class="detail-value" id="detail-payment-method"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h6>Additional Information</h6>
+                            <div class="detail-row">
+                                <span class="detail-label">Description:</span>
+                                <span class="detail-value" id="detail-description">Payment for medical consultation and treatment</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Invoice Generated:</span>
+                                <span class="detail-value" id="detail-invoice">Yes</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Receipt Number:</span>
+                                <span class="detail-value" id="detail-receipt"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="printPaymentDetails()">
+                        <i class="fa fa-print mr-1"></i> Print Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
@@ -1317,9 +1491,16 @@
                 {id: 2, doctor: 'Ganesh', pid: 2, ID: 2, fname: 'Alia', lname: 'Bhatt', national_id: 'NIC987654321', appdate: '2025-10-30', apptime: '11:00:00', disease: 'Cold', allergy: 'None', prescription: 'Take vitamin C and rest', emailStatus: 'SMS Sent'}
             ],
             payments: [
-                {id: 1, pid: 1, app_id: 1, national_id: 'NIC123456789', patient_name: 'Ram Kumar', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-10-29', pay_status: 'Paid'},
-                {id: 2, pid: 2, app_id: 2, national_id: 'NIC987654321', patient_name: 'Alia Bhatt', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-10-30', pay_status: 'Paid'},
-                {id: 3, pid: 3, app_id: 3, national_id: 'NIC111222333', patient_name: 'Shahrukh Khan', doctor: 'Dinesh', fees: 700.00, pay_date: '2025-11-01', pay_status: 'Pending'}
+                {id: 1, pid: 1, app_id: 1, national_id: 'NIC123456789', patient_name: 'Ram Kumar', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-10-29', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC001'},
+                {id: 2, pid: 2, app_id: 2, national_id: 'NIC987654321', patient_name: 'Alia Bhatt', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-10-30', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC002'},
+                {id: 3, pid: 3, app_id: 3, national_id: 'NIC111222333', patient_name: 'Shahrukh Khan', doctor: 'Dinesh', fees: 700.00, pay_date: '2025-11-01', pay_status: 'Pending', payment_method: 'Pending', receipt_no: 'PENDING'},
+                {id: 4, pid: 4, app_id: 4, national_id: 'NIC444555666', patient_name: 'Kishan Lal', doctor: 'Amit', fees: 1000.00, pay_date: '2025-11-02', pay_status: 'Paid', payment_method: 'Bank Transfer', receipt_no: 'REC003'},
+                {id: 5, pid: 5, app_id: 5, national_id: 'NIC777888999', patient_name: 'Gautam Shankararam', doctor: 'Kumar', fees: 800.00, pay_date: '2025-11-03', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC004'},
+                {id: 6, pid: 6, app_id: 6, national_id: 'NIC123123123', patient_name: 'Sushant Singh', doctor: 'Abbis', fees: 1500.00, pay_date: '2025-11-04', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC005'},
+                {id: 7, pid: 7, app_id: 7, national_id: 'NIC321321321', patient_name: 'Nancy Deborah', doctor: 'Tiwary', fees: 450.00, pay_date: '2025-11-05', pay_status: 'Pending', payment_method: 'Pending', receipt_no: 'PENDING'},
+                {id: 8, pid: 8, app_id: 8, national_id: 'NIC456456456', patient_name: 'Kenny Sebastian', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-11-06', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC006'},
+                {id: 9, pid: 9, app_id: 9, national_id: 'NIC654654654', patient_name: 'William Blake', doctor: 'Kumar', fees: 800.00, pay_date: '2025-11-07', pay_status: 'Paid', payment_method: 'Bank Transfer', receipt_no: 'REC007'},
+                {id: 10, pid: 10, app_id: 10, national_id: 'NIC789789789', patient_name: 'Peter Norvig', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-11-08', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC008'}
             ],
             staff: [
                 {id: 'STF001', name: 'Ramesh', role: 'Nurse', email: 'ramesh@gmail.com', contact: '0771112222', password: 'ramesh123'},
@@ -1342,6 +1523,7 @@
         let currentPrescriptionId = null;
         let currentPatientContact = '';
         let currentAppointmentIdToCancel = null;
+        let currentPaymentSearchMode = 'patientId'; // 'patientId', 'nic', or 'all'
 
         // Initialize dashboard with data
         document.addEventListener('DOMContentLoaded', function() {
@@ -1378,6 +1560,9 @@
             
             // Populate select dropdowns
             populateDoctorSelect();
+            
+            // Set initial payment search mode
+            setPaymentSearchMode('patientId');
         });
 
         // Update dashboard counts
@@ -1835,21 +2020,26 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
                     <td>${prescription.prescription}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewPrescription(${prescription.id})">View</button>
-                        <button class="btn btn-sm btn-success action-btn" onclick="sendPrescription(${prescription.id})">Send Prescription</button>
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewPrescription(${prescription.id})">
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-success action-btn" onclick="sendPrescription(${prescription.id})">
+                            <i class="fa fa-paper-plane"></i> Send
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
-        // Function to populate payments table
+        // Function to populate payments table WITH action column
         function populatePaymentsTable() {
             const tbody = document.getElementById('payments-table-body');
             tbody.innerHTML = '';
             
             database.payments.forEach(payment => {
                 const statusClass = payment.pay_status === 'Paid' ? 'status-active' : 'status-pending';
+                const statusText = payment.pay_status === 'Paid' ? 'Paid' : 'Pending';
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1857,14 +2047,166 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
                     <td>${payment.pid}</td>
                     <td>${payment.app_id}</td>
                     <td>${payment.patient_name}</td>
-                    <td>${payment.national_id}</td>
+                    <td><span class="badge badge-info">${payment.national_id}</span></td>
                     <td>${payment.doctor}</td>
-                    <td>Rs. ${payment.fees}</td>
+                    <td>Rs. ${payment.fees.toFixed(2)}</td>
                     <td>${payment.pay_date}</td>
-                    <td><span class="status-badge ${statusClass}">${payment.pay_status}</span></td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewPaymentDetails(${payment.id})">
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-warning action-btn" onclick="editPaymentStatus(${payment.id})">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Function to view payment details
+        function viewPaymentDetails(paymentId) {
+            const payment = database.payments.find(p => p.id === paymentId);
+            
+            if (payment) {
+                // Populate modal with payment details
+                document.getElementById('detail-payment-id').textContent = payment.id;
+                document.getElementById('detail-patient-id').textContent = payment.pid;
+                document.getElementById('detail-patient-name').textContent = payment.patient_name;
+                document.getElementById('detail-national-id').textContent = payment.national_id;
+                document.getElementById('detail-appointment-id').textContent = payment.app_id;
+                document.getElementById('detail-doctor').textContent = payment.doctor;
+                document.getElementById('detail-fees').textContent = `Rs. ${payment.fees.toFixed(2)}`;
+                document.getElementById('detail-payment-date').textContent = payment.pay_date;
+                document.getElementById('detail-status').textContent = payment.pay_status;
+                document.getElementById('detail-payment-method').textContent = payment.payment_method || 'Not specified';
+                document.getElementById('detail-receipt').textContent = payment.receipt_no;
+                
+                // Set status badge color
+                const statusElement = document.getElementById('detail-status');
+                statusElement.className = '';
+                statusElement.classList.add('badge', payment.pay_status === 'Paid' ? 'badge-success' : 'badge-warning');
+                
+                // Show the modal
+                $('#paymentDetailsModal').modal('show');
+            }
+        }
+
+        // Function to edit payment status
+        function editPaymentStatus(paymentId) {
+            const payment = database.payments.find(p => p.id === paymentId);
+            
+            if (payment) {
+                const newStatus = prompt(`Change payment status for Payment ID ${payment.id}:\nCurrent: ${payment.pay_status}\nEnter new status (Paid/Pending):`, payment.pay_status);
+                
+                if (newStatus && (newStatus.toLowerCase() === 'paid' || newStatus.toLowerCase() === 'pending')) {
+                    const oldStatus = payment.pay_status;
+                    payment.pay_status = newStatus.charAt(0).toUpperCase() + newStatus.slice(1).toLowerCase();
+                    
+                    // If changing to Paid, set payment method and receipt number
+                    if (payment.pay_status === 'Paid' && oldStatus !== 'Paid') {
+                        const paymentMethod = prompt('Enter payment method (Cash/Credit Card/Bank Transfer):', payment.payment_method || 'Cash');
+                        if (paymentMethod) {
+                            payment.payment_method = paymentMethod;
+                            // Generate a receipt number if not exists
+                            if (!payment.receipt_no || payment.receipt_no === 'PENDING') {
+                                payment.receipt_no = 'REC' + String(payment.id).padStart(3, '0');
+                            }
+                        }
+                    }
+                    
+                    // Update UI
+                    populatePaymentsTable();
+                    
+                    // Add to recent activity
+                    addRecentActivity(`Payment status updated: ID ${payment.id} changed from ${oldStatus} to ${payment.pay_status}`);
+                    
+                    alert(`Payment ID ${payment.id} status updated to ${payment.pay_status}`);
+                } else if (newStatus) {
+                    alert('Invalid status! Please enter either "Paid" or "Pending".');
+                }
+            }
+        }
+
+        // Function to print payment details
+        function printPaymentDetails() {
+            const printContent = `
+                <html>
+                <head>
+                    <title>Payment Receipt - Heth Care Hospital</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .hospital-name { font-size: 24px; font-weight: bold; color: #342ac1; }
+                        .receipt-title { font-size: 20px; margin: 10px 0; }
+                        .details { margin: 20px 0; }
+                        .detail-row { margin: 8px 0; }
+                        .detail-label { font-weight: bold; }
+                        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+                        .signature { margin-top: 50px; border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="hospital-name">Heth Care Hospital</div>
+                        <div>123 Hospital Road, Colombo, Sri Lanka</div>
+                        <div>Tel: +94 11 234 5678 | Email: info@hethcare.lk</div>
+                        <div class="receipt-title">PAYMENT RECEIPT</div>
+                    </div>
+                    <div class="details">
+                        <div class="detail-row">
+                            <span class="detail-label">Receipt No:</span> ${document.getElementById('detail-receipt').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Payment ID:</span> ${document.getElementById('detail-payment-id').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Date:</span> ${document.getElementById('detail-payment-date').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Patient Name:</span> ${document.getElementById('detail-patient-name').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Patient ID:</span> ${document.getElementById('detail-patient-id').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">NIC:</span> ${document.getElementById('detail-national-id').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Doctor:</span> ${document.getElementById('detail-doctor').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Appointment ID:</span> ${document.getElementById('detail-appointment-id').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Amount:</span> ${document.getElementById('detail-fees').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Payment Method:</span> ${document.getElementById('detail-payment-method').textContent}
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span> ${document.getElementById('detail-status').textContent}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="signature">
+                            Authorized Signature
+                        </div>
+                    </div>
+                    <div class="footer">
+                        This is a computer-generated receipt. No signature required.
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
         }
 
         // Function to populate staff table (including doctors) - WITH actions column
@@ -2181,9 +2523,82 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
             }
         }
 
+        // Function to filter payments by NIC only
+        function filterPaymentsByNIC() {
+            const input = document.getElementById('payment-nic-search');
+            const filter = input.value.toUpperCase();
+            const tbody = document.getElementById('payments-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                // Check only the NIC column (5th column, index 4)
+                if (cells.length >= 5) {
+                    const nicCell = cells[4]; // NIC column
+                    if (nicCell) {
+                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
+                        let nicWithoutPrefix = nicText.replace('NIC', '');
+                        
+                        // Search with or without "NIC" prefix
+                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
+                            found = true;
+                        }
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+
+        // Function to set payment search mode
+        function setPaymentSearchMode(mode) {
+            currentPaymentSearchMode = mode;
+            
+            // Update active button
+            const buttons = document.querySelectorAll('.search-option-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'patientId') {
+                document.querySelector('.search-option-btn:nth-child(1)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'block';
+                document.getElementById('nic-search-form').style.display = 'none';
+                // Show all payments
+                showAllPayments();
+            } else if (mode === 'nic') {
+                document.querySelector('.search-option-btn:nth-child(2)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'none';
+                document.getElementById('nic-search-form').style.display = 'block';
+                // Clear NIC search and show all
+                document.getElementById('payment-nic-search').value = '';
+                showAllPayments();
+            } else if (mode === 'all') {
+                document.querySelector('.search-option-btn:nth-child(3)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'none';
+                document.getElementById('nic-search-form').style.display = 'none';
+                showAllPayments();
+            }
+        }
+
+        // Function to show all payments
+        function showAllPayments() {
+            const tbody = document.getElementById('payments-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = '';
+            }
+        }
+
         // Function to export patients
         function exportPatients() {
             exportTable('patients-table-body', 'patients');
+        }
+
+        // Function to export payments
+        function exportPayments() {
+            exportTable('payments-table-body', 'payments');
         }
 
         // Function to filter table
@@ -2244,19 +2659,19 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
             const rows = table.getElementsByTagName('tr');
             let csv = [];
             
-            // Add headers
+            // Add headers (excluding the last column which is Actions)
             const headerRow = [];
             const headerCells = table.parentNode.getElementsByTagName('thead')[0].getElementsByTagName('th');
-            for (let i = 0; i < headerCells.length; i++) {
+            for (let i = 0; i < headerCells.length - 1; i++) { // Exclude last column (Actions)
                 headerRow.push(headerCells[i].innerText);
             }
             csv.push(headerRow.join(','));
             
-            // Add data
+            // Add data (excluding the last column which is Actions)
             for (let i = 0; i < rows.length; i++) {
                 const row = [], cols = rows[i].querySelectorAll('td');
                 
-                for (let j = 0; j < cols.length; j++) {
+                for (let j = 0; j < cols.length - 1; j++) { // Exclude last column (Actions)
                     row.push(cols[j].innerText);
                 }
                 
@@ -2282,9 +2697,7 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
             
             if (!patientId) {
                 // Show all payments if no ID is entered
-                for (let i = 0; i < rows.length; i++) {
-                    rows[i].style.display = '';
-                }
+                showAllPayments();
                 return;
             }
             
@@ -2554,11 +2967,6 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
             document.getElementById('add-staff-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 addStaff();
-            });
-            
-            document.getElementById('payment-search-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                searchPaymentsByPatient();
             });
         }
 
