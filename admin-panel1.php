@@ -1445,6 +1445,62 @@
         </div>
     </div>
 
+    <!-- Edit Payment Status Modal -->
+    <div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="editPaymentModalLabel">Edit Payment Status</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-payment-form">
+                        <input type="hidden" id="edit-payment-id">
+                        
+                        <div class="form-group">
+                            <label for="edit-payment-status">Payment Status</label>
+                            <select class="form-control" id="edit-payment-status" required>
+                                <option value="">Select Status</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Pending">Pending</option>
+                            </select>
+                        </div>
+                        
+                        <div id="payment-method-section" style="display: none;">
+                            <div class="form-group">
+                                <label for="edit-payment-method">Payment Method</label>
+                                <select class="form-control" id="edit-payment-method">
+                                    <option value="">Select Payment Method</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Credit Card">Credit Card</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="Online Payment">Online Payment</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="edit-receipt-number">Receipt Number (Optional)</label>
+                                <input type="text" class="form-control" id="edit-receipt-number" placeholder="Enter receipt number">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-payment-notes">Notes (Optional)</label>
+                            <textarea class="form-control" id="edit-payment-notes" rows="3" placeholder="Add any additional notes"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="updatePaymentStatus()">Update Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
@@ -1519,7 +1575,8 @@
             ]
         };
 
-        // Current prescription being processed
+        // Current payment being edited
+        let currentPaymentId = null;
         let currentPrescriptionId = null;
         let currentPatientContact = '';
         let currentAppointmentIdToCancel = null;
@@ -1563,6 +1620,9 @@
             
             // Set initial payment search mode
             setPaymentSearchMode('patientId');
+            
+            // Setup payment status change listener
+            setupPaymentStatusListener();
         });
 
         // Update dashboard counts
@@ -2057,7 +2117,7 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
                             <i class="fa fa-eye"></i> View
                         </button>
                         <button class="btn btn-sm btn-warning action-btn" onclick="editPaymentStatus(${payment.id})">
-                            <i class="fa fa-edit"></i> Edit
+                            <i class="fa fa-edit"></i> Edit Status
                         </button>
                     </td>
                 `;
@@ -2098,34 +2158,99 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
             const payment = database.payments.find(p => p.id === paymentId);
             
             if (payment) {
-                const newStatus = prompt(`Change payment status for Payment ID ${payment.id}:\nCurrent: ${payment.pay_status}\nEnter new status (Paid/Pending):`, payment.pay_status);
+                currentPaymentId = paymentId;
                 
-                if (newStatus && (newStatus.toLowerCase() === 'paid' || newStatus.toLowerCase() === 'pending')) {
-                    const oldStatus = payment.pay_status;
-                    payment.pay_status = newStatus.charAt(0).toUpperCase() + newStatus.slice(1).toLowerCase();
-                    
-                    // If changing to Paid, set payment method and receipt number
-                    if (payment.pay_status === 'Paid' && oldStatus !== 'Paid') {
-                        const paymentMethod = prompt('Enter payment method (Cash/Credit Card/Bank Transfer):', payment.payment_method || 'Cash');
-                        if (paymentMethod) {
-                            payment.payment_method = paymentMethod;
-                            // Generate a receipt number if not exists
-                            if (!payment.receipt_no || payment.receipt_no === 'PENDING') {
-                                payment.receipt_no = 'REC' + String(payment.id).padStart(3, '0');
-                            }
-                        }
-                    }
-                    
-                    // Update UI
-                    populatePaymentsTable();
-                    
-                    // Add to recent activity
-                    addRecentActivity(`Payment status updated: ID ${payment.id} changed from ${oldStatus} to ${payment.pay_status}`);
-                    
-                    alert(`Payment ID ${payment.id} status updated to ${payment.pay_status}`);
-                } else if (newStatus) {
-                    alert('Invalid status! Please enter either "Paid" or "Pending".');
+                // Populate modal with current payment details
+                document.getElementById('edit-payment-id').value = paymentId;
+                document.getElementById('edit-payment-status').value = payment.pay_status;
+                document.getElementById('edit-payment-method').value = payment.payment_method || '';
+                document.getElementById('edit-receipt-number').value = payment.receipt_no || '';
+                document.getElementById('edit-payment-notes').value = '';
+                
+                // Show/hide payment method section based on status
+                togglePaymentMethodSection(payment.pay_status);
+                
+                // Show the modal
+                $('#editPaymentModal').modal('show');
+            }
+        }
+
+        // Function to setup payment status change listener
+        function setupPaymentStatusListener() {
+            document.getElementById('edit-payment-status').addEventListener('change', function() {
+                togglePaymentMethodSection(this.value);
+            });
+        }
+
+        // Function to toggle payment method section visibility
+        function togglePaymentMethodSection(status) {
+            const methodSection = document.getElementById('payment-method-section');
+            if (status === 'Paid') {
+                methodSection.style.display = 'block';
+            } else {
+                methodSection.style.display = 'none';
+            }
+        }
+
+        // Function to update payment status
+        function updatePaymentStatus() {
+            if (!currentPaymentId) return;
+            
+            const payment = database.payments.find(p => p.id === currentPaymentId);
+            const oldStatus = payment.pay_status;
+            
+            if (payment) {
+                // Get form values
+                const newStatus = document.getElementById('edit-payment-status').value;
+                const paymentMethod = document.getElementById('edit-payment-method').value;
+                const receiptNumber = document.getElementById('edit-receipt-number').value;
+                const notes = document.getElementById('edit-payment-notes').value;
+                
+                // Validate required fields
+                if (!newStatus) {
+                    alert('Please select a payment status!');
+                    return;
                 }
+                
+                if (newStatus === 'Paid' && !paymentMethod) {
+                    alert('Please select a payment method for paid status!');
+                    return;
+                }
+                
+                // Update payment
+                payment.pay_status = newStatus;
+                
+                if (newStatus === 'Paid') {
+                    payment.payment_method = paymentMethod;
+                    
+                    // Generate receipt number if not provided and status changed from Pending
+                    if (!receiptNumber && oldStatus === 'Pending') {
+                        payment.receipt_no = 'REC' + String(payment.id).padStart(3, '0');
+                    } else if (receiptNumber) {
+                        payment.receipt_no = receiptNumber;
+                    }
+                } else if (newStatus === 'Pending') {
+                    payment.payment_method = 'Pending';
+                    payment.receipt_no = 'PENDING';
+                }
+                
+                // Update UI
+                populatePaymentsTable();
+                
+                // Close modal
+                $('#editPaymentModal').modal('hide');
+                
+                // Add to recent activity
+                addRecentActivity(`Payment status updated: ID ${payment.id} changed from ${oldStatus} to ${newStatus} ${notes ? `(Notes: ${notes})` : ''}`);
+                
+                // Show success message
+                alert(`Payment ID ${payment.id} status updated to ${newStatus} successfully!`);
+                
+                // Reset
+                currentPaymentId = null;
+                
+                // Reset form
+                document.getElementById('edit-payment-form').reset();
             }
         }
 
