@@ -335,7 +335,7 @@ switch($page){
         echo "</tbody></table></div>";
         break;
 
-    //======
+    //
     case 'appointments':
         $result = $con->query("SELECT a.ID, p.fname, p.lname, p.national_id, a.doctor, a.appdate, a.apptime, a.userStatus, a.doctorStatus 
                                FROM appointmenttb a 
