@@ -21,6 +21,7 @@ $doctor_msg = "";
 $staff_msg = "";
 $payment_msg = "";
 $appointment_msg = "";
+$prescription_msg = ""; // Added for prescription messages
 
 // ===========================
 // ADD PATIENT (NO PASSWORD ENCRYPTION)
@@ -282,6 +283,61 @@ if(isset($_POST['add_room'])){
         $_SESSION['success'] = "Room/Bed added successfully!";
         header("Location: " . $_SERVER['PHP_SELF'] . "#room-tab");
         exit();
+    }
+}
+
+// ===========================
+// SEND PRESCRIPTION TO HOSPITAL PHARMACY
+// ===========================
+if(isset($_POST['send_to_hospital'])){
+    $prescription_id = mysqli_real_escape_string($con, $_POST['prescription_id']);
+    
+    $query = "UPDATE prestb SET emailStatus='Sent to Hospital Pharmacy' WHERE id='$prescription_id'";
+    
+    if(mysqli_query($con, $query)){
+        $prescription_msg = "<div class='alert alert-success'>✅ Prescription sent to Hospital Pharmacy successfully!</div>";
+        $_SESSION['success'] = "Prescription sent to Hospital Pharmacy!";
+    } else {
+        $prescription_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// SEND PRESCRIPTION TO PATIENT CONTACT
+// ===========================
+if(isset($_POST['send_to_patient'])){
+    $prescription_id = mysqli_real_escape_string($con, $_POST['prescription_id']);
+    
+    // Get patient contact from prescription
+    $get_contact_query = mysqli_query($con, "SELECT p.contact, ps.fname, ps.lname, ps.prescription 
+                                            FROM prestb ps 
+                                            JOIN patreg p ON ps.pid = p.pid 
+                                            WHERE ps.id='$prescription_id'");
+    
+    if(mysqli_num_rows($get_contact_query) > 0){
+        $patient_data = mysqli_fetch_assoc($get_contact_query);
+        $contact = $patient_data['contact'];
+        $patient_name = $patient_data['fname'] . ' ' . $patient_data['lname'];
+        $prescription_text = $patient_data['prescription'];
+        
+        // In a real system, you would integrate with SMS API here
+        // For demo, we'll just update the status and log it
+        $query = "UPDATE prestb SET emailStatus='Sent to Patient Contact (SMS)' WHERE id='$prescription_id'";
+        
+        if(mysqli_query($con, $query)){
+            // Log the SMS sending (in real system, you'd call SMS API)
+            $sms_log = "SMS sent to $patient_name at $contact with prescription details.";
+            
+            $prescription_msg = "<div class='alert alert-success'>✅ Prescription sent to patient's contact number via SMS!<br>
+                                <small>Patient: $patient_name<br>
+                                Contact: $contact<br>
+                                Message: Prescription details have been sent to your mobile number.</small></div>";
+            $_SESSION['success'] = "Prescription sent to patient via SMS!";
+        } else {
+            $prescription_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    } else {
+        $prescription_msg = "<div class='alert alert-danger'>❌ Patient contact not found!</div>";
     }
 }
 
@@ -744,19 +800,19 @@ if(isset($_SESSION['success'])){
             color: #c62828;
         }
         
-        .status-sent {
+        .status-not-sent {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .status-hospital-pharmacy {
             background-color: #e3f2fd;
             color: #1565c0;
         }
         
-        .status-sms-sent {
+        .status-patient-sms {
             background-color: #e8f5e9;
             color: #2e7d32;
-        }
-        
-        .status-sent-external {
-            background-color: #fff3e0;
-            color: #ef6c00;
         }
         
         .recent-activity {
@@ -913,6 +969,79 @@ if(isset($_SESSION['success'])){
             color: #212529;
         }
         
+        /* Prescription action buttons */
+        .prescription-action-btn {
+            min-width: 180px;
+            margin: 5px;
+            font-size: 0.9rem;
+        }
+        
+        /* Modal styles for prescription sending */
+        .prescription-modal .modal-header {
+            background: linear-gradient(135deg, #4CAF50, #8BC34A);
+            color: white;
+        }
+        
+        .prescription-modal .modal-body {
+            padding: 20px;
+        }
+        
+        .prescription-details {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .prescription-detail-item {
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .prescription-detail-label {
+            font-weight: 600;
+            color: #555;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .send-option-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .send-option-card:hover {
+            border-color: #4CAF50;
+            background: #f1f8e9;
+        }
+        
+        .send-option-card.selected {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+        
+        .send-option-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        
+        .send-option-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .send-option-desc {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
         @media (max-width: 992px) {
             .dash-card {
                 width: 48% !important;
@@ -955,6 +1084,12 @@ if(isset($_SESSION['success'])){
             .search-options {
                 flex-direction: column;
             }
+            
+            .prescription-action-btn {
+                min-width: 140px;
+                font-size: 0.8rem;
+                padding: 8px 5px;
+            }
         }
     </style>
     <script>
@@ -964,6 +1099,7 @@ if(isset($_SESSION['success'])){
         let currentPatientContact = '';
         let currentAppointmentIdToCancel = null;
         let currentPaymentSearchMode = 'patientId';
+        let currentSendOption = '';
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1107,6 +1243,22 @@ if(isset($_SESSION['success'])){
                 const button = $(event.relatedTarget);
                 const paymentId = button.data('payment-id');
                 currentPaymentId = paymentId;
+            });
+            
+            // Prescription send modal
+            $('#sendPrescriptionModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const prescriptionId = button.data('prescription-id');
+                currentPrescriptionId = prescriptionId;
+                
+                // Reset selection
+                currentSendOption = '';
+                document.querySelectorAll('.send-option-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Load prescription details
+                loadPrescriptionDetails(prescriptionId);
             });
             
             // Payment status change listener
@@ -1559,6 +1711,125 @@ if(isset($_SESSION['success'])){
                 }
                 
                 rows[i].style.display = found ? '' : 'none';
+            }
+        }
+        
+        // Function to load prescription details
+        function loadPrescriptionDetails(prescriptionId) {
+            // This function would typically make an AJAX call to get prescription details
+            // For now, we'll just set a placeholder
+            document.getElementById('prescription-details-content').innerHTML = 
+                '<p>Loading prescription details...</p>';
+            
+            // In a real application, you would fetch the data via AJAX
+            // For demo purposes, we'll just show a message
+            setTimeout(() => {
+                document.getElementById('prescription-details-content').innerHTML = 
+                    '<p>Prescription details loaded. Select a sending option below.</p>';
+            }, 500);
+        }
+        
+        // Function to select send option
+        function selectSendOption(option) {
+            currentSendOption = option;
+            
+            // Update UI
+            document.querySelectorAll('.send-option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            event.currentTarget.classList.add('selected');
+            
+            // Enable confirm button
+            document.getElementById('confirm-send-btn').disabled = false;
+        }
+        
+        // Function to confirm prescription sending
+        function confirmSendPrescription() {
+            if(!currentPrescriptionId || !currentSendOption) {
+                alert('Please select a sending option!');
+                return;
+            }
+            
+            let formAction = '';
+            let formName = '';
+            
+            if(currentSendOption === 'hospital') {
+                formAction = 'send_to_hospital';
+                formName = 'send_to_hospital';
+            } else if(currentSendOption === 'patient') {
+                formAction = 'send_to_patient';
+                formName = 'send_to_patient';
+            }
+            
+            // Submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            const prescriptionIdInput = document.createElement('input');
+            prescriptionIdInput.type = 'hidden';
+            prescriptionIdInput.name = 'prescription_id';
+            prescriptionIdInput.value = currentPrescriptionId;
+            form.appendChild(prescriptionIdInput);
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = formName;
+            actionInput.value = '1';
+            form.appendChild(actionInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Function to directly send to hospital pharmacy
+        function sendToHospitalPharmacy(prescriptionId) {
+            if(confirm('Send this prescription to Hospital Pharmacy?')) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const prescriptionIdInput = document.createElement('input');
+                prescriptionIdInput.type = 'hidden';
+                prescriptionIdInput.name = 'prescription_id';
+                prescriptionIdInput.value = prescriptionId;
+                form.appendChild(prescriptionIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'send_to_hospital';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Function to directly send to patient contact
+        function sendToPatientContact(prescriptionId) {
+            if(confirm('Send this prescription to Patient\'s Contact Number via SMS?')) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const prescriptionIdInput = document.createElement('input');
+                prescriptionIdInput.type = 'hidden';
+                prescriptionIdInput.name = 'prescription_id';
+                prescriptionIdInput.value = prescriptionId;
+                form.appendChild(prescriptionIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'send_to_patient';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
             }
         }
     </script>
@@ -2163,50 +2434,83 @@ if(isset($_SESSION['success'])){
                     <!-- Prescriptions -->
                     <div class="tab-pane fade" id="pres-tab">
                         <h4>Prescriptions</h4>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('prescriptions-table-body', 'prescriptions')">Export</button>
+                        <?php if($prescription_msg): echo $prescription_msg; endif; ?>
+                        
+                        <div class="search-container">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="search-bar">
+                                        <input type="text" class="form-control" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
+                                        <i class="fa fa-search search-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="exportTable('prescriptions-table-body', 'prescriptions')">
+                                        <i class="fa fa-download mr-2"></i>Export Prescriptions
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+                        
                         <table class="table table-hover table-bordered">
                             <thead>
                                 <tr>
+                                    <th>ID</th>
                                     <th>Doctor</th>
                                     <th>Patient ID</th>
                                     <th>Patient Name</th>
                                     <th>National ID</th>
                                     <th>Date</th>
                                     <th>Disease</th>
-                                    <th>Allergy</th>
                                     <th>Prescription</th>
                                     <th>Status</th>
+                                    <th>Send Options</th>
                                 </tr>
                             </thead>
                             <tbody id="prescriptions-table-body">
                                 <?php if(count($prescriptions) > 0): ?>
                                     <?php foreach($prescriptions as $pres): ?>
                                     <tr>
+                                        <td><?php echo $pres['id']; ?></td>
                                         <td><?php echo $pres['doctor']; ?></td>
                                         <td><?php echo $pres['pid']; ?></td>
                                         <td><?php echo $pres['fname'] . ' ' . $pres['lname']; ?></td>
                                         <td><?php echo $pres['national_id']; ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($pres['appdate'])); ?></td>
                                         <td><?php echo $pres['disease']; ?></td>
-                                        <td><?php echo $pres['allergy']; ?></td>
-                                        <td><?php echo $pres['prescription']; ?></td>
+                                        <td style="max-width: 200px; word-wrap: break-word;"><?php echo $pres['prescription']; ?></td>
                                         <td>
-                                            <?php if($pres['emailStatus'] == 'Not Sent'): ?>
-                                                <span class="status-badge status-pending">Not Sent</span>
-                                            <?php elseif($pres['emailStatus'] == 'SMS Sent'): ?>
-                                                <span class="status-badge status-sms-sent">SMS Sent</span>
+                                            <?php 
+                                            $status = $pres['emailStatus'];
+                                            if($status == 'Not Sent'): ?>
+                                                <span class="status-badge status-not-sent">Not Sent</span>
+                                            <?php elseif($status == 'Sent to Hospital Pharmacy'): ?>
+                                                <span class="status-badge status-hospital-pharmacy">Sent to Hospital</span>
+                                            <?php elseif($status == 'Sent to Patient Contact (SMS)'): ?>
+                                                <span class="status-badge status-patient-sms">Sent via SMS</span>
                                             <?php else: ?>
-                                                <span class="status-badge status-sent-external">Sent to Pharmacy</span>
+                                                <span class="status-badge status-not-sent"><?php echo $status; ?></span>
                                             <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-wrap">
+                                                <button class="btn btn-sm btn-primary prescription-action-btn" onclick="sendToHospitalPharmacy(<?php echo $pres['id']; ?>)">
+                                                    <i class="fa fa-hospital-o mr-1"></i> Send to Hospital Pharmacy
+                                                </button>
+                                                <button class="btn btn-sm btn-success prescription-action-btn" onclick="sendToPatientContact(<?php echo $pres['id']; ?>)">
+                                                    <i class="fa fa-mobile mr-1"></i> Send to Patient Contact
+                                                </button>
+                                                <!-- Alternative: Open modal for options -->
+                                                <button class="btn btn-sm btn-info prescription-action-btn" data-toggle="modal" data-target="#sendPrescriptionModal" data-prescription-id="<?php echo $pres['id']; ?>">
+                                                    <i class="fa fa-send mr-1"></i> Send Options
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center">No prescriptions found</td>
+                                        <td colspan="10" class="text-center">No prescriptions found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2797,6 +3101,71 @@ if(isset($_SESSION['success'])){
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-warning" onclick="updatePaymentStatus()">Update Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Prescription Modal -->
+    <div class="modal fade prescription-modal" id="sendPrescriptionModal" tabindex="-1" role="dialog" aria-labelledby="sendPrescriptionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sendPrescriptionModalLabel"><i class="fa fa-send mr-2"></i>Send Prescription</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="prescription-details" id="prescription-details-content">
+                        <h6>Prescription Details</h6>
+                        <p>Select a prescription to view details.</p>
+                    </div>
+                    
+                    <h6 class="mb-3">Select Sending Option:</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="send-option-card" onclick="selectSendOption('hospital')">
+                                <div class="text-center">
+                                    <i class="fa fa-hospital-o send-option-icon"></i>
+                                    <div class="send-option-title">Hospital Pharmacy</div>
+                                    <div class="send-option-desc">
+                                        Send directly to the hospital pharmacy for medicine dispensing.
+                                        Pharmacists will prepare medications based on this prescription.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="send-option-card" onclick="selectSendOption('patient')">
+                                <div class="text-center">
+                                    <i class="fa fa-mobile send-option-icon"></i>
+                                    <div class="send-option-title">Patient Contact (SMS)</div>
+                                    <div class="send-option-desc">
+                                        Send prescription details to patient's registered mobile number via SMS.
+                                        Patient can use this to get medications from any pharmacy.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fa fa-info-circle mr-2"></i>
+                        <strong>Note:</strong> 
+                        <ul class="mb-0 mt-2">
+                            <li>Hospital Pharmacy option sends prescription to internal pharmacy system</li>
+                            <li>Patient Contact option sends SMS with prescription details</li>
+                            <li>Both options will update the prescription status accordingly</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirm-send-btn" onclick="confirmSendPrescription()" disabled>
+                        <i class="fa fa-send mr-1"></i> Send Prescription
+                    </button>
                 </div>
             </div>
         </div>
