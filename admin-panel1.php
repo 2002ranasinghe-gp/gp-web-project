@@ -58,7 +58,7 @@ if(isset($_POST['add_patient'])){
             
             if(mysqli_query($con, $query)){
                 $new_patient_id = mysqli_insert_id($con);
-                $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id, Password: $password</div>";
+                $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
                 $_SESSION['success'] = "Patient added successfully!";
             } else {
                 $patient_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -90,7 +90,7 @@ if(isset($_POST['add_doctor'])){
                   VALUES ('$doctorId', '$doctor', '$special', '$demail', '$dpassword', '$docFees', '$doctorContact')";
         
         if(mysqli_query($con, $query)){
-            $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId, Password: $dpassword</div>";
+            $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId</div>";
             $_SESSION['success'] = "Doctor added successfully!";
         } else {
             $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -141,7 +141,7 @@ if(isset($_POST['add_staff'])){
                   VALUES ('$staffId', '$staff', '$role', '$semail', '$scontact', '$spassword')";
         
         if(mysqli_query($con, $query)){
-            $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId, Password: $spassword</div>";
+            $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
             $_SESSION['success'] = "Staff added successfully!";
         } else {
             $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -298,7 +298,7 @@ $schedules = [];
 $rooms = [];
 
 // Get patients
-$patient_result = mysqli_query($con, "SELECT * FROM patreg ORDER BY pid DESC");
+$patient_result = mysqli_query($con, "SELECT pid, fname, lname, gender, email, contact, dob, national_id FROM patreg ORDER BY pid DESC");
 if($patient_result){
     while($row = mysqli_fetch_assoc($patient_result)){
         $patients[] = $row;
@@ -306,7 +306,7 @@ if($patient_result){
 }
 
 // Get doctors
-$doctor_result = mysqli_query($con, "SELECT * FROM doctb ORDER BY username");
+$doctor_result = mysqli_query($con, "SELECT id, username, spec, email, docFees, contact FROM doctb ORDER BY username");
 if($doctor_result){
     while($row = mysqli_fetch_assoc($doctor_result)){
         $doctors[] = $row;
@@ -338,7 +338,7 @@ if($payment_result){
 }
 
 // Get staff
-$staff_result = mysqli_query($con, "SELECT * FROM stafftb ORDER BY role");
+$staff_result = mysqli_query($con, "SELECT id, name, role, email, contact FROM stafftb ORDER BY role");
 if($staff_result){
     while($row = mysqli_fetch_assoc($staff_result)){
         $staff[] = $row;
@@ -1824,7 +1824,6 @@ if(isset($_SESSION['success'])){
                                     <th>Email</th>
                                     <th>Fees (Rs.)</th>
                                     <th>Contact Number</th>
-                                    <th>Password</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -1838,9 +1837,8 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $doctor['email']; ?></td>
                                         <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
                                         <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
-                                        <td><code><?php echo $doctor['password']; ?></code></td>
                                         <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>\\nPassword: <?php echo $doctor['password']; ?>')">
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
                                                 <i class="fa fa-eye"></i> View
                                             </button>
                                         </td>
@@ -1848,7 +1846,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center">No doctors found</td>
+                                        <td colspan="7" class="text-center">No doctors found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2008,7 +2006,6 @@ if(isset($_SESSION['success'])){
                                     <th>Contact</th>
                                     <th>Date of Birth</th>
                                     <th>NIC</th>
-                                    <th>Password</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-table-body">
@@ -2023,12 +2020,11 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $patient['contact']; ?></td>
                                         <td><?php echo $patient['dob'] ? date('Y-m-d', strtotime($patient['dob'])) : 'N/A'; ?></td>
                                         <td><span class="badge badge-info"><?php echo $patient['national_id']; ?></span></td>
-                                        <td><code><?php echo $patient['password']; ?></code></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center">No patients found</td>
+                                        <td colspan="8" class="text-center">No patients found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2628,7 +2624,6 @@ if(isset($_SESSION['success'])){
                                     <th>Role/Type</th>
                                     <th>Email</th>
                                     <th>Contact/Fees</th>
-                                    <th>Password</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2641,9 +2636,8 @@ if(isset($_SESSION['success'])){
                                     <td><span class="badge badge-primary">Doctor (<?php echo $doctor['spec']; ?>)</span></td>
                                     <td><?php echo $doctor['email']; ?></td>
                                     <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
-                                    <td><code><?php echo $doctor['password']; ?></code></td>
                                     <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nPassword: <?php echo $doctor['password']; ?>')">
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>')">
                                             <i class="fa fa-eye"></i> View
                                         </button>
                                     </td>
@@ -2658,9 +2652,8 @@ if(isset($_SESSION['success'])){
                                     <td><span class="badge badge-secondary"><?php echo $staff_member['role']; ?></span></td>
                                     <td><?php echo $staff_member['email']; ?></td>
                                     <td><?php echo $staff_member['contact']; ?></td>
-                                    <td><code><?php echo $staff_member['password']; ?></code></td>
                                     <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>\\nPassword: <?php echo $staff_member['password']; ?>')">
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>')">
                                             <i class="fa fa-eye"></i> View
                                         </button>
                                     </td>
@@ -2669,7 +2662,7 @@ if(isset($_SESSION['success'])){
                                 
                                 <?php if(count($doctors) == 0 && count($staff) == 0): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center">No doctors or staff members found</td>
+                                    <td colspan="6" class="text-center">No doctors or staff members found</td>
                                 </tr>
                                 <?php endif; ?>
                             </tbody>
