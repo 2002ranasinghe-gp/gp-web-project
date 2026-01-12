@@ -258,7 +258,7 @@ h2 {
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <a class="navbar-brand" href="#">
-        <i class="fas fa-hospital-alt mr-2"></i>HEALTHCARE 
+        <i class="fas fa-hospital-alt mr-2"></i>HEALTHCARE HOSPITAL
     </a>
     <div class="welcome">
         <i class="fas fa-user-circle mr-2"></i>Welcome, <?php echo $_SESSION['reception']; ?> 
