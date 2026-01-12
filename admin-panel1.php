@@ -1,4 +1,423 @@
 <!DOCTYPE html>
+<?php
+// ===========================
+// DATABASE CONNECTION
+// ===========================
+session_start();
+$con = mysqli_connect("localhost", "root", "", "myhmsdb");
+
+if(!$con){
+    die("Database connection failed: " . mysqli_connect_error());
+}
+
+// Check if required tables exist, create if not
+checkAndCreateTables($con);
+
+// ===========================
+// MESSAGES VARIABLES
+// ===========================
+$patient_msg = "";
+$doctor_msg = "";
+$staff_msg = "";
+$payment_msg = "";
+$appointment_msg = "";
+
+// ===========================
+// ADD PATIENT
+// ===========================
+if(isset($_POST['add_patient'])){
+    $fname = mysqli_real_escape_string($con, $_POST['fname']);
+    $lname = mysqli_real_escape_string($con, $_POST['lname']);
+    $gender = mysqli_real_escape_string($con, $_POST['gender']);
+    $dob = mysqli_real_escape_string($con, $_POST['dob']);
+    $email = mysqli_real_escape_string($con, $_POST['email']);
+    $contact = mysqli_real_escape_string($con, $_POST['contact']);
+    $address = isset($_POST['address']) ? mysqli_real_escape_string($con, $_POST['address']) : '';
+    $emergencyContact = isset($_POST['emergencyContact']) ? mysqli_real_escape_string($con, $_POST['emergencyContact']) : '';
+    $nic_input = mysqli_real_escape_string($con, $_POST['nic']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    
+    // Format NIC
+    $nicNumbers = preg_replace('/[^0-9]/', '', $nic_input);
+    $national_id = 'NIC' . $nicNumbers;
+    
+    // Check if email exists
+    $check_email = mysqli_query($con, "SELECT * FROM patreg WHERE email='$email'");
+    if(mysqli_num_rows($check_email) > 0){
+        $patient_msg = "<div class='alert alert-danger'>❌ Patient with this email already exists!</div>";
+    } else {
+        // Check if NIC exists
+        $check_nic = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$national_id'");
+        if(mysqli_num_rows($check_nic) > 0){
+            $patient_msg = "<div class='alert alert-danger'>❌ Patient with this NIC already exists!</div>";
+        } else {
+            // Insert patient
+            $query = "INSERT INTO patreg (fname, lname, gender, dob, email, contact, address, emergencyContact, national_id, password) 
+                      VALUES ('$fname', '$lname', '$gender', '$dob', '$email', '$contact', '$address', '$emergencyContact', '$national_id', '$password')";
+            
+            if(mysqli_query($con, $query)){
+                $new_patient_id = mysqli_insert_id($con);
+                $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
+                $_SESSION['success'] = "Patient added successfully!";
+            } else {
+                $patient_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+            }
+        }
+    }
+}
+
+// ===========================
+// ADD DOCTOR
+// ===========================
+if(isset($_POST['add_doctor'])){
+    $doctorId = mysqli_real_escape_string($con, $_POST['doctorId']);
+    $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
+    $special = mysqli_real_escape_string($con, $_POST['special']);
+    $demail = mysqli_real_escape_string($con, $_POST['demail']);
+    $dpassword = password_hash($_POST['dpassword'], PASSWORD_DEFAULT);
+    $docFees = mysqli_real_escape_string($con, $_POST['docFees']);
+    $doctorContact = mysqli_real_escape_string($con, $_POST['doctorContact']);
+    
+    // Check if doctor exists
+    $check = mysqli_query($con, "SELECT * FROM doctb WHERE email='$demail' OR id='$doctorId'");
+    if(mysqli_num_rows($check) > 0){
+        $doctor_msg = "<div class='alert alert-danger'>❌ Doctor with this email or ID already exists!</div>";
+    } else {
+        $query = "INSERT INTO doctb (id, username, spec, email, password, docFees, contact) 
+                  VALUES ('$doctorId', '$doctor', '$special', '$demail', '$dpassword', '$docFees', '$doctorContact')";
+        
+        if(mysqli_query($con, $query)){
+            $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId</div>";
+            $_SESSION['success'] = "Doctor added successfully!";
+        } else {
+            $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// DELETE DOCTOR
+// ===========================
+if(isset($_POST['delete_doctor'])){
+    $doctorId = mysqli_real_escape_string($con, $_POST['doctorId']);
+    
+    // Check if doctor exists
+    $check = mysqli_query($con, "SELECT * FROM doctb WHERE id='$doctorId'");
+    if(mysqli_num_rows($check) == 0){
+        $doctor_msg = "<div class='alert alert-danger'>❌ No doctor found with this ID!</div>";
+    } else {
+        $delete = mysqli_query($con, "DELETE FROM doctb WHERE id='$doctorId'");
+        if($delete){
+            $doctor_msg = "<div class='alert alert-success'>✅ Doctor deleted successfully!</div>";
+            $_SESSION['success'] = "Doctor deleted successfully!";
+        } else {
+            $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// ADD STAFF
+// ===========================
+if(isset($_POST['add_staff'])){
+    $staffId = mysqli_real_escape_string($con, $_POST['staffId']);
+    $staff = mysqli_real_escape_string($con, $_POST['staff']);
+    $role = mysqli_real_escape_string($con, $_POST['role']);
+    $semail = mysqli_real_escape_string($con, $_POST['semail']);
+    $scontact = mysqli_real_escape_string($con, $_POST['scontact']);
+    $spassword = password_hash($_POST['spassword'], PASSWORD_DEFAULT);
+    
+    // Check if staff exists
+    $check = mysqli_query($con, "SELECT * FROM stafftb WHERE email='$semail' OR id='$staffId'");
+    if(mysqli_num_rows($check) > 0){
+        $staff_msg = "<div class='alert alert-danger'>❌ Staff member with this email or ID already exists!</div>";
+    } else {
+        $query = "INSERT INTO stafftb (id, name, role, email, contact, password) 
+                  VALUES ('$staffId', '$staff', '$role', '$semail', '$scontact', '$spassword')";
+        
+        if(mysqli_query($con, $query)){
+            $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
+            $_SESSION['success'] = "Staff added successfully!";
+        } else {
+            $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// CANCEL APPOINTMENT
+// ===========================
+if(isset($_POST['cancel_appointment'])){
+    $appointmentId = mysqli_real_escape_string($con, $_POST['appointmentId']);
+    $reason = mysqli_real_escape_string($con, $_POST['reason']);
+    $cancelledBy = mysqli_real_escape_string($con, $_POST['cancelledBy']);
+    
+    $query = "UPDATE appointmenttb SET 
+              appointmentStatus='cancelled',
+              cancelledBy='$cancelledBy',
+              cancellationReason='$reason',
+              userStatus=0 
+              WHERE ID='$appointmentId'";
+    
+    if(mysqli_query($con, $query)){
+        $appointment_msg = "<div class='alert alert-success'>✅ Appointment cancelled successfully!</div>";
+        $_SESSION['success'] = "Appointment cancelled!";
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// UPDATE PAYMENT STATUS
+// ===========================
+if(isset($_POST['update_payment'])){
+    $paymentId = mysqli_real_escape_string($con, $_POST['paymentId']);
+    $status = mysqli_real_escape_string($con, $_POST['status']);
+    $method = mysqli_real_escape_string($con, $_POST['method']);
+    $receipt = mysqli_real_escape_string($con, $_POST['receipt']);
+    
+    if($status == 'Paid' && empty($receipt)){
+        $receipt = 'REC' . str_pad($paymentId, 3, '0', STR_PAD_LEFT);
+    }
+    
+    $query = "UPDATE paymenttb SET 
+              pay_status='$status',
+              payment_method='$method',
+              receipt_no='$receipt'
+              WHERE id='$paymentId'";
+    
+    if(mysqli_query($con, $query)){
+        $payment_msg = "<div class='alert alert-success'>✅ Payment status updated successfully!</div>";
+        $_SESSION['success'] = "Payment updated!";
+    } else {
+        $payment_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// GET DATA FROM DATABASE
+// ===========================
+$patients = [];
+$doctors = [];
+$appointments = [];
+$prescriptions = [];
+$payments = [];
+$staff = [];
+$schedules = [];
+$rooms = [];
+
+// Get patients
+$patient_result = mysqli_query($con, "SELECT * FROM patreg ORDER BY pid DESC");
+if($patient_result){
+    while($row = mysqli_fetch_assoc($patient_result)){
+        $patients[] = $row;
+    }
+}
+
+// Get doctors
+$doctor_result = mysqli_query($con, "SELECT * FROM doctb ORDER BY username");
+if($doctor_result){
+    while($row = mysqli_fetch_assoc($doctor_result)){
+        $doctors[] = $row;
+    }
+}
+
+// Get appointments
+$appointment_result = mysqli_query($con, "SELECT * FROM appointmenttb ORDER BY appdate DESC, apptime DESC");
+if($appointment_result){
+    while($row = mysqli_fetch_assoc($appointment_result)){
+        $appointments[] = $row;
+    }
+}
+
+// Get prescriptions
+$prescription_result = mysqli_query($con, "SELECT * FROM prestb ORDER BY appdate DESC");
+if($prescription_result){
+    while($row = mysqli_fetch_assoc($prescription_result)){
+        $prescriptions[] = $row;
+    }
+}
+
+// Get payments
+$payment_result = mysqli_query($con, "SELECT * FROM paymenttb ORDER BY pay_date DESC");
+if($payment_result){
+    while($row = mysqli_fetch_assoc($payment_result)){
+        $payments[] = $row;
+    }
+}
+
+// Get staff
+$staff_result = mysqli_query($con, "SELECT * FROM stafftb ORDER BY role");
+if($staff_result){
+    while($row = mysqli_fetch_assoc($staff_result)){
+        $staff[] = $row;
+    }
+}
+
+// Get schedules
+$schedule_result = mysqli_query($con, "SELECT * FROM scheduletb ORDER BY day, shift");
+if($schedule_result){
+    while($row = mysqli_fetch_assoc($schedule_result)){
+        $schedules[] = $row;
+    }
+}
+
+// Get rooms
+$room_result = mysqli_query($con, "SELECT * FROM roomtb ORDER BY room_no, bed_no");
+if($room_result){
+    while($row = mysqli_fetch_assoc($room_result)){
+        $rooms[] = $row;
+    }
+}
+
+// Get dashboard counts
+$total_doctors = count($doctors);
+$total_patients = count($patients);
+$total_appointments = count($appointments);
+$total_staff = count($staff);
+$today_appointments = 0;
+$today = date('Y-m-d');
+
+foreach($appointments as $app){
+    if($app['appdate'] == $today){
+        $today_appointments++;
+    }
+}
+
+// ===========================
+// FUNCTION TO CHECK/CREATE TABLES
+// ===========================
+function checkAndCreateTables($con){
+    $tables = [
+        'patreg' => "CREATE TABLE IF NOT EXISTS patreg (
+            pid INT PRIMARY KEY AUTO_INCREMENT,
+            fname VARCHAR(50) NOT NULL,
+            lname VARCHAR(50) NOT NULL,
+            gender VARCHAR(10),
+            dob DATE,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            contact VARCHAR(15) NOT NULL,
+            address TEXT,
+            emergencyContact VARCHAR(15),
+            national_id VARCHAR(20) UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            reg_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        
+        'doctb' => "CREATE TABLE IF NOT EXISTS doctb (
+            id VARCHAR(20) PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            spec VARCHAR(50) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            docFees DECIMAL(10,2) NOT NULL,
+            contact VARCHAR(15),
+            reg_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        
+        'appointmenttb' => "CREATE TABLE IF NOT EXISTS appointmenttb (
+            ID INT PRIMARY KEY AUTO_INCREMENT,
+            pid INT NOT NULL,
+            national_id VARCHAR(20),
+            fname VARCHAR(50),
+            lname VARCHAR(50),
+            gender VARCHAR(10),
+            email VARCHAR(100),
+            contact VARCHAR(15),
+            doctor VARCHAR(50) NOT NULL,
+            docFees DECIMAL(10,2) NOT NULL,
+            appdate DATE NOT NULL,
+            apptime TIME NOT NULL,
+            userStatus INT DEFAULT 1,
+            doctorStatus INT DEFAULT 1,
+            appointmentStatus VARCHAR(20) DEFAULT 'active',
+            cancelledBy VARCHAR(20),
+            cancellationReason TEXT,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (pid) REFERENCES patreg(pid) ON DELETE CASCADE
+        )",
+        
+        'prestb' => "CREATE TABLE IF NOT EXISTS prestb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            doctor VARCHAR(50) NOT NULL,
+            pid INT NOT NULL,
+            appointment_id INT,
+            fname VARCHAR(50),
+            lname VARCHAR(50),
+            national_id VARCHAR(20),
+            appdate DATE,
+            apptime TIME,
+            disease VARCHAR(100),
+            allergy VARCHAR(100),
+            prescription TEXT,
+            emailStatus VARCHAR(50) DEFAULT 'Not Sent',
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (pid) REFERENCES patreg(pid) ON DELETE CASCADE
+        )",
+        
+        'paymenttb' => "CREATE TABLE IF NOT EXISTS paymenttb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            pid INT NOT NULL,
+            appointment_id INT,
+            national_id VARCHAR(20),
+            patient_name VARCHAR(100),
+            doctor VARCHAR(50) NOT NULL,
+            fees DECIMAL(10,2) NOT NULL,
+            pay_date DATE NOT NULL,
+            pay_status VARCHAR(20) DEFAULT 'Pending',
+            payment_method VARCHAR(50),
+            receipt_no VARCHAR(50),
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (pid) REFERENCES patreg(pid) ON DELETE CASCADE
+        )",
+        
+        'stafftb' => "CREATE TABLE IF NOT EXISTS stafftb (
+            id VARCHAR(20) PRIMARY KEY,
+            name VARCHAR(50) NOT NULL,
+            role VARCHAR(50) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            contact VARCHAR(15) NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        
+        'scheduletb' => "CREATE TABLE IF NOT EXISTS scheduletb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            staff_name VARCHAR(50) NOT NULL,
+            role VARCHAR(50) NOT NULL,
+            day VARCHAR(20) NOT NULL,
+            shift VARCHAR(20) NOT NULL,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        
+        'roomtb' => "CREATE TABLE IF NOT EXISTS roomtb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            room_no VARCHAR(10) NOT NULL,
+            bed_no VARCHAR(10) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            status VARCHAR(20) DEFAULT 'Available',
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )"
+    ];
+    
+    foreach($tables as $table_name => $create_sql){
+        $check = mysqli_query($con, "SHOW TABLES LIKE '$table_name'");
+        if(mysqli_num_rows($check) == 0){
+            mysqli_query($con, $create_sql);
+        }
+    }
+}
+
+// ===========================
+// CHECK SESSION MESSAGES
+// ===========================
+if(isset($_SESSION['success'])){
+    $success_msg = $_SESSION['success'];
+    unset($_SESSION['success']);
+} else {
+    $success_msg = "";
+}
+?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -24,7 +443,7 @@
             padding-top: 70px;
             background-color: #f5f7fb;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 16px; /* Increased base font size */
+            font-size: 16px;
         }
         
         .bg-primary { 
@@ -33,11 +452,11 @@
         
         .navbar-brand { 
             font-weight: bold;
-            font-size: 1.8rem; /* Increased */
+            font-size: 1.8rem;
         }
         
         .list-group-item {
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         .list-group-item.active {
@@ -59,13 +478,13 @@
         .table {
             width: 100%;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         .table th {
             background-color: var(--primary);
             color: white;
-            font-size: 1.2rem; /* Increased */
+            font-size: 1.2rem;
         }
         
         h3, h4, h5 {
@@ -73,15 +492,15 @@
         }
         
         h3 {
-            font-size: 2.2rem; /* Increased */
+            font-size: 2.2rem;
         }
         
         h4 {
-            font-size: 1.8rem; /* Increased */
+            font-size: 1.8rem;
         }
         
         h5 {
-            font-size: 1.5rem; /* Increased */
+            font-size: 1.5rem;
         }
         
         .dashboard-bg {
@@ -128,13 +547,13 @@
         }
         
         .card-title {
-            font-size: 1.3rem; /* Increased */
+            font-size: 1.3rem;
             margin-bottom: 10px;
             font-weight: 600;
         }
         
         .card-value {
-            font-size: 3.5rem; /* Increased */
+            font-size: 3.5rem;
             font-weight: bold;
         }
         
@@ -178,7 +597,7 @@
             cursor: pointer;
             text-decoration: none;
             color: var(--dark);
-            font-size: 1rem; /* Increased */
+            font-size: 1rem;
         }
         
         .quick-action-btn:hover {
@@ -190,7 +609,7 @@
         .status-badge {
             padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.9rem; /* Increased */
+            font-size: 0.9rem;
             font-weight: bold;
         }
         
@@ -257,11 +676,11 @@
         .activity-item {
             padding: 10px 0;
             border-bottom: 1px solid #e0e0e0;
-            font-size: 1rem; /* Increased */
+            font-size: 1rem;
         }
         
         .activity-time {
-            font-size: 0.9rem; /* Increased */
+            font-size: 0.9rem;
             color: var(--secondary);
         }
         
@@ -272,7 +691,7 @@
         
         .action-btn {
             margin: 2px;
-            font-size: 1rem; /* Increased */
+            font-size: 1rem;
             padding: 5px 10px;
             border-radius: 4px;
             transition: all 0.3s;
@@ -286,28 +705,28 @@
         .pharmacy-type-btn {
             width: 100%;
             margin-bottom: 10px;
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         .form-control {
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         label {
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
             font-weight: 500;
         }
         
         .btn {
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         .modal-title {
-            font-size: 1.5rem; /* Increased */
+            font-size: 1.5rem;
         }
         
         .modal-body {
-            font-size: 1.1rem; /* Increased */
+            font-size: 1.1rem;
         }
         
         .patient-registration-card {
@@ -322,7 +741,7 @@
             color: white;
             padding: 15px 20px;
             font-weight: bold;
-            font-size: 1.3rem; /* Increased */
+            font-size: 1.3rem;
         }
         
         .generated-nic {
@@ -333,7 +752,7 @@
             font-weight: bold;
             color: #0066cc;
             margin-top: 10px;
-            font-size: 1.2rem; /* Increased */
+            font-size: 1.2rem;
         }
         
         .search-container {
@@ -409,11 +828,11 @@
             }
             
             .card-value {
-                font-size: 2.8rem; /* Adjusted for medium screens */
+                font-size: 2.8rem;
             }
             
             body {
-                font-size: 15px; /* Slightly smaller on tablets */
+                font-size: 15px;
             }
         }
         
@@ -427,11 +846,11 @@
             }
             
             .card-value {
-                font-size: 2.5rem; /* Adjusted for small screens */
+                font-size: 2.5rem;
             }
             
             body {
-                font-size: 14px; /* Slightly smaller on mobile */
+                font-size: 14px;
             }
             
             h3 {
@@ -447,6 +866,583 @@
             }
         }
     </style>
+    <script>
+        // Global variables
+        let currentPaymentId = null;
+        let currentPrescriptionId = null;
+        let currentPatientContact = '';
+        let currentAppointmentIdToCancel = null;
+        let currentPaymentSearchMode = 'patientId';
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update dashboard counts with real data from PHP
+            updateDashboardCounts();
+            
+            // Set up form validations
+            setupFormValidations();
+            
+            // Set up modal functionality
+            setupModalFunctionality();
+            
+            // Populate doctor select for delete modal
+            populateDoctorSelect();
+            
+            // Set initial payment search mode
+            setPaymentSearchMode('patientId');
+            
+            // Auto-refresh success messages
+            autoRefreshMessages();
+        });
+        
+        // Update dashboard counts with real data
+        function updateDashboardCounts() {
+            // These values are set by PHP
+            document.getElementById('total-doctors').textContent = '<?php echo $total_doctors; ?>';
+            document.getElementById('total-patients').textContent = '<?php echo $total_patients; ?>';
+            document.getElementById('total-appointments').textContent = '<?php echo $total_appointments; ?>';
+            document.getElementById('total-staff').textContent = '<?php echo $total_staff; ?>';
+            
+            // Initialize charts with real data
+            initializeCharts();
+        }
+        
+        // Function to format NIC input
+        function formatNIC() {
+            const nicInput = document.getElementById('patientNIC');
+            const nicDisplay = document.getElementById('generatedNICDisplay');
+            
+            let nicValue = nicInput.value.replace(/[^0-9]/g, '');
+            nicInput.value = nicValue;
+            
+            if (nicValue) {
+                nicDisplay.innerHTML = `<strong>NIC will be:</strong> NIC${nicValue}`;
+            } else {
+                nicDisplay.innerHTML = 'Enter NIC number above';
+            }
+        }
+        
+        // Function to check patient password match
+        function checkPatientPassword() {
+            let pass = document.getElementById('patientPassword').value;
+            let cpass = document.getElementById('patientConfirmPassword').value;
+            const message = document.getElementById('patientPasswordMessage');
+            
+            if (pass === cpass) {
+                message.style.color = '#28a745';
+                message.innerText = 'Passwords match';
+            } else {
+                message.style.color = '#dc3545';
+                message.innerText = 'Passwords do not match';
+            }
+        }
+        
+        // Function to check doctor password match
+        function checkDoctorPassword() {
+            let pass = document.getElementById('dpassword').value;
+            let cpass = document.getElementById('cdpassword').value;
+            const message = document.getElementById('message');
+            
+            if (pass === cpass) {
+                message.style.color = '#28a745';
+                message.innerText = 'Passwords match';
+            } else {
+                message.style.color = '#dc3545';
+                message.innerText = 'Passwords do not match';
+            }
+        }
+        
+        // Alpha only validation for names
+        function alphaOnly(event) {
+            let key = event.keyCode;
+            return ((key >= 65 && key <= 90) || (key >= 97 && key <= 122) || key == 8 || key == 32);
+        }
+        
+        // Function to setup form validations
+        function setupFormValidations() {
+            // Add Patient form validation
+            const addPatientForm = document.getElementById('add-patient-form');
+            if(addPatientForm) {
+                addPatientForm.addEventListener('submit', function(e) {
+                    const password = document.getElementById('patientPassword').value;
+                    const confirmPassword = document.getElementById('patientConfirmPassword').value;
+                    
+                    if(password !== confirmPassword) {
+                        e.preventDefault();
+                        alert('Passwords do not match!');
+                        return false;
+                    }
+                    
+                    const nic = document.getElementById('patientNIC').value;
+                    if(!nic || nic.trim() === '') {
+                        e.preventDefault();
+                        alert('Please enter NIC number!');
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Add Doctor form validation
+            const addDoctorForm = document.getElementById('add-doctor-form');
+            if(addDoctorForm) {
+                addDoctorForm.addEventListener('submit', function(e) {
+                    const password = document.getElementById('dpassword').value;
+                    const confirmPassword = document.getElementById('cdpassword').value;
+                    
+                    if(password !== confirmPassword) {
+                        e.preventDefault();
+                        alert('Passwords do not match!');
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+        }
+        
+        // Function to setup modal functionality
+        function setupModalFunctionality() {
+            // Cancel appointment modal
+            $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const appointmentId = button.data('appointment-id');
+                currentAppointmentIdToCancel = appointmentId;
+            });
+            
+            // Edit payment modal
+            $('#editPaymentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const paymentId = button.data('payment-id');
+                currentPaymentId = paymentId;
+            });
+            
+            // Payment status change listener
+            const editPaymentStatus = document.getElementById('edit-payment-status');
+            if(editPaymentStatus) {
+                editPaymentStatus.addEventListener('change', function() {
+                    togglePaymentMethodSection(this.value);
+                });
+            }
+        }
+        
+        // Function to toggle payment method section
+        function togglePaymentMethodSection(status) {
+            const methodSection = document.getElementById('payment-method-section');
+            if (status === 'Paid') {
+                methodSection.style.display = 'block';
+            } else {
+                methodSection.style.display = 'none';
+            }
+        }
+        
+        // Function to populate doctor select dropdown
+        function populateDoctorSelect() {
+            const select = document.getElementById('doctor-select');
+            if(select) {
+                // This should be populated from database via AJAX or PHP
+                // For now, we'll do it with PHP inline
+            }
+        }
+        
+        // Function to set payment search mode
+        function setPaymentSearchMode(mode) {
+            currentPaymentSearchMode = mode;
+            
+            // Update active button
+            const buttons = document.querySelectorAll('.search-option-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'patientId') {
+                document.querySelector('.search-option-btn:nth-child(1)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'block';
+                document.getElementById('nic-search-form').style.display = 'none';
+                showAllPayments();
+            } else if (mode === 'nic') {
+                document.querySelector('.search-option-btn:nth-child(2)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'none';
+                document.getElementById('nic-search-form').style.display = 'block';
+                document.getElementById('payment-nic-search').value = '';
+                showAllPayments();
+            } else if (mode === 'all') {
+                document.querySelector('.search-option-btn:nth-child(3)').classList.add('active');
+                document.getElementById('patientId-search-form').style.display = 'none';
+                document.getElementById('nic-search-form').style.display = 'none';
+                showAllPayments();
+            }
+        }
+        
+        // Function to show all payments in table
+        function showAllPayments() {
+            const tbody = document.getElementById('payments-table-body');
+            if(tbody) {
+                const rows = tbody.getElementsByTagName('tr');
+                for (let i = 0; i < rows.length; i++) {
+                    rows[i].style.display = '';
+                }
+            }
+        }
+        
+        // Function to filter patients by NIC
+        function filterPatientsByNIC() {
+            const input = document.getElementById('patient-search');
+            const filter = input.value.toUpperCase();
+            const tbody = document.getElementById('patients-table-body');
+            
+            if(!tbody) return;
+            
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                if (cells.length >= 8) {
+                    const nicCell = cells[7];
+                    if (nicCell) {
+                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
+                        let nicWithoutPrefix = nicText.replace('NIC', '');
+                        
+                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
+                            found = true;
+                        }
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+        
+        // Function to filter payments by NIC
+        function filterPaymentsByNIC() {
+            const input = document.getElementById('payment-nic-search');
+            const filter = input.value.toUpperCase();
+            const tbody = document.getElementById('payments-table-body');
+            
+            if(!tbody) return;
+            
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                if (cells.length >= 5) {
+                    const nicCell = cells[4];
+                    if (nicCell) {
+                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
+                        let nicWithoutPrefix = nicText.replace('NIC', '');
+                        
+                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
+                            found = true;
+                        }
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+        
+        // Function to search payments by patient ID
+        function searchPaymentsByPatient() {
+            const patientId = document.getElementById('payment-patient-id').value;
+            const tbody = document.getElementById('payments-table-body');
+            
+            if(!tbody || !patientId) {
+                showAllPayments();
+                return;
+            }
+            
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                if (cells.length > 1 && cells[1].textContent == patientId) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+        }
+        
+        // Function to export table to CSV
+        function exportTable(tableBodyId, filename) {
+            const table = document.getElementById(tableBodyId);
+            if(!table) return;
+            
+            const rows = table.getElementsByTagName('tr');
+            let csv = [];
+            
+            // Get headers
+            const headerCells = table.parentNode.getElementsByTagName('thead')[0].getElementsByTagName('th');
+            const headerRow = [];
+            for (let i = 0; i < headerCells.length; i++) {
+                if(headerCells[i].innerText !== 'Actions') {
+                    headerRow.push(headerCells[i].innerText);
+                }
+            }
+            csv.push(headerRow.join(','));
+            
+            // Get data
+            for (let i = 0; i < rows.length; i++) {
+                const row = [];
+                const cols = rows[i].querySelectorAll('td');
+                
+                for (let j = 0; j < cols.length; j++) {
+                    const colText = cols[j].innerText;
+                    if(!colText.includes('View') && !colText.includes('Edit') && !colText.includes('Delete') && !colText.includes('Cancel') && !colText.includes('Send')) {
+                        row.push(cols[j].innerText);
+                    }
+                }
+                
+                if(row.length > 0) {
+                    csv.push(row.join(','));
+                }
+            }
+            
+            // Download CSV
+            const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
+            const downloadLink = document.createElement('a');
+            downloadLink.download = filename + '.csv';
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+        
+        // Function to initialize charts
+        function initializeCharts() {
+            // Appointments Chart
+            const appointmentsCtx = document.getElementById('appointmentsChart');
+            if(appointmentsCtx) {
+                // Count appointments by status
+                let active = 0;
+                let cancelled = 0;
+                
+                <?php
+                $active_apps = 0;
+                $cancelled_apps = 0;
+                foreach($appointments as $app) {
+                    if($app['appointmentStatus'] == 'active') {
+                        $active_apps++;
+                    } else {
+                        $cancelled_apps++;
+                    }
+                }
+                ?>
+                
+                const appointmentsChart = new Chart(appointmentsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Cancelled'],
+                        datasets: [{
+                            data: [<?php echo $active_apps; ?>, <?php echo $cancelled_apps; ?>],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.5)',
+                                'rgba(255, 99, 132, 0.5)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true
+                    }
+                });
+            }
+            
+            // Department Chart
+            const departmentCtx = document.getElementById('departmentChart');
+            if(departmentCtx) {
+                <?php
+                // Count doctors by specialization
+                $spec_count = [];
+                foreach($doctors as $doctor) {
+                    $spec = $doctor['spec'];
+                    if(!isset($spec_count[$spec])) {
+                        $spec_count[$spec] = 0;
+                    }
+                    $spec_count[$spec]++;
+                }
+                
+                $spec_labels = json_encode(array_keys($spec_count));
+                $spec_values = json_encode(array_values($spec_count));
+                ?>
+                
+                const specCount = <?php echo $spec_values; ?>;
+                const specLabels = <?php echo $spec_labels; ?>;
+                
+                const departmentChart = new Chart(departmentCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: specLabels,
+                        datasets: [{
+                            data: specCount,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.5)',
+                                'rgba(54, 162, 235, 0.5)',
+                                'rgba(255, 206, 86, 0.5)',
+                                'rgba(75, 192, 192, 0.5)',
+                                'rgba(153, 102, 255, 0.5)',
+                                'rgba(255, 159, 64, 0.5)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true
+                    }
+                });
+            }
+        }
+        
+        // Function to auto-refresh success messages
+        function autoRefreshMessages() {
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    if(alert.classList.contains('alert-success') || alert.classList.contains('alert-danger')) {
+                        alert.style.opacity = '0.7';
+                        setTimeout(function() {
+                            alert.style.display = 'none';
+                        }, 3000);
+                    }
+                });
+            }, 5000);
+        }
+        
+        // Function to confirm appointment cancellation
+        function confirmCancelAppointment() {
+            if(!currentAppointmentIdToCancel) return;
+            
+            const reason = document.getElementById('cancellationReason').value;
+            const cancelledBy = document.querySelector('input[name="cancelledBy"]:checked').value;
+            
+            // Submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            const appointmentIdInput = document.createElement('input');
+            appointmentIdInput.type = 'hidden';
+            appointmentIdInput.name = 'appointmentId';
+            appointmentIdInput.value = currentAppointmentIdToCancel;
+            form.appendChild(appointmentIdInput);
+            
+            const reasonInput = document.createElement('input');
+            reasonInput.type = 'hidden';
+            reasonInput.name = 'reason';
+            reasonInput.value = reason;
+            form.appendChild(reasonInput);
+            
+            const cancelledByInput = document.createElement('input');
+            cancelledByInput.type = 'hidden';
+            cancelledByInput.name = 'cancelledBy';
+            cancelledByInput.value = cancelledBy;
+            form.appendChild(cancelledByInput);
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'cancel_appointment';
+            actionInput.value = '1';
+            form.appendChild(actionInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Function to update payment status
+        function updatePaymentStatus() {
+            if(!currentPaymentId) return;
+            
+            const status = document.getElementById('edit-payment-status').value;
+            const method = document.getElementById('edit-payment-method').value;
+            const receipt = document.getElementById('edit-receipt-number').value;
+            
+            // Submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            const paymentIdInput = document.createElement('input');
+            paymentIdInput.type = 'hidden';
+            paymentIdInput.name = 'paymentId';
+            paymentIdInput.value = currentPaymentId;
+            form.appendChild(paymentIdInput);
+            
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'status';
+            statusInput.value = status;
+            form.appendChild(statusInput);
+            
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = 'method';
+            methodInput.value = method;
+            form.appendChild(methodInput);
+            
+            const receiptInput = document.createElement('input');
+            receiptInput.type = 'hidden';
+            receiptInput.name = 'receipt';
+            receiptInput.value = receipt;
+            form.appendChild(receiptInput);
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'update_payment';
+            actionInput.value = '1';
+            form.appendChild(actionInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Function to delete doctor from dashboard
+        function deleteDoctorFromDashboard() {
+            const doctorId = document.getElementById('doctor-select').value;
+            
+            if(!doctorId) {
+                alert('Please select a doctor to delete!');
+                return;
+            }
+            
+            if(confirm('Are you sure you want to delete this doctor?')) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const doctorIdInput = document.createElement('input');
+                doctorIdInput.type = 'hidden';
+                doctorIdInput.name = 'doctorId';
+                doctorIdInput.value = doctorId;
+                form.appendChild(doctorIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'delete_doctor';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -457,7 +1453,10 @@
         <div class="collapse navbar-collapse" id="navbarContent">
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="#" id="notification-badge"><i class="fa fa-bell"></i> Notifications <span class="badge badge-light" id="notification-count">3</span></a>
+                    <a class="nav-link" href="#" id="notification-badge">
+                        <i class="fa fa-bell"></i> Notifications 
+                        <span class="badge badge-light" id="notification-count">0</span>
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="#"><i class="fa fa-user"></i> Profile</a>
@@ -471,6 +1470,11 @@
 
     <div class="container-fluid">
         <h3 class="text-center mb-4">ADMIN PANEL</h3>
+        
+        <?php if($success_msg): ?>
+            <div class="alert alert-success text-center"><?php echo $success_msg; ?></div>
+        <?php endif; ?>
+        
         <div class="row">
             <div class="col-md-3">
                 <div class="list-group" id="list-tab" role="tablist">
@@ -489,7 +1493,7 @@
                     <a class="list-group-item list-group-item-action" data-toggle="list" href="#pres-tab">
                         <i class="fa fa-file-text mr-2"></i>Prescriptions
                     </a>
-                    <a class="list-group-item list-group-itemAction" data-toggle="list" href="#pay-tab">
+                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#pay-tab">
                         <i class="fa fa-credit-card mr-2"></i>Payments
                     </a>
                     <a class="list-group-item list-group-item-action" data-toggle="list" href="#sched-tab">
@@ -547,7 +1551,7 @@
                                         <i class="fa fa-user-md dash-icon"></i>
                                         <div class="card-body text-center">
                                             <h5 class="card-title">Total Doctors</h5>
-                                            <h3 class="card-value" id="total-doctors">8</h3>
+                                            <h3 class="card-value" id="total-doctors">0</h3>
                                         </div>
                                     </div>
                                 </div>
@@ -556,7 +1560,7 @@
                                         <i class="fa fa-users dash-icon"></i>
                                         <div class="card-body text-center">
                                             <h5 class="card-title">Total Patients</h5>
-                                            <h3 class="card-value" id="total-patients">10</h3>
+                                            <h3 class="card-value" id="total-patients">0</h3>
                                         </div>
                                     </div>
                                 </div>
@@ -565,7 +1569,7 @@
                                         <i class="fa fa-calendar dash-icon"></i>
                                         <div class="card-body text-center">
                                             <h5 class="card-title">Appointments</h5>
-                                            <h3 class="card-value" id="total-appointments">10</h3>
+                                            <h3 class="card-value" id="total-appointments">0</h3>
                                         </div>
                                     </div>
                                 </div>
@@ -574,7 +1578,7 @@
                                         <i class="fa fa-id-badge dash-icon"></i>
                                         <div class="card-body text-center">
                                             <h5 class="card-title">Staff Members</h5>
-                                            <h3 class="card-value" id="total-staff">2</h3>
+                                            <h3 class="card-value" id="total-staff">0</h3>
                                         </div>
                                     </div>
                                 </div>
@@ -602,7 +1606,31 @@
                                     <div class="chart-container">
                                         <h5>Recent Activity</h5>
                                         <div class="recent-activity" id="recent-activity">
-                                            <!-- Activity items will be populated by JavaScript -->
+                                            <div class="activity-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div><strong>System Started</strong></div>
+                                                    <div class="activity-time">Just now</div>
+                                                </div>
+                                                <div>Admin Panel loaded successfully</div>
+                                            </div>
+                                            <?php if($total_patients > 0): ?>
+                                            <div class="activity-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div><strong>Patients Registered</strong></div>
+                                                    <div class="activity-time">Today</div>
+                                                </div>
+                                                <div>Total <?php echo $total_patients; ?> patients in system</div>
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if($total_doctors > 0): ?>
+                                            <div class="activity-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div><strong>Doctors Available</strong></div>
+                                                    <div class="activity-time">Today</div>
+                                                </div>
+                                                <div>Total <?php echo $total_doctors; ?> doctors in system</div>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -619,7 +1647,28 @@
                                                 </tr>
                                             </thead>
                                             <tbody id="today-appointments">
-                                                <!-- Today's appointments will be populated by JavaScript -->
+                                                <?php if($today_appointments > 0): ?>
+                                                    <?php foreach($appointments as $app): ?>
+                                                        <?php if($app['appdate'] == $today): ?>
+                                                        <tr>
+                                                            <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
+                                                            <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
+                                                            <td><?php echo $app['doctor']; ?></td>
+                                                            <td>
+                                                                <?php if($app['appointmentStatus'] == 'active'): ?>
+                                                                    <span class="status-badge status-active">Active</span>
+                                                                <?php else: ?>
+                                                                    <span class="status-badge status-cancelled">Cancelled</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                        </tr>
+                                                        <?php endif; ?>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <tr>
+                                                        <td colspan="4" class="text-center">No appointments for today</td>
+                                                    </tr>
+                                                <?php endif; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -628,19 +1677,20 @@
                         </div>
                     </div>
 
-                    <!-- Doctors - Action column removed -->
+                    <!-- Doctors -->
                     <div class="tab-pane fade" id="doc-tab">
                         <h4>Doctors List</h4>
+                        <?php if($doctor_msg): echo $doctor_msg; endif; ?>
                         <div class="search-container">
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="search-bar">
-                                        <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name or ID..." onkeyup="filterDoctors()">
+                                        <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name or ID..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
                                         <i class="fa fa-search search-icon"></i>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportDoctors()">
+                                    <button class="btn btn-primary w-100" onclick="exportTable('doctors-table-body', 'doctors')">
                                         <i class="fa fa-download mr-2"></i>Export Doctors
                                     </button>
                                 </div>
@@ -655,21 +1705,33 @@
                                     <th>Email</th>
                                     <th>Fees (Rs.)</th>
                                     <th>Contact Number</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="doctors-table-body">
-                                <!-- Doctors data will be populated by JavaScript -->
+                                <?php if(count($doctors) > 0): ?>
+                                    <?php foreach($doctors as $doctor): ?>
+                                    <tr>
+                                        <td><?php echo $doctor['id']; ?></td>
+                                        <td><?php echo $doctor['username']; ?></td>
+                                        <td><?php echo $doctor['spec']; ?></td>
+                                        <td><?php echo $doctor['email']; ?></td>
+                                        <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
+                                        <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
+                                                <i class="fa fa-eye"></i> View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center">No doctors found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Patients -->
@@ -680,7 +1742,8 @@
                                 <i class="fa fa-user-plus mr-2"></i>Register New Patient
                             </div>
                             <div class="card-body">
-                                <form id="add-patient-form">
+                                <?php echo $patient_msg; ?>
+                                <form method="POST" id="add-patient-form">
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-group">
@@ -781,12 +1844,11 @@
                                                 <i class="fa fa-id-card mr-2"></i>
                                                 <span id="generatedNICDisplay">Enter NIC number above</span>
                                             </div>
-                                            <small class="text-muted">Note: NIC must be entered by user. Format: NIC + numbers only</small>
                                         </div>
                                     </div>
                                     
                                     <div class="mt-3">
-                                        <button type="button" class="btn btn-success" onclick="addPatient()">
+                                        <button type="submit" name="add_patient" class="btn btn-success">
                                             <i class="fa fa-user-plus mr-1"></i> Register Patient
                                         </button>
                                         <button type="reset" class="btn btn-secondary ml-2">
@@ -808,7 +1870,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportPatients()">
+                                    <button class="btn btn-primary w-100" onclick="exportTable('patients-table-body', 'patients')">
                                         <i class="fa fa-download mr-2"></i>Export Patients
                                     </button>
                                 </div>
@@ -824,37 +1886,46 @@
                                     <th>Email</th>
                                     <th>Contact</th>
                                     <th>Date of Birth</th>
-                                    <th>NIC (User Entered)</th>
+                                    <th>NIC</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-table-body">
-                                <!-- Patients data will be populated by JavaScript -->
+                                <?php if(count($patients) > 0): ?>
+                                    <?php foreach($patients as $patient): ?>
+                                    <tr>
+                                        <td><?php echo $patient['pid']; ?></td>
+                                        <td><?php echo $patient['fname']; ?></td>
+                                        <td><?php echo $patient['lname']; ?></td>
+                                        <td><?php echo $patient['gender']; ?></td>
+                                        <td><?php echo $patient['email']; ?></td>
+                                        <td><?php echo $patient['contact']; ?></td>
+                                        <td><?php echo $patient['dob'] ? date('Y-m-d', strtotime($patient['dob'])) : 'N/A'; ?></td>
+                                        <td><span class="badge badge-info"><?php echo $patient['national_id']; ?></span></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="8" class="text-center">No patients found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Appointments -->
                     <div class="tab-pane fade" id="app-tab">
                         <h4>Appointments</h4>
+                        <?php if($appointment_msg): echo $appointment_msg; endif; ?>
                         <div class="search-container">
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="search-bar">
-                                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments by patient name, doctor name, or ID..." onkeyup="filterAppointments()">
+                                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
                                         <i class="fa fa-search search-icon"></i>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportAppointments()">
+                                    <button class="btn btn-primary w-100" onclick="exportTable('appointments-table-body', 'appointments')">
                                         <i class="fa fa-download mr-2"></i>Export Appointments
                                     </button>
                                 </div>
@@ -876,18 +1947,47 @@
                                 </tr>
                             </thead>
                             <tbody id="appointments-table-body">
-                                <!-- Appointments data will be populated by JavaScript -->
+                                <?php if(count($appointments) > 0): ?>
+                                    <?php foreach($appointments as $app): ?>
+                                    <tr>
+                                        <td><?php echo $app['ID']; ?></td>
+                                        <td><?php echo $app['pid']; ?></td>
+                                        <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
+                                        <td><?php echo $app['national_id']; ?></td>
+                                        <td><?php echo $app['doctor']; ?></td>
+                                        <td>Rs. <?php echo number_format($app['docFees'], 2); ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($app['appdate'])); ?></td>
+                                        <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
+                                        <td>
+                                            <?php if($app['appointmentStatus'] == 'active'): ?>
+                                                <span class="status-badge status-active">Active</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-cancelled">Cancelled</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if($app['appointmentStatus'] == 'active'): ?>
+                                                <button class="btn btn-sm btn-danger action-btn" data-toggle="modal" data-target="#cancelAppointmentModal" data-appointment-id="<?php echo $app['ID']; ?>">
+                                                    <i class="fa fa-times"></i> Cancel
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-secondary action-btn" disabled>
+                                                    <i class="fa fa-times"></i> Cancelled
+                                                </button>
+                                            <?php endif; ?>
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Appointment Details:\\nID: <?php echo $app['ID']; ?>\\nPatient: <?php echo $app['fname'] . ' ' . $app['lname']; ?>\\nDoctor: <?php echo $app['doctor']; ?>\\nDate: <?php echo $app['appdate']; ?>\\nTime: <?php echo $app['apptime']; ?>\\nStatus: <?php echo $app['appointmentStatus']; ?>')">
+                                                <i class="fa fa-eye"></i> View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center">No appointments found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Prescriptions -->
@@ -909,27 +2009,44 @@
                                     <th>Allergy</th>
                                     <th>Prescription</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="prescriptions-table-body">
-                                <!-- Prescriptions data will be populated by JavaScript -->
+                                <?php if(count($prescriptions) > 0): ?>
+                                    <?php foreach($prescriptions as $pres): ?>
+                                    <tr>
+                                        <td><?php echo $pres['doctor']; ?></td>
+                                        <td><?php echo $pres['pid']; ?></td>
+                                        <td><?php echo $pres['fname'] . ' ' . $pres['lname']; ?></td>
+                                        <td><?php echo $pres['national_id']; ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($pres['appdate'])); ?></td>
+                                        <td><?php echo $pres['disease']; ?></td>
+                                        <td><?php echo $pres['allergy']; ?></td>
+                                        <td><?php echo $pres['prescription']; ?></td>
+                                        <td>
+                                            <?php if($pres['emailStatus'] == 'Not Sent'): ?>
+                                                <span class="status-badge status-pending">Not Sent</span>
+                                            <?php elseif($pres['emailStatus'] == 'SMS Sent'): ?>
+                                                <span class="status-badge status-sms-sent">SMS Sent</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-sent-external">Sent to Pharmacy</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="9" class="text-center">No prescriptions found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Payments -->
                     <div class="tab-pane fade" id="pay-tab">
                         <h4>Payments</h4>
+                        <?php if($payment_msg): echo $payment_msg; endif; ?>
                         
                         <!-- Search Options -->
                         <div class="search-options mb-3">
@@ -946,12 +2063,12 @@
                         
                         <!-- Search Forms -->
                         <div id="patientId-search-form" class="mb-3">
-                            <form method="post" class="form-inline">
-                                <input type="number" name="pid" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
+                            <div class="form-inline">
+                                <input type="number" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
                                 <button type="button" class="btn btn-success" onclick="searchPaymentsByPatient()">
                                     <i class="fa fa-search mr-1"></i> Search Payments
                                 </button>
-                            </form>
+                            </div>
                         </div>
                         
                         <div id="nic-search-form" class="mb-3" style="display: none;">
@@ -964,7 +2081,7 @@
                         
                         <div class="d-flex justify-content-between mb-3">
                             <div></div>
-                            <button class="btn btn-primary" onclick="exportPayments()">
+                            <button class="btn btn-primary" onclick="exportTable('payments-table-body', 'payments')">
                                 <i class="fa fa-download mr-2"></i>Export Payments
                             </button>
                         </div>
@@ -985,18 +2102,41 @@
                                 </tr>
                             </thead>
                             <tbody id="payments-table-body">
-                                <!-- Payments data will be populated by JavaScript -->
+                                <?php if(count($payments) > 0): ?>
+                                    <?php foreach($payments as $pay): ?>
+                                    <tr>
+                                        <td><?php echo $pay['id']; ?></td>
+                                        <td><?php echo $pay['pid']; ?></td>
+                                        <td><?php echo $pay['appointment_id']; ?></td>
+                                        <td><?php echo $pay['patient_name']; ?></td>
+                                        <td><span class="badge badge-info"><?php echo $pay['national_id']; ?></span></td>
+                                        <td><?php echo $pay['doctor']; ?></td>
+                                        <td>Rs. <?php echo number_format($pay['fees'], 2); ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($pay['pay_date'])); ?></td>
+                                        <td>
+                                            <?php if($pay['pay_status'] == 'Paid'): ?>
+                                                <span class="status-badge status-active">Paid</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-pending">Pending</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Payment Details:\\nID: <?php echo $pay['id']; ?>\\nPatient: <?php echo $pay['patient_name']; ?>\\nDoctor: <?php echo $pay['doctor']; ?>\\nAmount: Rs. <?php echo number_format($pay['fees'], 2); ?>\\nDate: <?php echo $pay['pay_date']; ?>\\nStatus: <?php echo $pay['pay_status']; ?>')">
+                                                <i class="fa fa-eye"></i> View
+                                            </button>
+                                            <button class="btn btn-sm btn-warning action-btn" data-toggle="modal" data-target="#editPaymentModal" data-payment-id="<?php echo $pay['id']; ?>">
+                                                <i class="fa fa-edit"></i> Edit Status
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center">No payments found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Staff Schedules -->
@@ -1017,18 +2157,23 @@
                                 </tr>
                             </thead>
                             <tbody id="schedules-table-body">
-                                <!-- Schedules data will be populated by JavaScript -->
+                                <?php if(count($schedules) > 0): ?>
+                                    <?php foreach($schedules as $schedule): ?>
+                                    <tr>
+                                        <td><?php echo $schedule['id']; ?></td>
+                                        <td><?php echo $schedule['staff_name']; ?></td>
+                                        <td><?php echo $schedule['role']; ?></td>
+                                        <td><?php echo $schedule['day']; ?></td>
+                                        <td><?php echo $schedule['shift']; ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center">No schedules found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
                     <!-- Rooms / Beds -->
@@ -1046,27 +2191,40 @@
                                     <th>Bed No</th>
                                     <th>Type</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="rooms-table-body">
-                                <!-- Rooms data will be populated by JavaScript -->
+                                <?php if(count($rooms) > 0): ?>
+                                    <?php foreach($rooms as $room): ?>
+                                    <tr>
+                                        <td><?php echo $room['id']; ?></td>
+                                        <td><?php echo $room['room_no']; ?></td>
+                                        <td><?php echo $room['bed_no']; ?></td>
+                                        <td><?php echo $room['type']; ?></td>
+                                        <td>
+                                            <?php if($room['status'] == 'Available'): ?>
+                                                <span class="status-badge status-available">Available</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-occupied">Occupied</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center">No rooms found</td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
 
-                    <!-- Staff Management (now includes Doctor Management) -->
+                    <!-- Staff Management -->
                     <div class="tab-pane fade" id="staff-tab">
                         <h4>Staff & Doctor Management</h4>
+                        
+                        <?php if($staff_msg): echo $staff_msg; endif; ?>
+                        
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="card">
@@ -1074,7 +2232,7 @@
                                         <i class="fa fa-user-md mr-2"></i>Add New Doctor
                                     </div>
                                     <div class="card-body">
-                                        <form id="add-doctor-form">
+                                        <form method="POST" id="add-doctor-form">
                                             <div class="form-group">
                                                 <label>Doctor ID *</label>
                                                 <input type="text" name="doctorId" class="form-control" required>
@@ -1110,14 +2268,14 @@
                                             </div>
                                             <div class="form-group">
                                                 <label>Confirm Password *</label>
-                                                <input type="password" id="cdpassword" class="form-control" onkeyup="checkPassword()" required>
+                                                <input type="password" id="cdpassword" class="form-control" onkeyup="checkDoctorPassword()" required>
                                                 <small id="message"></small>
                                             </div>
                                             <div class="form-group">
                                                 <label>Fees (Rs.) *</label>
                                                 <input type="number" name="docFees" class="form-control" required>
                                             </div>
-                                            <button type="button" class="btn btn-success btn-block" onclick="addDoctor()">Add Doctor</button>
+                                            <button type="submit" name="add_doctor" class="btn btn-success btn-block">Add Doctor</button>
                                         </form>
                                     </div>
                                 </div>
@@ -1128,7 +2286,7 @@
                                         <i class="fa fa-plus-circle mr-2"></i>Add New Staff Member
                                     </div>
                                     <div class="card-body">
-                                        <form id="add-staff-form">
+                                        <form method="POST" id="add-staff-form">
                                             <div class="form-group">
                                                 <label>Staff ID</label>
                                                 <input type="text" name="staffId" class="form-control" required>
@@ -1161,7 +2319,7 @@
                                                 <label>Password</label>
                                                 <input type="password" name="spassword" class="form-control" required>
                                             </div>
-                                            <button type="button" class="btn btn-primary btn-block" onclick="addStaff()">Add Staff Member</button>
+                                            <button type="submit" name="add_staff" class="btn btn-primary btn-block">Add Staff Member</button>
                                         </form>
                                     </div>
                                 </div>
@@ -1170,7 +2328,7 @@
                         
                         <h5>Doctors & Staff List</h5>
                         <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="staff-search" placeholder="Search by ID or Name..." onkeyup="filterStaffTable()">
+                            <input type="text" class="form-control w-25" id="staff-search" placeholder="Search by ID or Name..." onkeyup="filterTable('staff-search', 'staff-table-body')">
                             <button class="btn btn-primary" onclick="exportTable('staff-table-body', 'staff')">Export</button>
                         </div>
                         <table class="table table-hover table-bordered">
@@ -1185,18 +2343,45 @@
                                 </tr>
                             </thead>
                             <tbody id="staff-table-body">
-                                <!-- Staff and Doctors data will be populated by JavaScript -->
+                                <!-- Doctors -->
+                                <?php foreach($doctors as $doctor): ?>
+                                <tr>
+                                    <td><?php echo $doctor['id']; ?></td>
+                                    <td><?php echo $doctor['username']; ?></td>
+                                    <td><span class="badge badge-primary">Doctor (<?php echo $doctor['spec']; ?>)</span></td>
+                                    <td><?php echo $doctor['email']; ?></td>
+                                    <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>')">
+                                            <i class="fa fa-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                                
+                                <!-- Staff -->
+                                <?php foreach($staff as $staff_member): ?>
+                                <tr>
+                                    <td><?php echo $staff_member['id']; ?></td>
+                                    <td><?php echo $staff_member['name']; ?></td>
+                                    <td><span class="badge badge-secondary"><?php echo $staff_member['role']; ?></span></td>
+                                    <td><?php echo $staff_member['email']; ?></td>
+                                    <td><?php echo $staff_member['contact']; ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>')">
+                                            <i class="fa fa-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if(count($doctors) == 0 && count($staff) == 0): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center">No doctors or staff members found</td>
+                                </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
-                        <nav>
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                            </ul>
-                        </nav>
                     </div>
                 </div>
             </div>
@@ -1219,6 +2404,11 @@
                             <label>Select Doctor</label>
                             <select name="doctorId" class="form-control" id="doctor-select" required>
                                 <option value="">Select doctor to delete</option>
+                                <?php foreach($doctors as $doctor): ?>
+                                <option value="<?php echo $doctor['id']; ?>">
+                                    <?php echo $doctor['id']; ?> - <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </form>
@@ -1231,7 +2421,7 @@
         </div>
     </div>
 
-    <!-- Cancel Appointment Modal - UPDATED: Removed Doctor option -->
+    <!-- Cancel Appointment Modal -->
     <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog" aria-labelledby="cancelAppointmentModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -1258,7 +2448,6 @@
                                     <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByPatient" value="patient">
                                     <label class="form-check-label" for="cancelledByPatient">Patient</label>
                                 </div>
-                                <!-- Doctor option removed -->
                             </div>
                         </div>
                         <input type="hidden" id="appointmentToCancelId">
@@ -1267,179 +2456,6 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-danger" onclick="confirmCancelAppointment()">Cancel Appointment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Prescription Delivery Selection Modal -->
-    <div class="modal fade" id="prescriptionDeliveryModal" tabindex="-1" role="dialog" aria-labelledby="prescriptionDeliveryModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="prescriptionDeliveryModalLabel">Send Prescription</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Please select how to send this prescription:</p>
-                    <button type="button" class="btn btn-success pharmacy-type-btn" onclick="selectDeliveryMethod('sms')">
-                        <i class="fa fa-mobile"></i> Send SMS to Patient
-                    </button>
-                    <button type="button" class="btn btn-warning pharmacy-type-btn" onclick="selectDeliveryMethod('external')">
-                        <i class="fa fa-medkit"></i> Send to Heth Care Hospital Pharmacy
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SMS to Patient Modal -->
-    <div class="modal fade" id="smsToPatientModal" tabindex="-1" role="dialog" aria-labelledby="smsToPatientModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="smsToPatientModalLabel">Send SMS to Patient</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="smsToPatientForm">
-                        <div class="form-group">
-                            <label for="patientContactNumber">Patient Contact Number</label>
-                            <input type="text" class="form-control" id="patientContactNumber" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="smsMessage">SMS Message</label>
-                            <textarea class="form-control" id="smsMessage" rows="10" readonly></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="sendSmsBtn">Send SMS to Patient</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hospital Pharmacy Email Modal -->
-    <div class="modal fade" id="hospitalPharmacyModal" tabindex="-1" role="dialog" aria-labelledby="hospitalPharmacyModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="hospitalPharmacyModalLabel">Send to Heth Care Hospital Pharmacy</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="hospitalPharmacyForm">
-                        <div class="form-group">
-                            <label for="hospitalRecipientEmail">Pharmacy Email Address</label>
-                            <input type="email" class="form-control" id="hospitalRecipientEmail" value="helthcarepharmacypp1@gmail.com" readonly>
-                            <small class="text-muted">This email is automatically set to Heth Care Hospital Pharmacy</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="hospitalEmailSubject">Subject</label>
-                            <input type="text" class="form-control" id="hospitalEmailSubject" value="Prescription from Heth Care Hospital">
-                        </div>
-                        <div class="form-group">
-                            <label for="hospitalEmailMessage">Prescription Details</label>
-                            <textarea class="form-control" id="hospitalEmailMessage" rows="10" readonly></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" id="sendHospitalEmailBtn">Send to Hospital Pharmacy</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Details Modal -->
-    <div class="modal fade" id="paymentDetailsModal" tabindex="-1" role="dialog" aria-labelledby="paymentDetailsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="paymentDetailsModalLabel">Payment Details</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true" style="color: white;">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body payment-details-modal">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="detail-row">
-                                <span class="detail-label">Payment ID:</span>
-                                <span class="detail-value" id="detail-payment-id"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Patient ID:</span>
-                                <span class="detail-value" id="detail-patient-id"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Patient Name:</span>
-                                <span class="detail-value" id="detail-patient-name"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">National ID (NIC):</span>
-                                <span class="detail-value" id="detail-national-id"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Appointment ID:</span>
-                                <span class="detail-value" id="detail-appointment-id"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detail-row">
-                                <span class="detail-label">Doctor:</span>
-                                <span class="detail-value" id="detail-doctor"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Fees:</span>
-                                <span class="detail-value" id="detail-fees"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Payment Date:</span>
-                                <span class="detail-value" id="detail-payment-date"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Status:</span>
-                                <span class="detail-value" id="detail-status"></span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Payment Method:</span>
-                                <span class="detail-value" id="detail-payment-method"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <h6>Additional Information</h6>
-                            <div class="detail-row">
-                                <span class="detail-label">Description:</span>
-                                <span class="detail-value" id="detail-description">Payment for medical consultation and treatment</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Invoice Generated:</span>
-                                <span class="detail-value" id="detail-invoice">Yes</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Receipt Number:</span>
-                                <span class="detail-value" id="detail-receipt"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="printPaymentDetails()">
-                        <i class="fa fa-print mr-1"></i> Print Details
-                    </button>
                 </div>
             </div>
         </div>
@@ -1506,1231 +2522,13 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
     
     <script>
-        // Database simulation
-        let database = {
-            patients: [
-                {pid: 1, fname: 'Ram', lname: 'Kumar', gender: 'Male', dob: '1990-05-15', email: 'ram@gmail.com', contact: '0771234567', address: '123 Main St, Colombo', emergencyContact: '0779876543', national_id: 'NIC123456789', password: 'ram123', cpassword: 'ram123'},
-                {pid: 2, fname: 'Alia', lname: 'Bhatt', gender: 'Female', dob: '1995-08-22', email: 'alia@gmail.com', contact: '0779876543', address: '456 Park Ave, Kandy', emergencyContact: '0771234567', national_id: 'NIC987654321', password: 'alia123', cpassword: 'alia123'},
-                {pid: 3, fname: 'Shahrukh', lname: 'Khan', gender: 'Male', dob: '1985-11-02', email: 'shahrukh@gmail.com', contact: '0712345678', address: '789 Beach Rd, Galle', emergencyContact: '0718765432', national_id: 'NIC111222333', password: 'shahrukh123', cpassword: 'shahrukh123'},
-                {pid: 4, fname: 'Kishan', lname: 'Lal', gender: 'Male', dob: '1978-03-30', email: 'kishan@gmail.com', contact: '0765432198', address: '321 Hill St, Negombo', emergencyContact: '0761234987', national_id: 'NIC444555666', password: 'kishan123', cpassword: 'kishan123'},
-                {pid: 5, fname: 'Gautam', lname: 'Shankararam', gender: 'Male', dob: '1992-07-18', email: 'gautam@gmail.com', contact: '0754321876', address: '654 River Rd, Jaffna', emergencyContact: '0756789123', national_id: 'NIC777888999', password: 'gautam123', cpassword: 'gautam123'},
-                {pid: 6, fname: 'Sushant', lname: 'Singh', gender: 'Male', dob: '1988-01-25', email: 'sushant@gmail.com', contact: '0787654321', address: '987 Lake View, Anuradhapura', emergencyContact: '0781234567', national_id: 'NIC123123123', password: 'sushant123', cpassword: 'sushant123'},
-                {pid: 7, fname: 'Nancy', lname: 'Deborah', gender: 'Female', dob: '1993-09-14', email: 'nancy@gmail.com', contact: '0723456789', address: '147 Temple Rd, Polonnaruwa', emergencyContact: '0729876543', national_id: 'NIC321321321', password: 'nancy123', cpassword: 'nancy123'},
-                {pid: 8, fname: 'Kenny', lname: 'Sebastian', gender: 'Male', dob: '1980-12-05', email: 'kenny@gmail.com', contact: '0745678901', address: '258 Market St, Trincomalee', emergencyContact: '0741098765', national_id: 'NIC456456456', password: 'kenny123', cpassword: 'kenny123'},
-                {pid: 9, fname: 'William', lname: 'Blake', gender: 'Male', dob: '1975-06-28', email: 'william@gmail.com', contact: '0798765432', address: '369 Garden Rd, Ratnapura', emergencyContact: '0792345678', national_id: 'NIC654654654', password: 'william123', cpassword: 'william123'},
-                {pid: 10, fname: 'Peter', lname: 'Norvig', gender: 'Male', dob: '1965-04-12', email: 'peter@gmail.com', contact: '0734567890', address: '741 Ocean Dr, Matara', emergencyContact: '0738901234', national_id: 'NIC789789789', password: 'peter123', cpassword: 'peter123'}
-            ],
-            doctors: [
-                {id: 'DOC001', username: 'Ashok', password: 'ashok123', email: 'ashok@gmail.com', contact: '0771110000', spec: 'General', docFees: 500},
-                {id: 'DOC002', username: 'Arun', password: 'arun123', email: 'arun@gmail.com', contact: '0772220000', spec: 'Cardiologist', docFees: 600},
-                {id: 'DOC003', username: 'Dinesh', password: 'dinesh123', email: 'dinesh@gmail.com', contact: '0773330000', spec: 'General', docFees: 700},
-                {id: 'DOC004', username: 'Ganesh', password: 'ganesh123', email: 'ganesh@gmail.com', contact: '0774440000', spec: 'Pediatrician', docFees: 550},
-                {id: 'DOC005', username: 'Kumar', password: 'kumar123', email: 'kumar@gmail.com', contact: '0775550000', spec: 'Pediatrician', docFees: 800},
-                {id: 'DOC006', username: 'Amit', password: 'amit123', email: 'amit@gmail.com', contact: '0776660000', spec: 'Cardiologist', docFees: 1000},
-                {id: 'DOC007', username: 'Abbis', password: 'abbis123', email: 'abbis@gmail.com', contact: '0777770000', spec: 'Neurologist', docFees: 1500},
-                {id: 'DOC008', username: 'Tiwary', password: 'tiwary123', email: 'tiwary@gmail.com', contact: '0778880000', spec: 'Pediatrician', docFees: 450}
-            ],
-            appointments: [
-                {ID: 1, pid: 1, national_id: 'NIC123456789', fname: 'Ram', lname: 'Kumar', gender: 'Male', email: 'ram@gmail.com', contact: '0771234567', doctor: 'Ganesh', docFees: 500, appdate: '2025-10-29', apptime: '10:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 2, pid: 2, national_id: 'NIC987654321', fname: 'Alia', lname: 'Bhatt', gender: 'Female', email: 'alia@gmail.com', contact: '0779876543', doctor: 'Ganesh', docFees: 550, appdate: '2025-10-30', apptime: '11:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 3, pid: 3, national_id: 'NIC111222333', fname: 'Shahrukh', lname: 'Khan', gender: 'Male', email: 'shahrukh@gmail.com', contact: '0712345678', doctor: 'Dinesh', docFees: 700, appdate: '2025-11-01', apptime: '09:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 4, pid: 4, national_id: 'NIC444555666', fname: 'Kishan', lname: 'Lal', gender: 'Male', email: 'kishan@gmail.com', contact: '0765432198', doctor: 'Amit', docFees: 1000, appdate: '2025-11-02', apptime: '14:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 5, pid: 5, national_id: 'NIC777888999', fname: 'Gautam', lname: 'Shankararam', gender: 'Male', email: 'gautam@gmail.com', contact: '0754321876', doctor: 'Kumar', docFees: 800, appdate: '2025-11-03', apptime: '16:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 6, pid: 6, national_id: 'NIC123123123', fname: 'Sushant', lname: 'Singh', gender: 'Male', email: 'sushant@gmail.com', contact: '0787654321', doctor: 'Abbis', docFees: 1500, appdate: '2025-11-04', apptime: '12:00:00', userStatus: 0, doctorStatus: 1, appointmentStatus: 'cancelled', cancelledBy: 'patient', cancellationReason: 'Patient not feeling well'},
-                {ID: 7, pid: 7, national_id: 'NIC321321321', fname: 'Nancy', lname: 'Deborah', gender: 'Female', email: 'nancy@gmail.com', contact: '0723456789', doctor: 'Tiwary', docFees: 450, appdate: '2025-11-05', apptime: '10:00:00', userStatus: 1, doctorStatus: 0, appointmentStatus: 'cancelled', cancelledBy: 'doctor', cancellationReason: 'Doctor emergency'},
-                {ID: 8, pid: 8, national_id: 'NIC456456456', fname: 'Kenny', lname: 'Sebastian', gender: 'Male', email: 'kenny@gmail.com', contact: '0745678901', doctor: 'Ganesh', docFees: 550, appdate: '2025-11-06', apptime: '11:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 9, pid: 9, national_id: 'NIC654654654', fname: 'William', lname: 'Blake', gender: 'Male', email: 'william@gmail.com', contact: '0798765432', doctor: 'Kumar', docFees: 800, appdate: '2025-11-07', apptime: '15:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''},
-                {ID: 10, pid: 10, national_id: 'NIC789789789', fname: 'Peter', lname: 'Norvig', gender: 'Male', email: 'peter@gmail.com', contact: '0734567890', doctor: 'Ganesh', docFees: 500, appdate: '2025-11-08', apptime: '09:00:00', userStatus: 1, doctorStatus: 1, appointmentStatus: 'active', cancelledBy: '', cancellationReason: ''}
-            ],
-            prescriptions: [
-                {id: 1, doctor: 'Ganesh', pid: 1, ID: 1, fname: 'Ram', lname: 'Kumar', national_id: 'NIC123456789', appdate: '2025-10-29', apptime: '10:00:00', disease: 'Fever', allergy: 'None', prescription: 'Take paracetamol 500mg twice daily', emailStatus: 'Not Sent'},
-                {id: 2, doctor: 'Ganesh', pid: 2, ID: 2, fname: 'Alia', lname: 'Bhatt', national_id: 'NIC987654321', appdate: '2025-10-30', apptime: '11:00:00', disease: 'Cold', allergy: 'None', prescription: 'Take vitamin C and rest', emailStatus: 'SMS Sent'}
-            ],
-            payments: [
-                {id: 1, pid: 1, app_id: 1, national_id: 'NIC123456789', patient_name: 'Ram Kumar', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-10-29', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC001'},
-                {id: 2, pid: 2, app_id: 2, national_id: 'NIC987654321', patient_name: 'Alia Bhatt', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-10-30', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC002'},
-                {id: 3, pid: 3, app_id: 3, national_id: 'NIC111222333', patient_name: 'Shahrukh Khan', doctor: 'Dinesh', fees: 700.00, pay_date: '2025-11-01', pay_status: 'Pending', payment_method: 'Pending', receipt_no: 'PENDING'},
-                {id: 4, pid: 4, app_id: 4, national_id: 'NIC444555666', patient_name: 'Kishan Lal', doctor: 'Amit', fees: 1000.00, pay_date: '2025-11-02', pay_status: 'Paid', payment_method: 'Bank Transfer', receipt_no: 'REC003'},
-                {id: 5, pid: 5, app_id: 5, national_id: 'NIC777888999', patient_name: 'Gautam Shankararam', doctor: 'Kumar', fees: 800.00, pay_date: '2025-11-03', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC004'},
-                {id: 6, pid: 6, app_id: 6, national_id: 'NIC123123123', patient_name: 'Sushant Singh', doctor: 'Abbis', fees: 1500.00, pay_date: '2025-11-04', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC005'},
-                {id: 7, pid: 7, app_id: 7, national_id: 'NIC321321321', patient_name: 'Nancy Deborah', doctor: 'Tiwary', fees: 450.00, pay_date: '2025-11-05', pay_status: 'Pending', payment_method: 'Pending', receipt_no: 'PENDING'},
-                {id: 8, pid: 8, app_id: 8, national_id: 'NIC456456456', patient_name: 'Kenny Sebastian', doctor: 'Ganesh', fees: 550.00, pay_date: '2025-11-06', pay_status: 'Paid', payment_method: 'Cash', receipt_no: 'REC006'},
-                {id: 9, pid: 9, app_id: 9, national_id: 'NIC654654654', patient_name: 'William Blake', doctor: 'Kumar', fees: 800.00, pay_date: '2025-11-07', pay_status: 'Paid', payment_method: 'Bank Transfer', receipt_no: 'REC007'},
-                {id: 10, pid: 10, app_id: 10, national_id: 'NIC789789789', patient_name: 'Peter Norvig', doctor: 'Ganesh', fees: 500.00, pay_date: '2025-11-08', pay_status: 'Paid', payment_method: 'Credit Card', receipt_no: 'REC008'}
-            ],
-            staff: [
-                {id: 'STF001', name: 'Ramesh', role: 'Nurse', email: 'ramesh@gmail.com', contact: '0771112222', password: 'ramesh123'},
-                {id: 'STF002', name: 'Sita', role: 'Receptionist', email: 'sita@gmail.com', contact: '0773334444', password: 'sita123'}
-            ],
-            schedules: [
-                {id: 1, staff_name: 'Ramesh', role: 'Nurse', day: 'Monday', shift: 'Morning'},
-                {id: 2, staff_name: 'Sita', role: 'Receptionist', day: 'Monday', shift: 'Evening'}
-            ],
-            rooms: [
-                {id: 1, room_no: '101', bed_no: '1', type: 'Normal', status: 'Available'},
-                {id: 2, room_no: '101', bed_no: '2', type: 'Normal', status: 'Occupied'},
-                {id: 3, room_no: '102', bed_no: '1', type: 'VIP', status: 'Available'},
-                {id: 4, room_no: '102', bed_no: '2', type: 'VIP', status: 'Occupied'},
-                {id: 5, room_no: '103', bed_no: '1', type: 'ICU', status: 'Available'}
-            ]
-        };
-
-        // Current payment being edited
-        let currentPaymentId = null;
-        let currentPrescriptionId = null;
-        let currentPatientContact = '';
-        let currentAppointmentIdToCancel = null;
-        let currentPaymentSearchMode = 'patientId'; // 'patientId', 'nic', or 'all'
-
-        // Initialize dashboard with data
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set dashboard counts
-            updateDashboardCounts();
-            
-            // Populate tables
-            populateDoctorsTable();
-            populatePatientsTable();
-            populateAppointmentsTable();
-            populatePrescriptionsTable();
-            populatePaymentsTable();
-            populateStaffTable();
-            populateSchedulesTable();
-            populateRoomsTable();
-            
-            // Set up recent activity
-            populateRecentActivity();
-            
-            // Set up today's appointments
-            populateTodayAppointments();
-            
-            // Initialize charts
-            initializeCharts();
-            
-            // Set up form submissions
-            setupFormSubmissions();
-            
-            // Set up email functionality
-            setupEmailFunctionality();
-            
-            // Set up SMS functionality
-            setupSMSFunctionality();
-            
-            // Populate select dropdowns
-            populateDoctorSelect();
-            
-            // Set initial payment search mode
-            setPaymentSearchMode('patientId');
-            
-            // Setup payment status change listener
-            setupPaymentStatusListener();
-        });
-
-        // Update dashboard counts
-        function updateDashboardCounts() {
-            document.getElementById('total-doctors').textContent = database.doctors.length;
-            document.getElementById('total-patients').textContent = database.patients.length;
-            document.getElementById('total-appointments').textContent = database.appointments.length;
-            document.getElementById('total-staff').textContent = database.staff.length;
-        }
-
-        // Function to populate patients table
-        function populatePatientsTable() {
-            const tbody = document.getElementById('patients-table-body');
-            tbody.innerHTML = '';
-            
-            database.patients.forEach(patient => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${patient.pid}</td>
-                    <td>${patient.fname}</td>
-                    <td>${patient.lname}</td>
-                    <td>${patient.gender}</td>
-                    <td>${patient.email}</td>
-                    <td>${patient.contact}</td>
-                    <td>${patient.dob || 'N/A'}</td>
-                    <td><span class="badge badge-info">${patient.national_id}</span></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to format NIC input
-        function formatNIC() {
-            const nicInput = document.getElementById('patientNIC');
-            const nicDisplay = document.getElementById('generatedNICDisplay');
-            
-            // Get the value and remove any non-numeric characters
-            let nicValue = nicInput.value.replace(/[^0-9]/g, '');
-            
-            // Update the input with only numbers
-            nicInput.value = nicValue;
-            
-            // Update the display with formatted NIC
-            if (nicValue) {
-                nicDisplay.innerHTML = `<strong>NIC will be:</strong> NIC${nicValue}`;
-            } else {
-                nicDisplay.innerHTML = 'Enter NIC number above';
-            }
-        }
-
-        // Function to add a new patient
-        function addPatient() {
-            const form = document.getElementById('add-patient-form');
-            const formData = new FormData(form);
-            
-            // Get form values
-            const fname = formData.get('fname');
-            const lname = formData.get('lname');
-            const gender = formData.get('gender');
-            const dob = formData.get('dob');
-            const email = formData.get('email');
-            const contact = formData.get('contact');
-            const address = formData.get('address');
-            const emergencyContact = formData.get('emergencyContact');
-            const password = formData.get('password');
-            const cpassword = formData.get('cpassword');
-            const userNIC = formData.get('nic'); // Get user-provided NIC
-            
-            // Validate required fields
-            if (!fname || !lname || !gender || !dob || !email || !contact || !password || !cpassword) {
-                alert('Please fill in all required fields!');
-                return;
-            }
-            
-            // Validate NIC field
-            if (!userNIC || userNIC.trim() === '') {
-                alert('Please enter NIC number!');
-                return;
-            }
-            
-            // Validate password match
-            if (password !== cpassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-            
-            // Check if email already exists
-            const existingPatient = database.patients.find(p => p.email === email);
-            if (existingPatient) {
-                alert('A patient with this email already exists!');
-                return;
-            }
-            
-            // Generate new patient ID
-            const newPid = database.patients.length > 0 ? 
-                Math.max(...database.patients.map(p => p.pid)) + 1 : 1;
-            
-            // Format NIC - ensure it starts with "NIC"
-            let generatedNIC;
-            if (userNIC && userNIC.trim() !== '') {
-                // Remove any non-numeric characters
-                const nicNumbers = userNIC.replace(/[^0-9]/g, '');
-                if (nicNumbers === '') {
-                    alert('Please enter valid NIC numbers!');
-                    return;
-                }
-                generatedNIC = 'NIC' + nicNumbers;
-            } else {
-                alert('Please enter NIC number!');
-                return;
-            }
-            
-            // Check if NIC already exists
-            const existingNIC = database.patients.find(p => p.national_id === generatedNIC);
-            if (existingNIC) {
-                alert('A patient with this NIC already exists! Please use a different NIC.');
-                return;
-            }
-            
-            // Create new patient object
-            const newPatient = {
-                pid: newPid,
-                fname: fname,
-                lname: lname,
-                gender: gender,
-                dob: dob,
-                email: email,
-                contact: contact,
-                address: address || '',
-                emergencyContact: emergencyContact || '',
-                national_id: generatedNIC, // User-provided NIC
-                password: password,
-                cpassword: cpassword
-            };
-            
-            // Add to database
-            database.patients.push(newPatient);
-            
-            // Update UI
-            populatePatientsTable();
-            updateDashboardCounts();
-            
-            // Show generated/used NIC
-            document.getElementById('generatedNICDisplay').innerHTML = 
-                `<strong>NIC Registered:</strong> ${generatedNIC}`;
-            
-            // Reset form
-            form.reset();
-            document.getElementById('patientPasswordMessage').innerText = '';
-            
-            // Add to recent activity
-            addRecentActivity(`New patient registered: ${fname} ${lname} (NIC: ${generatedNIC})`);
-            
-            // Show success message
-            alert(`Patient registered successfully!\n\nPatient ID: ${newPid}\nNIC: ${generatedNIC}\n\nPlease note the NIC for future reference.`);
-            
-            // Scroll to patient list
-            document.getElementById('patients-table-body').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Function to check patient password match
-        function checkPatientPassword() {
-            let pass = document.getElementById('patientPassword').value;
-            let cpass = document.getElementById('patientConfirmPassword').value;
-            const message = document.getElementById('patientPasswordMessage');
-            
-            if (pass === cpass) {
-                message.style.color = '#28a745';
-                message.innerText = 'Passwords match';
-            } else {
-                message.style.color = '#dc3545';
-                message.innerText = 'Passwords do not match';
-            }
-        }
-
-        // Function to populate doctors table (WITHOUT actions column)
-        function populateDoctorsTable() {
-            const tbody = document.getElementById('doctors-table-body');
-            tbody.innerHTML = '';
-            
-            database.doctors.forEach(doctor => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${doctor.id}</td>
-                    <td>${doctor.username}</td>
-                    <td>${doctor.spec}</td>
-                    <td>${doctor.email}</td>
-                    <td>Rs. ${doctor.docFees}</td>
-                    <td>${doctor.contact || 'N/A'}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to filter doctors by name or ID
-        function filterDoctors() {
-            const input = document.getElementById('doctor-search');
-            const filter = input.value.toLowerCase();
-            const tbody = document.getElementById('doctors-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                // Check Doctor ID (first cell) and Name (second cell)
-                if (cells.length > 1) {
-                    const doctorId = cells[0].textContent || cells[0].innerText;
-                    const doctorName = cells[1].textContent || cells[1].innerText;
-                    const specialization = cells[2].textContent || cells[2].innerText;
-                    
-                    if (doctorId.toLowerCase().includes(filter) || 
-                        doctorName.toLowerCase().includes(filter) ||
-                        specialization.toLowerCase().includes(filter)) {
-                        found = true;
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-
-        // Function to export doctors
-        function exportDoctors() {
-            exportTable('doctors-table-body', 'doctors');
-        }
-
-        // Function to view doctor details
-        function viewDoctorDetails(doctorId) {
-            const doctor = database.doctors.find(d => d.id === doctorId);
-            
-            if (doctor) {
-                const message = `
-Doctor Details:
-ID: ${doctor.id}
-Name: ${doctor.username}
-Specialization: ${doctor.spec}
-Email: ${doctor.email}
-Contact: ${doctor.contact || 'N/A'}
-Fees: Rs. ${doctor.docFees}
-                `;
-                alert(message);
-            }
-        }
-
-        // Function to populate appointments table
-        function populateAppointmentsTable() {
-            const tbody = document.getElementById('appointments-table-body');
-            tbody.innerHTML = '';
-            
-            database.appointments.forEach(appointment => {
-                let status, statusClass;
-                
-                if (appointment.appointmentStatus === 'cancelled') {
-                    if (appointment.cancelledBy === 'patient') {
-                        status = 'Cancelled by Patient';
-                        statusClass = 'status-cancelled-patient';
-                    } else if (appointment.cancelledBy === 'doctor') {
-                        status = 'Cancelled by Doctor';
-                        statusClass = 'status-cancelled-doctor';
-                    } else if (appointment.cancelledBy === 'admin') {
-                        status = 'Cancelled by Admin';
-                        statusClass = 'status-cancelled-admin';
-                    }
-                } else {
-                    status = 'Active';
-                    statusClass = 'status-active';
-                }
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${appointment.ID}</td>
-                    <td>${appointment.pid}</td>
-                    <td>${appointment.fname} ${appointment.lname}</td>
-                    <td>${appointment.national_id}</td>
-                    <td>${appointment.doctor}</td>
-                    <td>${appointment.docFees}</td>
-                    <td>${appointment.appdate}</td>
-                    <td>${appointment.apptime}</td>
-                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                    <td>
-                        ${appointment.appointmentStatus === 'active' ? 
-                            `<button class="btn btn-sm btn-danger action-btn" onclick="cancelAppointment(${appointment.ID})">
-                                <i class="fa fa-times"></i> Cancel
-                            </button>` : 
-                            `<button class="btn btn-sm btn-secondary action-btn" disabled>
-                                <i class="fa fa-times"></i> Cancelled
-                            </button>`
-                        }
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewAppointmentDetails(${appointment.ID})">
-                            <i class="fa fa-eye"></i> View
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to filter appointments
-        function filterAppointments() {
-            const input = document.getElementById('appointment-search');
-            const filter = input.value.toLowerCase();
-            const tbody = document.getElementById('appointments-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                // Check multiple cells for search
-                if (cells.length > 3) {
-                    const appointmentId = cells[0].textContent || cells[0].innerText;
-                    const patientName = cells[2].textContent || cells[2].innerText;
-                    const doctorName = cells[4].textContent || cells[4].innerText;
-                    const patientId = cells[1].textContent || cells[1].innerText;
-                    
-                    if (appointmentId.toLowerCase().includes(filter) || 
-                        patientName.toLowerCase().includes(filter) ||
-                        doctorName.toLowerCase().includes(filter) ||
-                        patientId.toLowerCase().includes(filter)) {
-                        found = true;
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-
-        // Function to export appointments
-        function exportAppointments() {
-            exportTable('appointments-table-body', 'appointments');
-        }
-
-        // Function to view appointment details
-        function viewAppointmentDetails(appointmentId) {
-            const appointment = database.appointments.find(a => a.ID === appointmentId);
-            
-            if (appointment) {
-                let status;
-                if (appointment.appointmentStatus === 'cancelled') {
-                    if (appointment.cancelledBy === 'patient') {
-                        status = 'Cancelled by Patient';
-                    } else if (appointment.cancelledBy === 'doctor') {
-                        status = 'Cancelled by Doctor';
-                    } else if (appointment.cancelledBy === 'admin') {
-                        status = 'Cancelled by Admin';
-                    }
-                } else {
-                    status = 'Active';
-                }
-                
-                const message = `
-Appointment Details:
-ID: ${appointment.ID}
-Patient: ${appointment.fname} ${appointment.lname}
-Patient ID: ${appointment.pid}
-National ID: ${appointment.national_id}
-Doctor: ${appointment.doctor}
-Fees: Rs. ${appointment.docFees}
-Date: ${appointment.appdate}
-Time: ${appointment.apptime}
-Status: ${status}
-${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellationReason}` : ''}
-                `;
-                alert(message);
-            }
-        }
-
-        // Function to cancel appointment
-        function cancelAppointment(appointmentId) {
-            currentAppointmentIdToCancel = appointmentId;
-            
-            // Reset form
-            document.getElementById('cancellationReason').value = '';
-            document.getElementById('cancelledByAdmin').checked = true;
-            
-            // Show modal
-            $('#cancelAppointmentModal').modal('show');
-        }
-
-        // Function to confirm appointment cancellation - UPDATED: Removed doctor option handling
-        function confirmCancelAppointment() {
-            if (!currentAppointmentIdToCancel) return;
-            
-            const reason = document.getElementById('cancellationReason').value;
-            const cancelledBy = document.querySelector('input[name="cancelledBy"]:checked').value;
-            
-            // Find appointment
-            const appointmentIndex = database.appointments.findIndex(a => a.ID === currentAppointmentIdToCancel);
-            
-            if (appointmentIndex !== -1) {
-                // Update appointment
-                database.appointments[appointmentIndex].appointmentStatus = 'cancelled';
-                database.appointments[appointmentIndex].cancelledBy = cancelledBy;
-                database.appointments[appointmentIndex].cancellationReason = reason;
-                
-                // Update status fields based on who cancelled
-                // Only admin and patient options available now
-                if (cancelledBy === 'patient') {
-                    database.appointments[appointmentIndex].userStatus = 0;
-                } else if (cancelledBy === 'admin') {
-                    // Admin cancellation - mark as cancelled by admin
-                    database.appointments[appointmentIndex].userStatus = 0;
-                }
-                // Doctor option has been removed
-                
-                // Update UI
-                populateAppointmentsTable();
-                populateTodayAppointments();
-                updateDashboardCounts();
-                
-                // Close modal
-                $('#cancelAppointmentModal').modal('hide');
-                
-                // Add to recent activity
-                const appointment = database.appointments[appointmentIndex];
-                addRecentActivity(`Appointment cancelled: ID ${appointment.ID} (${appointment.fname} ${appointment.lname} with Dr. ${appointment.doctor}) - Cancelled by ${cancelledBy}`);
-                
-                // Show success message
-                alert(`Appointment ID ${currentAppointmentIdToCancel} has been cancelled successfully!`);
-                
-                // Reset
-                currentAppointmentIdToCancel = null;
-            }
-        }
-
-        // Function to populate prescriptions table
-        function populatePrescriptionsTable() {
-            const tbody = document.getElementById('prescriptions-table-body');
-            tbody.innerHTML = '';
-            
-            database.prescriptions.forEach(prescription => {
-                let statusClass, statusText;
-                
-                if (prescription.emailStatus === 'Not Sent') {
-                    statusClass = 'status-pending';
-                    statusText = 'Not Sent';
-                } else if (prescription.emailStatus === 'SMS Sent') {
-                    statusClass = 'status-sms-sent';
-                    statusText = 'SMS Sent';
-                } else if (prescription.emailStatus === 'Hospital Pharmacy') {
-                    statusClass = 'status-sent-external';
-                    statusText = 'Sent to Hospital Pharmacy';
-                }
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${prescription.doctor}</td>
-                    <td>${prescription.pid}</td>
-                    <td>${prescription.fname} ${prescription.lname}</td>
-                    <td>${prescription.national_id}</td>
-                    <td>${prescription.appdate}</td>
-                    <td>${prescription.disease}</td>
-                    <td>${prescription.allergy}</td>
-                    <td>${prescription.prescription}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewPrescription(${prescription.id})">
-                            <i class="fa fa-eye"></i> View
-                        </button>
-                        <button class="btn btn-sm btn-success action-btn" onclick="sendPrescription(${prescription.id})">
-                            <i class="fa fa-paper-plane"></i> Send
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to populate payments table WITH action column
-        function populatePaymentsTable() {
-            const tbody = document.getElementById('payments-table-body');
-            tbody.innerHTML = '';
-            
-            database.payments.forEach(payment => {
-                const statusClass = payment.pay_status === 'Paid' ? 'status-active' : 'status-pending';
-                const statusText = payment.pay_status === 'Paid' ? 'Paid' : 'Pending';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${payment.id}</td>
-                    <td>${payment.pid}</td>
-                    <td>${payment.app_id}</td>
-                    <td>${payment.patient_name}</td>
-                    <td><span class="badge badge-info">${payment.national_id}</span></td>
-                    <td>${payment.doctor}</td>
-                    <td>Rs. ${payment.fees.toFixed(2)}</td>
-                    <td>${payment.pay_date}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewPaymentDetails(${payment.id})">
-                            <i class="fa fa-eye"></i> View
-                        </button>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editPaymentStatus(${payment.id})">
-                            <i class="fa fa-edit"></i> Edit Status
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to view payment details
-        function viewPaymentDetails(paymentId) {
-            const payment = database.payments.find(p => p.id === paymentId);
-            
-            if (payment) {
-                // Populate modal with payment details
-                document.getElementById('detail-payment-id').textContent = payment.id;
-                document.getElementById('detail-patient-id').textContent = payment.pid;
-                document.getElementById('detail-patient-name').textContent = payment.patient_name;
-                document.getElementById('detail-national-id').textContent = payment.national_id;
-                document.getElementById('detail-appointment-id').textContent = payment.app_id;
-                document.getElementById('detail-doctor').textContent = payment.doctor;
-                document.getElementById('detail-fees').textContent = `Rs. ${payment.fees.toFixed(2)}`;
-                document.getElementById('detail-payment-date').textContent = payment.pay_date;
-                document.getElementById('detail-status').textContent = payment.pay_status;
-                document.getElementById('detail-payment-method').textContent = payment.payment_method || 'Not specified';
-                document.getElementById('detail-receipt').textContent = payment.receipt_no;
-                
-                // Set status badge color
-                const statusElement = document.getElementById('detail-status');
-                statusElement.className = '';
-                statusElement.classList.add('badge', payment.pay_status === 'Paid' ? 'badge-success' : 'badge-warning');
-                
-                // Show the modal
-                $('#paymentDetailsModal').modal('show');
-            }
-        }
-
-        // Function to edit payment status
-        function editPaymentStatus(paymentId) {
-            const payment = database.payments.find(p => p.id === paymentId);
-            
-            if (payment) {
-                currentPaymentId = paymentId;
-                
-                // Populate modal with current payment details
-                document.getElementById('edit-payment-id').value = paymentId;
-                document.getElementById('edit-payment-status').value = payment.pay_status;
-                document.getElementById('edit-payment-method').value = payment.payment_method || '';
-                document.getElementById('edit-receipt-number').value = payment.receipt_no || '';
-                document.getElementById('edit-payment-notes').value = '';
-                
-                // Show/hide payment method section based on status
-                togglePaymentMethodSection(payment.pay_status);
-                
-                // Show the modal
-                $('#editPaymentModal').modal('show');
-            }
-        }
-
-        // Function to setup payment status change listener
-        function setupPaymentStatusListener() {
-            document.getElementById('edit-payment-status').addEventListener('change', function() {
-                togglePaymentMethodSection(this.value);
-            });
-        }
-
-        // Function to toggle payment method section visibility
-        function togglePaymentMethodSection(status) {
-            const methodSection = document.getElementById('payment-method-section');
-            if (status === 'Paid') {
-                methodSection.style.display = 'block';
-            } else {
-                methodSection.style.display = 'none';
-            }
-        }
-
-        // Function to update payment status
-        function updatePaymentStatus() {
-            if (!currentPaymentId) return;
-            
-            const payment = database.payments.find(p => p.id === currentPaymentId);
-            const oldStatus = payment.pay_status;
-            
-            if (payment) {
-                // Get form values
-                const newStatus = document.getElementById('edit-payment-status').value;
-                const paymentMethod = document.getElementById('edit-payment-method').value;
-                const receiptNumber = document.getElementById('edit-receipt-number').value;
-                const notes = document.getElementById('edit-payment-notes').value;
-                
-                // Validate required fields
-                if (!newStatus) {
-                    alert('Please select a payment status!');
-                    return;
-                }
-                
-                if (newStatus === 'Paid' && !paymentMethod) {
-                    alert('Please select a payment method for paid status!');
-                    return;
-                }
-                
-                // Update payment
-                payment.pay_status = newStatus;
-                
-                if (newStatus === 'Paid') {
-                    payment.payment_method = paymentMethod;
-                    
-                    // Generate receipt number if not provided and status changed from Pending
-                    if (!receiptNumber && oldStatus === 'Pending') {
-                        payment.receipt_no = 'REC' + String(payment.id).padStart(3, '0');
-                    } else if (receiptNumber) {
-                        payment.receipt_no = receiptNumber;
-                    }
-                } else if (newStatus === 'Pending') {
-                    payment.payment_method = 'Pending';
-                    payment.receipt_no = 'PENDING';
-                }
-                
-                // Update UI
-                populatePaymentsTable();
-                
-                // Close modal
-                $('#editPaymentModal').modal('hide');
-                
-                // Add to recent activity
-                addRecentActivity(`Payment status updated: ID ${payment.id} changed from ${oldStatus} to ${newStatus} ${notes ? `(Notes: ${notes})` : ''}`);
-                
-                // Show success message
-                alert(`Payment ID ${payment.id} status updated to ${newStatus} successfully!`);
-                
-                // Reset
-                currentPaymentId = null;
-                
-                // Reset form
-                document.getElementById('edit-payment-form').reset();
-            }
-        }
-
-        // Function to print payment details
-        function printPaymentDetails() {
-            const printContent = `
-                <html>
-                <head>
-                    <title>Payment Receipt - Heth Care Hospital</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .hospital-name { font-size: 24px; font-weight: bold; color: #342ac1; }
-                        .receipt-title { font-size: 20px; margin: 10px 0; }
-                        .details { margin: 20px 0; }
-                        .detail-row { margin: 8px 0; }
-                        .detail-label { font-weight: bold; }
-                        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-                        .signature { margin-top: 50px; border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="hospital-name">Heth Care Hospital</div>
-                        <div>123 Hospital Road, Colombo, Sri Lanka</div>
-                        <div>Tel: +94 11 234 5678 | Email: info@hethcare.lk</div>
-                        <div class="receipt-title">PAYMENT RECEIPT</div>
-                    </div>
-                    <div class="details">
-                        <div class="detail-row">
-                            <span class="detail-label">Receipt No:</span> ${document.getElementById('detail-receipt').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Payment ID:</span> ${document.getElementById('detail-payment-id').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Date:</span> ${document.getElementById('detail-payment-date').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Patient Name:</span> ${document.getElementById('detail-patient-name').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Patient ID:</span> ${document.getElementById('detail-patient-id').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">NIC:</span> ${document.getElementById('detail-national-id').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Doctor:</span> ${document.getElementById('detail-doctor').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Appointment ID:</span> ${document.getElementById('detail-appointment-id').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Amount:</span> ${document.getElementById('detail-fees').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Payment Method:</span> ${document.getElementById('detail-payment-method').textContent}
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Status:</span> ${document.getElementById('detail-status').textContent}
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="signature">
-                            Authorized Signature
-                        </div>
-                    </div>
-                    <div class="footer">
-                        This is a computer-generated receipt. No signature required.
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
-        }
-
-        // Function to populate staff table (including doctors) - WITH actions column
-        function populateStaffTable() {
-            const tbody = document.getElementById('staff-table-body');
-            tbody.innerHTML = '';
-            
-            // Add doctors to the table
-            database.doctors.forEach(doctor => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${doctor.id}</td>
-                    <td>${doctor.username}</td>
-                    <td><span class="badge badge-primary">Doctor (${doctor.spec})</span></td>
-                    <td>${doctor.email}</td>
-                    <td>${doctor.contact || 'Rs. ' + doctor.docFees}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editDoctorFromStaff('${doctor.id}')">
-                            <i class="fa fa-edit"></i> Edit
-                        </button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctorPrompt('${doctor.id}')">
-                            <i class="fa fa-trash"></i> Delete
-                        </button>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewDoctorDetails('${doctor.id}')">
-                            <i class="fa fa-eye"></i> View
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            // Add staff to the table
-            database.staff.forEach(staff => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${staff.id}</td>
-                    <td>${staff.name}</td>
-                    <td><span class="badge badge-secondary">${staff.role}</span></td>
-                    <td>${staff.email}</td>
-                    <td>${staff.contact}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="editStaff('${staff.id}')">Edit</button>
-                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteStaffPrompt('${staff.id}')">Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to edit doctor from staff management
-        function editDoctorFromStaff(doctorId) {
-            const doctor = database.doctors.find(d => d.id === doctorId);
-            
-            if (doctor) {
-                // Create a modal or form for editing
-                const newName = prompt('Edit doctor name:', doctor.username);
-                if (newName !== null) {
-                    const oldName = doctor.username;
-                    doctor.username = newName;
-                    populateDoctorsTable();
-                    populateStaffTable();
-                    populateDoctorSelect();
-                    addRecentActivity(`Doctor edited: ${oldName} name changed to ${newName} (ID: ${doctorId})`);
-                }
-                
-                const newContact = prompt('Edit contact number:', doctor.contact || '');
-                if (newContact !== null) {
-                    doctor.contact = newContact;
-                    populateDoctorsTable();
-                    populateStaffTable();
-                }
-                
-                const newSpec = prompt('Edit specialization:', doctor.spec);
-                if (newSpec !== null) {
-                    doctor.spec = newSpec;
-                    populateDoctorsTable();
-                    populateStaffTable();
-                    populateDoctorSelect();
-                }
-                
-                const newFees = prompt('Edit fees:', doctor.docFees);
-                if (newFees !== null) {
-                    doctor.docFees = parseInt(newFees);
-                    populateDoctorsTable();
-                    populateStaffTable();
-                }
-                
-                alert('Doctor updated successfully!');
-            }
-        }
-
-        // Function to populate schedules table
-        function populateSchedulesTable() {
-            const tbody = document.getElementById('schedules-table-body');
-            tbody.innerHTML = '';
-            
-            database.schedules.forEach(schedule => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${schedule.id}</td>
-                    <td>${schedule.staff_name}</td>
-                    <td>${schedule.role}</td>
-                    <td>${schedule.day}</td>
-                    <td>${schedule.shift}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to populate rooms table
-        function populateRoomsTable() {
-            const tbody = document.getElementById('rooms-table-body');
-            tbody.innerHTML = '';
-            
-            database.rooms.forEach(room => {
-                const statusClass = room.status === 'Available' ? 'status-available' : 'status-occupied';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${room.id}</td>
-                    <td>${room.room_no}</td>
-                    <td>${room.bed_no}</td>
-                    <td>${room.type}</td>
-                    <td><span class="status-badge ${statusClass}">${room.status}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-info action-btn" onclick="viewRoomDetails(${room.id})">View</button>
-                        <button class="btn btn-sm btn-warning action-btn" onclick="updateRoomStatus(${room.id})">Update</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to populate recent activity
-        function populateRecentActivity() {
-            const container = document.getElementById('recent-activity');
-            container.innerHTML = '';
-            
-            // Create activity items
-            const activities = [
-                {text: 'New appointment scheduled', details: 'Patient: Ram Kumar with Dr. Ganesh', time: '2 hours ago'},
-                {text: 'Payment received', details: 'Patient ID: 4, Amount: Rs. 700', time: '5 hours ago'},
-                {text: 'Prescription added', details: 'Dr. Dinesh for Patient ID: 4', time: '1 day ago'},
-                {text: 'New patient registered', details: 'dinuvi ranasinghe', time: '2 days ago'},
-                {text: 'Appointment cancelled', details: 'Patient ID: 4 with Dr. Ganesh', time: '3 days ago'}
-            ];
-            
-            activities.forEach(activity => {
-                const item = document.createElement('div');
-                item.className = 'activity-item';
-                item.innerHTML = `
-                    <div class="d-flex justify-content-between">
-                        <div><strong>${activity.text}</strong></div>
-                        <div class="activity-time">${activity.time}</div>
-                    </div>
-                    <div>${activity.details}</div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        // Function to populate today's appointments
-        function populateTodayAppointments() {
-            const tbody = document.getElementById('today-appointments');
-            tbody.innerHTML = '';
-            
-            // Get today's date
-            const today = new Date().toISOString().split('T')[0];
-            
-            // Filter today's appointments
-            const todayAppointments = database.appointments.filter(app => app.appdate === today);
-            
-            if (todayAppointments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No appointments for today</td></tr>';
-                return;
-            }
-            
-            todayAppointments.forEach(appointment => {
-                let status, statusClass;
-                
-                if (appointment.appointmentStatus === 'cancelled') {
-                    if (appointment.cancelledBy === 'patient') {
-                        status = 'Cancelled by Patient';
-                        statusClass = 'status-cancelled-patient';
-                    } else if (appointment.cancelledBy === 'doctor') {
-                        status = 'Cancelled by Doctor';
-                        statusClass = 'status-cancelled-doctor';
-                    } else if (appointment.cancelledBy === 'admin') {
-                        status = 'Cancelled by Admin';
-                        statusClass = 'status-cancelled-admin';
-                    }
-                } else {
-                    status = 'Active';
-                    statusClass = 'status-active';
-                }
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${appointment.apptime}</td>
-                    <td>${appointment.fname} ${appointment.lname}</td>
-                    <td>${appointment.doctor}</td>
-                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Function to populate doctor select dropdown
-        function populateDoctorSelect() {
-            const select = document.getElementById('doctor-select');
-            select.innerHTML = '<option value="">Select doctor to delete</option>';
-            
-            database.doctors.forEach(doctor => {
-                const option = document.createElement('option');
-                option.value = doctor.id;
-                option.textContent = `${doctor.id} - ${doctor.username} (${doctor.spec})`;
-                select.appendChild(option);
-            });
-        }
-
-        // Function to initialize charts
-        function initializeCharts() {
-            // Appointments Chart
-            const appointmentsCtx = document.getElementById('appointmentsChart').getContext('2d');
-            const appointmentsChart = new Chart(appointmentsCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Oct 29', 'Oct 30', 'Nov 1', 'Nov 2', 'Nov 3', 'Nov 4'],
-                    datasets: [{
-                        label: 'Appointments',
-                        data: [1, 1, 1, 1, 1, 1],
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // Department Chart
-            const departmentCtx = document.getElementById('departmentChart').getContext('2d');
-            
-            // Count doctors by specialization
-            const specCount = {};
-            database.doctors.forEach(doctor => {
-                specCount[doctor.spec] = (specCount[doctor.spec] || 0) + 1;
-            });
-            
-            const departmentChart = new Chart(departmentCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(specCount),
-                    datasets: [{
-                        data: Object.values(specCount),
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.5)',
-                            'rgba(54, 162, 235, 0.5)',
-                            'rgba(255, 206, 86, 0.5)',
-                            'rgba(75, 192, 192, 0.5)',
-                            'rgba(153, 102, 255, 0.5)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true
-                }
-            });
-        }
-
-        // Function to filter patients by NIC only
-        function filterPatientsByNIC() {
-            const input = document.getElementById('patient-search');
-            const filter = input.value.toUpperCase();
-            const tbody = document.getElementById('patients-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                // Check only the NIC column (8th column, index 7)
-                if (cells.length >= 8) {
-                    const nicCell = cells[7]; // NIC column
-                    if (nicCell) {
-                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
-                        let nicWithoutPrefix = nicText.replace('NIC', '');
-                        
-                        // Search with or without "NIC" prefix
-                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
-                            found = true;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-
-        // Function to filter payments by NIC only
-        function filterPaymentsByNIC() {
-            const input = document.getElementById('payment-nic-search');
-            const filter = input.value.toUpperCase();
-            const tbody = document.getElementById('payments-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                // Check only the NIC column (5th column, index 4)
-                if (cells.length >= 5) {
-                    const nicCell = cells[4]; // NIC column
-                    if (nicCell) {
-                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
-                        let nicWithoutPrefix = nicText.replace('NIC', '');
-                        
-                        // Search with or without "NIC" prefix
-                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
-                            found = true;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-
-        // Function to set payment search mode
-        function setPaymentSearchMode(mode) {
-            currentPaymentSearchMode = mode;
-            
-            // Update active button
-            const buttons = document.querySelectorAll('.search-option-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            if (mode === 'patientId') {
-                document.querySelector('.search-option-btn:nth-child(1)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'block';
-                document.getElementById('nic-search-form').style.display = 'none';
-                // Show all payments
-                showAllPayments();
-            } else if (mode === 'nic') {
-                document.querySelector('.search-option-btn:nth-child(2)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'none';
-                document.getElementById('nic-search-form').style.display = 'block';
-                // Clear NIC search and show all
-                document.getElementById('payment-nic-search').value = '';
-                showAllPayments();
-            } else if (mode === 'all') {
-                document.querySelector('.search-option-btn:nth-child(3)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'none';
-                document.getElementById('nic-search-form').style.display = 'none';
-                showAllPayments();
-            }
-        }
-
-        // Function to show all payments
-        function showAllPayments() {
-            const tbody = document.getElementById('payments-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                rows[i].style.display = '';
-            }
-        }
-
-        // Function to export patients
-        function exportPatients() {
-            exportTable('patients-table-body', 'patients');
-        }
-
-        // Function to export payments
-        function exportPayments() {
-            exportTable('payments-table-body', 'payments');
-        }
-
-        // Function to filter table
+        // Function to filter table rows
         function filterTable(searchInputId, tableBodyId) {
             const input = document.getElementById(searchInputId);
             const filter = input.value.toLowerCase();
             const table = document.getElementById(tableBodyId);
+            if(!table) return;
+            
             const rows = table.getElementsByTagName('tr');
             
             for (let i = 0; i < rows.length; i++) {
@@ -2751,549 +2549,25 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
                 rows[i].style.display = found ? '' : 'none';
             }
         }
-
-        // Function to filter staff table
-        function filterStaffTable() {
-            const input = document.getElementById('staff-search');
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById('staff-table-body');
-            const rows = table.getElementsByTagName('tr');
+        
+        // Initialize charts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update counts immediately
+            updateDashboardCounts();
             
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                // Check ID (first cell) and Name (second cell)
-                if (cells.length > 1) {
-                    const staffId = cells[0].textContent || cells[0].innerText;
-                    const staffName = cells[1].textContent || cells[1].innerText;
-                    
-                    if (staffId.toLowerCase().indexOf(filter) > -1 || 
-                        staffName.toLowerCase().indexOf(filter) > -1) {
-                        found = true;
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    if(alert.classList.contains('alert-success') || alert.classList.contains('alert-danger')) {
+                        alert.style.opacity = '0.7';
+                        setTimeout(function() {
+                            alert.style.display = 'none';
+                        }, 3000);
                     }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-
-        // Function to export table
-        function exportTable(tableBodyId, filename) {
-            const table = document.getElementById(tableBodyId);
-            const rows = table.getElementsByTagName('tr');
-            let csv = [];
-            
-            // Add headers (excluding the last column which is Actions)
-            const headerRow = [];
-            const headerCells = table.parentNode.getElementsByTagName('thead')[0].getElementsByTagName('th');
-            for (let i = 0; i < headerCells.length - 1; i++) { // Exclude last column (Actions)
-                headerRow.push(headerCells[i].innerText);
-            }
-            csv.push(headerRow.join(','));
-            
-            // Add data (excluding the last column which is Actions)
-            for (let i = 0; i < rows.length; i++) {
-                const row = [], cols = rows[i].querySelectorAll('td');
-                
-                for (let j = 0; j < cols.length - 1; j++) { // Exclude last column (Actions)
-                    row.push(cols[j].innerText);
-                }
-                
-                csv.push(row.join(','));
-            }
-            
-            // Download CSV file
-            const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
-            const downloadLink = document.createElement('a');
-            downloadLink.download = filename + '.csv';
-            downloadLink.href = window.URL.createObjectURL(csvFile);
-            downloadLink.style.display = 'none';
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        }
-
-        // Function to search payments by patient ID
-        function searchPaymentsByPatient() {
-            const patientId = document.getElementById('payment-patient-id').value;
-            const tbody = document.getElementById('payments-table-body');
-            const rows = tbody.getElementsByTagName('tr');
-            
-            if (!patientId) {
-                // Show all payments if no ID is entered
-                showAllPayments();
-                return;
-            }
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                if (cells.length > 1 && cells[1].textContent == patientId) {
-                    rows[i].style.display = '';
-                } else {
-                    rows[i].style.display = 'none';
-                }
-            }
-        }
-
-        // Function to add a new doctor
-        function addDoctor() {
-            const form = document.getElementById('add-doctor-form');
-            const formData = new FormData(form);
-            
-            const password = formData.get('dpassword');
-            const confirmPassword = document.getElementById('cdpassword').value;
-            
-            if (password !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-            
-            const newDoctor = {
-                id: formData.get('doctorId'),
-                username: formData.get('doctor'),
-                password: password,
-                email: formData.get('demail'),
-                contact: formData.get('doctorContact'),
-                spec: formData.get('special'),
-                docFees: parseInt(formData.get('docFees'))
-            };
-            
-            // Check if doctor already exists
-            const existingDoctor = database.doctors.find(d => d.id === newDoctor.id || d.email === newDoctor.email);
-            if (existingDoctor) {
-                alert('A doctor with this ID or email already exists!');
-                return;
-            }
-            
-            // Add to database
-            database.doctors.push(newDoctor);
-            
-            // Update UI
-            populateDoctorsTable();
-            populateStaffTable();
-            updateDashboardCounts();
-            populateDoctorSelect();
-            
-            // Reset form
-            form.reset();
-            document.getElementById('message').innerText = '';
-            
-            // Add to recent activity
-            addRecentActivity(`New doctor added: ${newDoctor.username} (${newDoctor.spec}) - ID: ${newDoctor.id}`);
-            
-            alert('Doctor added successfully!');
-        }
-
-        // Function to delete doctor from dashboard
-        function deleteDoctorFromDashboard() {
-            const form = document.getElementById('delete-doctor-form');
-            const formData = new FormData(form);
-            const doctorId = formData.get('doctorId');
-            
-            if (!doctorId) {
-                alert('Please select a doctor to delete!');
-                return;
-            }
-            
-            // Find doctor index
-            const doctorIndex = database.doctors.findIndex(d => d.id === doctorId);
-            
-            if (doctorIndex === -1) {
-                alert('No doctor found with this ID!');
-                return;
-            }
-            
-            // Get doctor name for activity log
-            const doctorName = database.doctors[doctorIndex].username;
-            const doctorIdValue = database.doctors[doctorIndex].id;
-            
-            // Remove from database
-            database.doctors.splice(doctorIndex, 1);
-            
-            // Update UI
-            populateDoctorsTable();
-            populateStaffTable();
-            updateDashboardCounts();
-            populateDoctorSelect();
-            
-            // Reset form
-            form.reset();
-            
-            // Close modal
-            $('#deleteDoctorModal').modal('hide');
-            
-            // Add to recent activity
-            addRecentActivity(`Doctor deleted: ${doctorName} (ID: ${doctorIdValue})`);
-            
-            alert('Doctor deleted successfully!');
-        }
-
-        // Function to delete doctor prompt
-        function deleteDoctorPrompt(doctorId) {
-            const doctor = database.doctors.find(d => d.id === doctorId);
-            if (!doctor) return;
-            
-            if (confirm(`Are you sure you want to delete doctor: ${doctor.username} (ID: ${doctor.id})?`)) {
-                const doctorIndex = database.doctors.findIndex(d => d.id === doctorId);
-                
-                if (doctorIndex !== -1) {
-                    const doctorName = database.doctors[doctorIndex].username;
-                    const doctorIdValue = database.doctors[doctorIndex].id;
-                    database.doctors.splice(doctorIndex, 1);
-                    
-                    // Update UI
-                    populateDoctorsTable();
-                    populateStaffTable();
-                    updateDashboardCounts();
-                    populateDoctorSelect();
-                    
-                    // Add to recent activity
-                    addRecentActivity(`Doctor deleted: ${doctorName} (ID: ${doctorIdValue})`);
-                    
-                    alert('Doctor deleted successfully!');
-                }
-            }
-        }
-
-        // Function to add a new staff member
-        function addStaff() {
-            const form = document.getElementById('add-staff-form');
-            const formData = new FormData(form);
-            
-            const newStaff = {
-                id: formData.get('staffId'),
-                name: formData.get('staff'),
-                role: formData.get('role'),
-                email: formData.get('semail'),
-                contact: formData.get('scontact'),
-                password: formData.get('spassword')
-            };
-            
-            // Check if staff already exists
-            const existingStaff = database.staff.find(s => s.id === newStaff.id || s.email === newStaff.email);
-            if (existingStaff) {
-                alert('A staff member with this ID or email already exists!');
-                return;
-            }
-            
-            // Add to database
-            database.staff.push(newStaff);
-            
-            // Update UI
-            populateStaffTable();
-            updateDashboardCounts();
-            
-            // Reset form
-            form.reset();
-            
-            // Add to recent activity
-            addRecentActivity(`New staff member added: ${newStaff.name} (${newStaff.role}) - ID: ${newStaff.id}`);
-            
-            alert('Staff member added successfully!');
-        }
-
-        // Function to delete staff prompt
-        function deleteStaffPrompt(staffId) {
-            const staff = database.staff.find(s => s.id === staffId);
-            if (!staff) return;
-            
-            if (confirm(`Are you sure you want to delete staff member: ${staff.name} (ID: ${staff.id})?`)) {
-                const staffIndex = database.staff.findIndex(s => s.id === staffId);
-                
-                if (staffIndex !== -1) {
-                    const staffName = database.staff[staffIndex].name;
-                    const staffIdValue = database.staff[staffIndex].id;
-                    database.staff.splice(staffIndex, 1);
-                    
-                    // Update UI
-                    populateStaffTable();
-                    updateDashboardCounts();
-                    
-                    // Add to recent activity
-                    addRecentActivity(`Staff member deleted: ${staffName} (ID: ${staffIdValue})`);
-                    
-                    alert('Staff member deleted successfully!');
-                }
-            }
-        }
-
-        // Function to edit staff
-        function editStaff(staffId) {
-            const staff = database.staff.find(s => s.id === staffId);
-            if (staff) {
-                const newName = prompt('Edit staff name:', staff.name);
-                if (newName) {
-                    const oldName = staff.name;
-                    staff.name = newName;
-                    populateStaffTable();
-                    addRecentActivity(`Staff edited: ${oldName} name changed to ${newName} (ID: ${staffId})`);
-                }
-                
-                const newRole = prompt('Edit role:', staff.role);
-                if (newRole) {
-                    staff.role = newRole;
-                    populateStaffTable();
-                }
-                
-                const newEmail = prompt('Edit email:', staff.email);
-                if (newEmail) {
-                    staff.email = newEmail;
-                    populateStaffTable();
-                }
-                
-                const newContact = prompt('Edit contact:', staff.contact);
-                if (newContact) {
-                    staff.contact = newContact;
-                    populateStaffTable();
-                }
-                
-                alert('Staff member updated successfully!');
-            }
-        }
-
-        // Password validation function
-        function checkPassword() {
-            let pass = document.getElementById('dpassword').value;
-            let cpass = document.getElementById('cdpassword').value;
-            if (pass === cpass) {
-                document.getElementById('message').style.color = '#5dd05d';
-                document.getElementById('message').innerText = 'Matched';
-            } else {
-                document.getElementById('message').style.color = '#f55252';
-                document.getElementById('message').innerText = 'Not Matching';
-            }
-        }
-
-        // Alpha only validation function
-        function alphaOnly(event) {
-            let key = event.keyCode;
-            return ((key >= 65 && key <= 90) || (key >= 97 && key <= 122) || key == 8 || key == 32);
-        }
-
-        // Setup form submissions
-        function setupFormSubmissions() {
-            // Prevent default form submission
-            document.getElementById('add-patient-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                addPatient();
-            });
-            
-            document.getElementById('add-doctor-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                addDoctor();
-            });
-            
-            document.getElementById('delete-doctor-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                deleteDoctorFromDashboard();
-            });
-            
-            document.getElementById('add-staff-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                addStaff();
-            });
-        }
-
-        // Setup email functionality
-        function setupEmailFunctionality() {
-            document.getElementById('sendHospitalEmailBtn').addEventListener('click', function() {
-                sendEmailToHospitalPharmacy();
-            });
-        }
-
-        // Setup SMS functionality
-        function setupSMSFunctionality() {
-            document.getElementById('sendSmsBtn').addEventListener('click', function() {
-                sendSMSToPatient();
-            });
-        }
-
-        // Function to view prescription details
-        function viewPrescription(prescriptionId) {
-            const prescription = database.prescriptions.find(p => p.id === prescriptionId);
-            
-            if (prescription) {
-                const message = formatPrescriptionMessage(prescription);
-                alert(message);
-            }
-        }
-
-        // Function to send prescription
-        function sendPrescription(prescriptionId) {
-            currentPrescriptionId = prescriptionId;
-            const prescription = database.prescriptions.find(p => p.id === prescriptionId);
-            
-            if (prescription) {
-                // Find patient contact
-                const patient = database.patients.find(p => p.pid === prescription.pid);
-                if (patient) {
-                    currentPatientContact = patient.contact;
-                    document.getElementById('patientContactNumber').value = patient.contact;
-                }
-                
-                const message = formatSMSMessage(prescription);
-                
-                // Store the message for use in both modals
-                document.getElementById('smsMessage').value = message;
-                document.getElementById('hospitalEmailMessage').value = formatEmailMessage(prescription);
-                
-                // Show delivery selection modal
-                $('#prescriptionDeliveryModal').modal('show');
-            }
-        }
-
-        // Function to select delivery method
-        function selectDeliveryMethod(method) {
-            $('#prescriptionDeliveryModal').modal('hide');
-            
-            if (method === 'sms') {
-                $('#smsToPatientModal').modal('show');
-            } else if (method === 'external') {
-                $('#hospitalPharmacyModal').modal('show');
-            }
-        }
-
-        // Function to format SMS message
-        function formatSMSMessage(prescription) {
-            return `HETH CARE HOSPITAL\nPrescription Details:\nPatient: ${prescription.fname} ${prescription.lname}\nDoctor: Dr. ${prescription.doctor}\nDisease: ${prescription.disease}\nPrescription: ${prescription.prescription}\nAllergy: ${prescription.allergy}\nDate: ${prescription.appdate}\nThank you!`;
-        }
-
-        // Function to format email message
-        function formatEmailMessage(prescription) {
-            return `
-HETH CARE HOSPITAL - PRESCRIPTION DETAILS
-
-Patient Information:
-- Name: ${prescription.fname} ${prescription.lname}
-- Patient ID: ${prescription.pid}
-- National ID: ${prescription.national_id}
-- Appointment Date: ${prescription.appdate}
-
-Medical Information:
-- Doctor: Dr. ${prescription.doctor}
-- Disease/Diagnosis: ${prescription.disease}
-- Known Allergies: ${prescription.allergy}
-
-PRESCRIPTION:
-${prescription.prescription}
-
-Issued on: ${prescription.appdate}
-Hospital Contact: +94 11 234 5678
-
-This is an electronically generated prescription from Heth Care Hospital.
-Please dispense the medication as prescribed.
-            `;
-        }
-
-        // Function to format prescription message for alert
-        function formatPrescriptionMessage(prescription) {
-            return `
-Prescription Details:
-Patient: ${prescription.fname} ${prescription.lname}
-Doctor: Dr. ${prescription.doctor}
-Disease: ${prescription.disease}
-Allergy: ${prescription.allergy}
-Prescription: ${prescription.prescription}
-Date: ${prescription.appdate}
-Status: ${prescription.emailStatus}
-            `;
-        }
-
-        // Function to send SMS to patient
-        function sendSMSToPatient() {
-            if (!currentPrescriptionId) return;
-            
-            const prescription = database.prescriptions.find(p => p.id === currentPrescriptionId);
-            
-            if (prescription) {
-                // Update prescription status
-                prescription.emailStatus = 'SMS Sent';
-                
-                // Update the UI
-                populatePrescriptionsTable();
-                
-                // Show success message
-                alert(`SMS sent to patient's contact number (${currentPatientContact}) successfully!`);
-                
-                // Close the modal
-                $('#smsToPatientModal').modal('hide');
-                
-                // Add to recent activity
-                addRecentActivity(`Prescription sent via SMS - Patient: ${prescription.fname} ${prescription.lname}, Contact: ${currentPatientContact}`);
-            }
-        }
-
-        // Function to send email to hospital pharmacy
-        function sendEmailToHospitalPharmacy() {
-            if (!currentPrescriptionId) return;
-            
-            const pharmacyEmail = document.getElementById('hospitalRecipientEmail').value;
-            
-            if (!pharmacyEmail) {
-                alert('Pharmacy email is not set.');
-                return;
-            }
-            
-            const prescription = database.prescriptions.find(p => p.id === currentPrescriptionId);
-            
-            if (prescription) {
-                // Update prescription status
-                prescription.emailStatus = 'Hospital Pharmacy';
-                
-                // Update the UI
-                populatePrescriptionsTable();
-                
-                // Show success message
-                alert(`Prescription sent to Heth Care Hospital Pharmacy (${pharmacyEmail}) successfully!`);
-                
-                // Close the modal
-                $('#hospitalPharmacyModal').modal('hide');
-                
-                // Add to recent activity
-                addRecentActivity(`Prescription sent to Heth Care Hospital Pharmacy - Patient: ${prescription.fname} ${prescription.lname}`);
-            }
-        }
-
-        // Function to add recent activity
-        function addRecentActivity(activityText) {
-            const container = document.getElementById('recent-activity');
-            const activityItem = document.createElement('div');
-            activityItem.className = 'activity-item';
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            activityItem.innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <div><strong>${activityText}</strong></div>
-                    <div class="activity-time">Just now</div>
-                </div>
-            `;
-            
-            // Add to the top of the activity list
-            container.insertBefore(activityItem, container.firstChild);
-        }
-
-        // Function to view room details
-        function viewRoomDetails(roomId) {
-            const room = database.rooms.find(r => r.id === roomId);
-            if (room) {
-                alert(`Room Details:\nRoom No: ${room.room_no}\nBed No: ${room.bed_no}\nType: ${room.type}\nStatus: ${room.status}`);
-            }
-        }
-
-        // Function to update room status
-        function updateRoomStatus(roomId) {
-            const room = database.rooms.find(r => r.id === roomId);
-            if (room) {
-                const newStatus = room.status === 'Available' ? 'Occupied' : 'Available';
-                room.status = newStatus;
-                populateRoomsTable();
-                addRecentActivity(`Room ${room.room_no} Bed ${room.bed_no} status updated to ${newStatus}`);
-                alert(`Room status updated to ${newStatus}`);
-            }
-        }
+                });
+            }, 5000);
+        });
     </script>
 </body>
 </html>
