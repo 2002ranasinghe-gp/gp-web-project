@@ -741,9 +741,21 @@
                         </div>
                         
                         <h4>Patients List</h4>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="patient-search" placeholder="Search patients..." onkeyup="filterTable('patient-search', 'patients-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('patients-table-body', 'patients')">Export</button>
+                        <div class="search-container">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="search-bar">
+                                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients by NIC only..." onkeyup="filterPatientsByNIC()">
+                                        <i class="fa fa-search search-icon"></i>
+                                        <small class="text-muted form-text">Search by National ID (NIC) only</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="exportPatients()">
+                                        <i class="fa fa-download mr-2"></i>Export Patients
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <table class="table table-hover table-bordered">
                             <thead>
@@ -2138,6 +2150,40 @@ ${appointment.cancellationReason ? `Cancellation Reason: ${appointment.cancellat
                     responsive: true
                 }
             });
+        }
+
+        // Function to filter patients by NIC only
+        function filterPatientsByNIC() {
+            const input = document.getElementById('patient-search');
+            const filter = input.value.toUpperCase();
+            const tbody = document.getElementById('patients-table-body');
+            const rows = tbody.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                // Check only the NIC column (8th column, index 7)
+                if (cells.length >= 8) {
+                    const nicCell = cells[7]; // NIC column
+                    if (nicCell) {
+                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
+                        let nicWithoutPrefix = nicText.replace('NIC', '');
+                        
+                        // Search with or without "NIC" prefix
+                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
+                            found = true;
+                        }
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
+
+        // Function to export patients
+        function exportPatients() {
+            exportTable('patients-table-body', 'patients');
         }
 
         // Function to filter table
