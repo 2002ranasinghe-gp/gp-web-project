@@ -286,7 +286,7 @@ $prescriptions_result = mysqli_query($con, $prescriptions_query);
       </div>
     </div>
 
-    <!-- Today's Sessions -->
+    <!-- Today's Sessions -
     <div id="todaysSessions" class="interface">
       <span class="back" onclick="showInterface('dashboard')">← Back</span>
       <div class="header-title">Today's Sessions</div>
