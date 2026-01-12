@@ -23,7 +23,7 @@ $payment_msg = "";
 $appointment_msg = "";
 
 // ===========================
-// ADD PATIENT
+// ADD PATIENT (NO PASSWORD ENCRYPTION)
 // ===========================
 if(isset($_POST['add_patient'])){
     $fname = mysqli_real_escape_string($con, $_POST['fname']);
@@ -35,7 +35,8 @@ if(isset($_POST['add_patient'])){
     $address = isset($_POST['address']) ? mysqli_real_escape_string($con, $_POST['address']) : '';
     $emergencyContact = isset($_POST['emergencyContact']) ? mysqli_real_escape_string($con, $_POST['emergencyContact']) : '';
     $nic_input = mysqli_real_escape_string($con, $_POST['nic']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    // REMOVED PASSWORD HASHING - STORE PLAIN TEXT
+    $password = mysqli_real_escape_string($con, $_POST['password']);
     
     // Format NIC
     $nicNumbers = preg_replace('/[^0-9]/', '', $nic_input);
@@ -51,13 +52,13 @@ if(isset($_POST['add_patient'])){
         if(mysqli_num_rows($check_nic) > 0){
             $patient_msg = "<div class='alert alert-danger'>❌ Patient with this NIC already exists!</div>";
         } else {
-            // Insert patient
+            // Insert patient with plain text password
             $query = "INSERT INTO patreg (fname, lname, gender, dob, email, contact, address, emergencyContact, national_id, password) 
                       VALUES ('$fname', '$lname', '$gender', '$dob', '$email', '$contact', '$address', '$emergencyContact', '$national_id', '$password')";
             
             if(mysqli_query($con, $query)){
                 $new_patient_id = mysqli_insert_id($con);
-                $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
+                $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id, Password: $password</div>";
                 $_SESSION['success'] = "Patient added successfully!";
             } else {
                 $patient_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -67,14 +68,15 @@ if(isset($_POST['add_patient'])){
 }
 
 // ===========================
-// ADD DOCTOR
+// ADD DOCTOR (NO PASSWORD ENCRYPTION)
 // ===========================
 if(isset($_POST['add_doctor'])){
     $doctorId = mysqli_real_escape_string($con, $_POST['doctorId']);
     $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
     $special = mysqli_real_escape_string($con, $_POST['special']);
     $demail = mysqli_real_escape_string($con, $_POST['demail']);
-    $dpassword = password_hash($_POST['dpassword'], PASSWORD_DEFAULT);
+    // REMOVED PASSWORD HASHING - STORE PLAIN TEXT
+    $dpassword = mysqli_real_escape_string($con, $_POST['dpassword']);
     $docFees = mysqli_real_escape_string($con, $_POST['docFees']);
     $doctorContact = mysqli_real_escape_string($con, $_POST['doctorContact']);
     
@@ -83,11 +85,12 @@ if(isset($_POST['add_doctor'])){
     if(mysqli_num_rows($check) > 0){
         $doctor_msg = "<div class='alert alert-danger'>❌ Doctor with this email or ID already exists!</div>";
     } else {
+        // Insert doctor with plain text password
         $query = "INSERT INTO doctb (id, username, spec, email, password, docFees, contact) 
                   VALUES ('$doctorId', '$doctor', '$special', '$demail', '$dpassword', '$docFees', '$doctorContact')";
         
         if(mysqli_query($con, $query)){
-            $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId</div>";
+            $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId, Password: $dpassword</div>";
             $_SESSION['success'] = "Doctor added successfully!";
         } else {
             $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -117,7 +120,7 @@ if(isset($_POST['delete_doctor'])){
 }
 
 // ===========================
-// ADD STAFF
+// ADD STAFF (NO PASSWORD ENCRYPTION)
 // ===========================
 if(isset($_POST['add_staff'])){
     $staffId = mysqli_real_escape_string($con, $_POST['staffId']);
@@ -125,18 +128,20 @@ if(isset($_POST['add_staff'])){
     $role = mysqli_real_escape_string($con, $_POST['role']);
     $semail = mysqli_real_escape_string($con, $_POST['semail']);
     $scontact = mysqli_real_escape_string($con, $_POST['scontact']);
-    $spassword = password_hash($_POST['spassword'], PASSWORD_DEFAULT);
+    // REMOVED PASSWORD HASHING - STORE PLAIN TEXT
+    $spassword = mysqli_real_escape_string($con, $_POST['spassword']);
     
     // Check if staff exists
     $check = mysqli_query($con, "SELECT * FROM stafftb WHERE email='$semail' OR id='$staffId'");
     if(mysqli_num_rows($check) > 0){
         $staff_msg = "<div class='alert alert-danger'>❌ Staff member with this email or ID already exists!</div>";
     } else {
+        // Insert staff with plain text password
         $query = "INSERT INTO stafftb (id, name, role, email, contact, password) 
                   VALUES ('$staffId', '$staff', '$role', '$semail', '$scontact', '$spassword')";
         
         if(mysqli_query($con, $query)){
-            $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
+            $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId, Password: $spassword</div>";
             $_SESSION['success'] = "Staff added successfully!";
         } else {
             $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -191,6 +196,92 @@ if(isset($_POST['update_payment'])){
         $_SESSION['success'] = "Payment updated!";
     } else {
         $payment_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// ADD APPOINTMENT (NEW FUNCTIONALITY)
+// ===========================
+if(isset($_POST['add_appointment'])){
+    $patient_id = mysqli_real_escape_string($con, $_POST['patient_id']);
+    $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
+    $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
+    $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    
+    // Get patient details
+    $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE pid='$patient_id'");
+    if(mysqli_num_rows($patient_query) > 0){
+        $patient = mysqli_fetch_assoc($patient_query);
+        
+        // Get doctor fees
+        $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
+        if(mysqli_num_rows($doctor_query) > 0){
+            $doctor_data = mysqli_fetch_assoc($doctor_query);
+            $docFees = $doctor_data['docFees'];
+            
+            // Insert appointment
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+                      VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
+                              '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
+                              '$doctor', '$docFees', '$appdate', '$apptime')";
+            
+            if(mysqli_query($con, $query)){
+                $appointment_id = mysqli_insert_id($con);
+                
+                // Create corresponding payment record
+                $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
+                                  VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
+                                          '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
+                mysqli_query($con, $payment_query);
+                
+                $appointment_msg = "<div class='alert alert-success'>✅ Appointment created successfully! Appointment ID: $appointment_id</div>";
+                $_SESSION['success'] = "Appointment created!";
+            } else {
+                $appointment_msg = "<div class='alert alert-danger'>❌ Error creating appointment: " . mysqli_error($con) . "</div>";
+            }
+        } else {
+            $appointment_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
+        }
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Patient not found!</div>";
+    }
+}
+
+// ===========================
+// ADD SCHEDULE (NEW FUNCTIONALITY)
+// ===========================
+if(isset($_POST['add_schedule'])){
+    $staff_name = mysqli_real_escape_string($con, $_POST['staff_name']);
+    $role = mysqli_real_escape_string($con, $_POST['role']);
+    $day = mysqli_real_escape_string($con, $_POST['day']);
+    $shift = mysqli_real_escape_string($con, $_POST['shift']);
+    
+    $query = "INSERT INTO scheduletb (staff_name, role, day, shift) 
+              VALUES ('$staff_name', '$role', '$day', '$shift')";
+    
+    if(mysqli_query($con, $query)){
+        $_SESSION['success'] = "Schedule added successfully!";
+        header("Location: " . $_SERVER['PHP_SELF'] . "#sched-tab");
+        exit();
+    }
+}
+
+// ===========================
+// ADD ROOM (NEW FUNCTIONALITY)
+// ===========================
+if(isset($_POST['add_room'])){
+    $room_no = mysqli_real_escape_string($con, $_POST['room_no']);
+    $bed_no = mysqli_real_escape_string($con, $_POST['bed_no']);
+    $type = mysqli_real_escape_string($con, $_POST['type']);
+    $status = mysqli_real_escape_string($con, $_POST['status']);
+    
+    $query = "INSERT INTO roomtb (room_no, bed_no, type, status) 
+              VALUES ('$room_no', '$bed_no', '$type', '$status')";
+    
+    if(mysqli_query($con, $query)){
+        $_SESSION['success'] = "Room/Bed added successfully!";
+        header("Location: " . $_SERVER['PHP_SELF'] . "#room-tab");
+        exit();
     }
 }
 
@@ -1442,6 +1533,34 @@ if(isset($_SESSION['success'])){
                 form.submit();
             }
         }
+        
+        // Function to filter table rows
+        function filterTable(searchInputId, tableBodyId) {
+            const input = document.getElementById(searchInputId);
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById(tableBodyId);
+            if(!table) return;
+            
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let found = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cell = cells[j];
+                    if (cell) {
+                        const text = cell.textContent || cell.innerText;
+                        if (text.toLowerCase().indexOf(filter) > -1) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                
+                rows[i].style.display = found ? '' : 'none';
+            }
+        }
     </script>
 </head>
 <body>
@@ -1455,7 +1574,7 @@ if(isset($_SESSION['success'])){
                 <li class="nav-item">
                     <a class="nav-link" href="#" id="notification-badge">
                         <i class="fa fa-bell"></i> Notifications 
-                        <span class="badge badge-light" id="notification-count">0</span>
+                        <span class="badge badge-light" id="notification-count"><?php echo $today_appointments; ?></span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -1705,6 +1824,7 @@ if(isset($_SESSION['success'])){
                                     <th>Email</th>
                                     <th>Fees (Rs.)</th>
                                     <th>Contact Number</th>
+                                    <th>Password</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -1718,8 +1838,9 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $doctor['email']; ?></td>
                                         <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
                                         <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
+                                        <td><code><?php echo $doctor['password']; ?></code></td>
                                         <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>\\nPassword: <?php echo $doctor['password']; ?>')">
                                                 <i class="fa fa-eye"></i> View
                                             </button>
                                         </td>
@@ -1727,7 +1848,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" class="text-center">No doctors found</td>
+                                        <td colspan="8" class="text-center">No doctors found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -1887,6 +2008,7 @@ if(isset($_SESSION['success'])){
                                     <th>Contact</th>
                                     <th>Date of Birth</th>
                                     <th>NIC</th>
+                                    <th>Password</th>
                                 </tr>
                             </thead>
                             <tbody id="patients-table-body">
@@ -1901,11 +2023,12 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $patient['contact']; ?></td>
                                         <td><?php echo $patient['dob'] ? date('Y-m-d', strtotime($patient['dob'])) : 'N/A'; ?></td>
                                         <td><span class="badge badge-info"><?php echo $patient['national_id']; ?></span></td>
+                                        <td><code><?php echo $patient['password']; ?></code></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center">No patients found</td>
+                                        <td colspan="9" class="text-center">No patients found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -1916,6 +2039,57 @@ if(isset($_SESSION['success'])){
                     <div class="tab-pane fade" id="app-tab">
                         <h4>Appointments</h4>
                         <?php if($appointment_msg): echo $appointment_msg; endif; ?>
+                        
+                        <!-- Add Appointment Form -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <i class="fa fa-plus-circle mr-2"></i>Create New Appointment
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="patient_id">Patient ID *</label>
+                                                <input type="number" class="form-control" id="patient_id" name="patient_id" required>
+                                                <small class="text-muted">Enter patient ID from patients list</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="doctor">Doctor *</label>
+                                                <select class="form-control" id="doctor" name="doctor" required>
+                                                    <option value="">Select Doctor</option>
+                                                    <?php foreach($doctors as $doctor): ?>
+                                                    <option value="<?php echo $doctor['username']; ?>">
+                                                        <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                                    </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="appdate">Appointment Date *</label>
+                                                <input type="date" class="form-control" id="appdate" name="appdate" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="apptime">Appointment Time *</label>
+                                                <input type="time" class="form-control" id="apptime" name="apptime" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" name="add_appointment" class="btn btn-success">
+                                        <i class="fa fa-calendar-plus mr-1"></i> Create Appointment
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
                         <div class="search-container">
                             <div class="row">
                                 <div class="col-md-8">
@@ -2098,6 +2272,8 @@ if(isset($_SESSION['success'])){
                                     <th>Fees (Rs.)</th>
                                     <th>Date</th>
                                     <th>Status</th>
+                                    <th>Payment Method</th>
+                                    <th>Receipt No</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2120,8 +2296,10 @@ if(isset($_SESSION['success'])){
                                                 <span class="status-badge status-pending">Pending</span>
                                             <?php endif; ?>
                                         </td>
+                                        <td><?php echo $pay['payment_method'] ? $pay['payment_method'] : 'N/A'; ?></td>
+                                        <td><?php echo $pay['receipt_no'] ? $pay['receipt_no'] : 'N/A'; ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Payment Details:\\nID: <?php echo $pay['id']; ?>\\nPatient: <?php echo $pay['patient_name']; ?>\\nDoctor: <?php echo $pay['doctor']; ?>\\nAmount: Rs. <?php echo number_format($pay['fees'], 2); ?>\\nDate: <?php echo $pay['pay_date']; ?>\\nStatus: <?php echo $pay['pay_status']; ?>')">
+                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Payment Details:\\nID: <?php echo $pay['id']; ?>\\nPatient: <?php echo $pay['patient_name']; ?>\\nDoctor: <?php echo $pay['doctor']; ?>\\nAmount: Rs. <?php echo number_format($pay['fees'], 2); ?>\\nDate: <?php echo $pay['pay_date']; ?>\\nStatus: <?php echo $pay['pay_status']; ?>\\nMethod: <?php echo $pay['payment_method']; ?>\\nReceipt: <?php echo $pay['receipt_no']; ?>')">
                                                 <i class="fa fa-eye"></i> View
                                             </button>
                                             <button class="btn btn-sm btn-warning action-btn" data-toggle="modal" data-target="#editPaymentModal" data-payment-id="<?php echo $pay['id']; ?>">
@@ -2132,7 +2310,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="10" class="text-center">No payments found</td>
+                                        <td colspan="12" class="text-center">No payments found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2142,6 +2320,64 @@ if(isset($_SESSION['success'])){
                     <!-- Staff Schedules -->
                     <div class="tab-pane fade" id="sched-tab">
                         <h4>Staff Schedules</h4>
+                        
+                        <!-- Add Schedule Form -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <i class="fa fa-clock-o mr-2"></i>Add New Schedule
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="staff_name">Staff Name *</label>
+                                                <input type="text" class="form-control" id="staff_name" name="staff_name" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="role">Role *</label>
+                                                <input type="text" class="form-control" id="role" name="role" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="day">Day *</label>
+                                                <select class="form-control" id="day" name="day" required>
+                                                    <option value="">Select Day</option>
+                                                    <option value="Monday">Monday</option>
+                                                    <option value="Tuesday">Tuesday</option>
+                                                    <option value="Wednesday">Wednesday</option>
+                                                    <option value="Thursday">Thursday</option>
+                                                    <option value="Friday">Friday</option>
+                                                    <option value="Saturday">Saturday</option>
+                                                    <option value="Sunday">Sunday</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="shift">Shift *</label>
+                                                <select class="form-control" id="shift" name="shift" required>
+                                                    <option value="">Select Shift</option>
+                                                    <option value="Morning">Morning (8AM - 2PM)</option>
+                                                    <option value="Afternoon">Afternoon (2PM - 8PM)</option>
+                                                    <option value="Night">Night (8PM - 8AM)</option>
+                                                    <option value="Full Day">Full Day</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" name="add_schedule" class="btn btn-info">
+                                        <i class="fa fa-plus mr-1"></i> Add Schedule
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="schedule-search" placeholder="Search schedules..." onkeyup="filterTable('schedule-search', 'schedules-table-body')">
                             <button class="btn btn-primary" onclick="exportTable('schedules-table-body', 'schedules')">Export</button>
@@ -2179,6 +2415,59 @@ if(isset($_SESSION['success'])){
                     <!-- Rooms / Beds -->
                     <div class="tab-pane fade" id="room-tab">
                         <h4>Rooms / Beds</h4>
+                        
+                        <!-- Add Room Form -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <i class="fa fa-bed mr-2"></i>Add New Room/Bed
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="room_no">Room Number *</label>
+                                                <input type="text" class="form-control" id="room_no" name="room_no" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="bed_no">Bed Number *</label>
+                                                <input type="text" class="form-control" id="bed_no" name="bed_no" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="type">Type *</label>
+                                                <select class="form-control" id="type" name="type" required>
+                                                    <option value="">Select Type</option>
+                                                    <option value="General">General</option>
+                                                    <option value="ICU">ICU</option>
+                                                    <option value="Private">Private</option>
+                                                    <option value="Semi-Private">Semi-Private</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="status">Status *</label>
+                                                <select class="form-control" id="status" name="status" required>
+                                                    <option value="Available">Available</option>
+                                                    <option value="Occupied">Occupied</option>
+                                                    <option value="Maintenance">Maintenance</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" name="add_room" class="btn btn-success">
+                                        <i class="fa fa-plus mr-1"></i> Add Room/Bed
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
                         <div class="d-flex justify-content-between mb-3">
                             <input type="text" class="form-control w-25" id="room-search" placeholder="Search rooms..." onkeyup="filterTable('room-search', 'rooms-table-body')">
                             <button class="btn btn-primary" onclick="exportTable('rooms-table-body', 'rooms')">Export</button>
@@ -2339,6 +2628,7 @@ if(isset($_SESSION['success'])){
                                     <th>Role/Type</th>
                                     <th>Email</th>
                                     <th>Contact/Fees</th>
+                                    <th>Password</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2351,8 +2641,9 @@ if(isset($_SESSION['success'])){
                                     <td><span class="badge badge-primary">Doctor (<?php echo $doctor['spec']; ?>)</span></td>
                                     <td><?php echo $doctor['email']; ?></td>
                                     <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
+                                    <td><code><?php echo $doctor['password']; ?></code></td>
                                     <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>')">
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nPassword: <?php echo $doctor['password']; ?>')">
                                             <i class="fa fa-eye"></i> View
                                         </button>
                                     </td>
@@ -2367,8 +2658,9 @@ if(isset($_SESSION['success'])){
                                     <td><span class="badge badge-secondary"><?php echo $staff_member['role']; ?></span></td>
                                     <td><?php echo $staff_member['email']; ?></td>
                                     <td><?php echo $staff_member['contact']; ?></td>
+                                    <td><code><?php echo $staff_member['password']; ?></code></td>
                                     <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>')">
+                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>\\nPassword: <?php echo $staff_member['password']; ?>')">
                                             <i class="fa fa-eye"></i> View
                                         </button>
                                     </td>
@@ -2377,7 +2669,7 @@ if(isset($_SESSION['success'])){
                                 
                                 <?php if(count($doctors) == 0 && count($staff) == 0): ?>
                                 <tr>
-                                    <td colspan="6" class="text-center">No doctors or staff members found</td>
+                                    <td colspan="7" class="text-center">No doctors or staff members found</td>
                                 </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2522,34 +2814,6 @@ if(isset($_SESSION['success'])){
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
     
     <script>
-        // Function to filter table rows
-        function filterTable(searchInputId, tableBodyId) {
-            const input = document.getElementById(searchInputId);
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById(tableBodyId);
-            if(!table) return;
-            
-            const rows = table.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                for (let j = 0; j < cells.length; j++) {
-                    const cell = cells[j];
-                    if (cell) {
-                        const text = cell.textContent || cell.innerText;
-                        if (text.toLowerCase().indexOf(filter) > -1) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-        
         // Initialize charts when page loads
         document.addEventListener('DOMContentLoaded', function() {
             // Update counts immediately
