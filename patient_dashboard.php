@@ -12,7 +12,7 @@ $query = "SELECT * FROM patreg WHERE email='$email' LIMIT 1";
 $result = mysqli_query($con, $query);
 $patient = mysqli_fetch_assoc($result);
 
-// Get patient appointments
+// Get patient 
 $appointments_query = "SELECT * FROM appointmenttb WHERE email='$email' ORDER BY appdate DESC";
 $appointments_result = mysqli_query($con, $appointments_query);
 
@@ -195,7 +195,7 @@ $prescriptions_result = mysqli_query($con, $prescriptions_query);
       <div class="service-grid mt-4">
         <div class="service-card" data-target="allDoctors">
           <img src="images/doctor.png" alt="Doctor" class="service-icon">
-          <h6>All Doctors</h6>
+          <h6> Doctors</h6>
         </div>
         <div class="service-card" data-target="emergencyCall">
           <img src="images/Emergency call.jpeg" alt="Emergency" class="service-icon">
