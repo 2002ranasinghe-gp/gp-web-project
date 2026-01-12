@@ -140,7 +140,7 @@ $prescriptions_result = mysqli_query($con, $prescriptions_query);
   <div class="sidebar">
     <img class="logo" src="images/medical-logo - Copy.jpg" alt="Hospital Logo">
     <ul>
-      <li data-target="dashboard" class="active">🏠 Dashboard</li>
+      <li data-target="dashboard" class="active">🏠 DASHBOARD</li>
       <li data-target="services">🩺 Services</li>
       <li data-target="schedule">📅 Schedule</li>
       <li data-target="appointment">📋 Appointments</li>
