@@ -368,7 +368,7 @@ switch($page){
         echo "</tbody></table></div>";
         break;
 
-    //===========================
+    //==============
     case 'payment':
         $result = $con->query("SELECT * FROM paymenttb ORDER BY pay_date DESC");
         echo "<div class='dashboard-header'>
