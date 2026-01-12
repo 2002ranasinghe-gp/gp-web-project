@@ -1519,7 +1519,7 @@
             });
         }
 
-        // Function to filter doctors by name or ID
+        // Function to filter doctors by name or Id
         function filterDoctors() {
             const input = document.getElementById('doctor-search');
             const filter = input.value.toLowerCase();
