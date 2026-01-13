@@ -25,6 +25,7 @@ $schedule_msg = "";
 $edit_doctor_msg = "";
 $edit_staff_msg = "";
 $settings_msg = "";
+$room_msg = "";
 
 // ===========================
 // GET ADMIN INFO
@@ -32,6 +33,15 @@ $settings_msg = "";
 $admin_id = $_SESSION['admin_id'] ?? 'ADM001';
 $admin_name = $_SESSION['admin_name'] ?? 'Admin User';
 $admin_email = $_SESSION['admin_email'] ?? 'admin@hospital.com';
+
+// Get admin profile picture from database
+$admin_query = mysqli_query($con, "SELECT profile_pic FROM admintb WHERE username='$admin_name'");
+if($admin_query && mysqli_num_rows($admin_query) > 0){
+    $admin_data = mysqli_fetch_assoc($admin_query);
+    $admin_profile_pic = $admin_data['profile_pic'] ?? 'default-avatar.jpg';
+} else {
+    $admin_profile_pic = 'default-avatar.jpg';
+}
 
 // ===========================
 // GET STATISTICS
@@ -497,19 +507,59 @@ if(isset($_POST['add_room'])){
     $check_result = mysqli_query($con, $check_query);
     
     if(mysqli_num_rows($check_result) > 0){
-        $_SESSION['error'] = "❌ Room/Bed combination already exists!";
+        $room_msg = "<div class='alert alert-danger'>❌ Room/Bed combination already exists!</div>";
     } else {
         $query = "INSERT INTO roomtb (room_no, bed_no, type, status) 
                   VALUES ('$room_no', '$bed_no', '$type', '$status')";
         
         if(mysqli_query($con, $query)){
-            $_SESSION['success'] = "✅ Room/Bed added successfully!";
+            $room_msg = "<div class='alert alert-success'>✅ Room/Bed added successfully!</div>";
+            $_SESSION['success'] = "Room/Bed added successfully!";
         } else {
-            $_SESSION['error'] = "❌ Error: " . mysqli_error($con);
+            $room_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
     }
-    header("Location: " . $_SERVER['PHP_SELF'] . "#room-tab");
-    exit();
+}
+
+// ===========================
+// EDIT ROOM/BED STATUS
+// ===========================
+if(isset($_POST['edit_room'])){
+    $room_id = mysqli_real_escape_string($con, $_POST['room_id']);
+    $room_no = mysqli_real_escape_string($con, $_POST['room_no']);
+    $bed_no = mysqli_real_escape_string($con, $_POST['bed_no']);
+    $type = mysqli_real_escape_string($con, $_POST['type']);
+    $status = mysqli_real_escape_string($con, $_POST['status']);
+    
+    $query = "UPDATE roomtb SET 
+              room_no='$room_no',
+              bed_no='$bed_no',
+              type='$type',
+              status='$status'
+              WHERE id='$room_id'";
+    
+    if(mysqli_query($con, $query)){
+        $room_msg = "<div class='alert alert-success'>✅ Room/Bed updated successfully!</div>";
+        $_SESSION['success'] = "Room/Bed updated successfully!";
+    } else {
+        $room_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// DELETE ROOM/BED
+// ===========================
+if(isset($_POST['delete_room'])){
+    $room_id = mysqli_real_escape_string($con, $_POST['room_id']);
+    
+    $query = "DELETE FROM roomtb WHERE id='$room_id'";
+    
+    if(mysqli_query($con, $query)){
+        $room_msg = "<div class='alert alert-success'>✅ Room/Bed deleted successfully!</div>";
+        $_SESSION['success'] = "Room/Bed deleted successfully!";
+    } else {
+        $room_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
 }
 
 // ===========================
@@ -646,6 +696,7 @@ if(isset($_POST['change_admin_password'])){
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
             full_name VARCHAR(100),
+            profile_pic VARCHAR(255) DEFAULT 'default-avatar.jpg',
             role VARCHAR(20) DEFAULT 'admin',
             created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -665,7 +716,16 @@ if(isset($_POST['change_admin_password'])){
     // Verify current password (using plain text for now)
     $check_password = mysqli_query($con, "SELECT * FROM admintb WHERE username='$admin_name' AND password='$current_password'");
     if(mysqli_num_rows($check_password) == 0){
-        $settings_msg = "<div class='alert alert-danger'>❌ Current password is incorrect!</div>";
+        // Generate new random password
+        $generated_password = generateRandomPassword(8);
+        $query = "UPDATE admintb SET password='$generated_password', updated_date=NOW() WHERE username='$admin_name'";
+        if(mysqli_query($con, $query)){
+            $settings_msg = "<div class='alert alert-warning'>⚠️ Current password was incorrect! A new password has been generated.<br>
+                            <strong>New Password: $generated_password</strong><br>
+                            Please use this new password to login and change it immediately.</div>";
+        } else {
+            $settings_msg = "<div class='alert alert-danger'>❌ Error generating new password: " . mysqli_error($con) . "</div>";
+        }
     } elseif($new_password !== $confirm_password){
         $settings_msg = "<div class='alert alert-danger'>❌ New passwords do not match!</div>";
     } elseif(strlen($new_password) < 6){
@@ -678,6 +738,44 @@ if(isset($_POST['change_admin_password'])){
             $_SESSION['success'] = "Password changed!";
         } else {
             $settings_msg = "<div class='alert alert-danger'>❌ Error changing password: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// UPDATE ADMIN PROFILE PICTURE
+// ===========================
+if(isset($_POST['update_profile_pic'])){
+    if(isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] == 0){
+        $allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        $file_type = $_FILES['profile_pic']['type'];
+        
+        if(in_array($file_type, $allowed_types)){
+            $upload_dir = 'uploads/profile_pictures/';
+            if(!file_exists($upload_dir)){
+                mkdir($upload_dir, 0777, true);
+            }
+            
+            // Generate unique filename
+            $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
+            $new_filename = 'admin_' . $admin_name . '_' . time() . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+            
+            if(move_uploaded_file($_FILES['profile_pic']['tmp_name'], $upload_path)){
+                // Update database with new profile picture path
+                $query = "UPDATE admintb SET profile_pic='$new_filename', updated_date=NOW() WHERE username='$admin_name'";
+                if(mysqli_query($con, $query)){
+                    $admin_profile_pic = $new_filename;
+                    $settings_msg = "<div class='alert alert-success'>✅ Profile picture updated successfully!</div>";
+                    $_SESSION['success'] = "Profile picture updated!";
+                } else {
+                    $settings_msg = "<div class='alert alert-danger'>❌ Error updating profile picture: " . mysqli_error($con) . "</div>";
+                }
+            } else {
+                $settings_msg = "<div class='alert alert-danger'>❌ Error uploading file!</div>";
+            }
+        } else {
+            $settings_msg = "<div class='alert alert-danger'>❌ Only JPG, PNG, and GIF files are allowed!</div>";
         }
     }
 }
@@ -847,7 +945,7 @@ foreach($staff as $staff_member){
 }
 
 // ===========================
-// FUNCTION TO CHECK/CREATE TABLES (UPDATED FOR SCHEDULE ID)
+// FUNCTION TO CHECK/CREATE TABLES (FIXED)
 // ===========================
 function checkAndCreateTables($con){
     $tables = [
@@ -976,6 +1074,7 @@ function checkAndCreateTables($con){
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
             full_name VARCHAR(100),
+            profile_pic VARCHAR(255) DEFAULT 'default-avatar.jpg',
             role VARCHAR(20) DEFAULT 'admin',
             created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -989,11 +1088,28 @@ function checkAndCreateTables($con){
                 echo "<div class='alert alert-danger'>❌ Error creating table $table_name: " . mysqli_error($con) . "</div>";
             }
         } else {
-            // Check if scheduletb has staff_id column, add if not
+            // Check for specific columns and add them if missing
             if($table_name == 'scheduletb'){
                 $check_column = mysqli_query($con, "SHOW COLUMNS FROM scheduletb LIKE 'staff_id'");
                 if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE scheduletb ADD COLUMN staff_id VARCHAR(20) AFTER id";
+                    $alter_query = "ALTER TABLE scheduletb ADD COLUMN staff_id VARCHAR(20)";
+                    mysqli_query($con, $alter_query);
+                }
+            }
+            
+            // For admintb table, check and add columns if missing
+            if($table_name == 'admintb'){
+                // Check if full_name column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM admintb LIKE 'full_name'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE admintb ADD COLUMN full_name VARCHAR(100)";
+                    mysqli_query($con, $alter_query);
+                }
+                
+                // Check if profile_pic column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM admintb LIKE 'profile_pic'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE admintb ADD COLUMN profile_pic VARCHAR(255) DEFAULT 'default-avatar.jpg'";
                     mysqli_query($con, $alter_query);
                 }
             }
@@ -1030,6 +1146,29 @@ function checkAndCreateTables($con){
             mysqli_query($con, $insert);
         }
     }
+    
+    // Create uploads directories if they don't exist
+    if(!file_exists('uploads')){
+        mkdir('uploads', 0777, true);
+    }
+    if(!file_exists('uploads/profile_pictures')){
+        mkdir('uploads/profile_pictures', 0777, true);
+    }
+    if(!file_exists('backups')){
+        mkdir('backups', 0777, true);
+    }
+}
+
+// ===========================
+// GENERATE RANDOM PASSWORD FUNCTION
+// ===========================
+function generateRandomPassword($length = 8){
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    $password = '';
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $chars[rand(0, strlen($chars) - 1)];
+    }
+    return $password;
 }
 
 // ===========================
@@ -1475,6 +1614,71 @@ if(isset($_SESSION['error'])){
         .slider.round:before {
             border-radius: 50%;
         }
+        
+        /* Profile Picture Styles */
+        .profile-pic-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-pic {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid #0077b6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .profile-pic-upload {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: #0077b6;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .profile-pic-upload input {
+            display: none;
+        }
+        
+        .user-avatar-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        
+        /* Room/Bed Edit Button */
+        .room-action-btn {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 5px;
+        }
+        
+        /* Password Generator Info */
+        .password-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        /* Custom File Input */
+        .custom-file-label::after {
+            content: "Browse";
+        }
     </style>
 </head>
 <body>
@@ -1525,8 +1729,14 @@ if(isset($_SESSION['error'])){
         <div class="topbar">
             <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?> Admin</div>
             <div class="user-info">
-                <div class="user-avatar">
-                    <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
+                <div class="profile-pic-container">
+                    <?php if($admin_profile_pic && file_exists('uploads/profile_pictures/' . $admin_profile_pic)): ?>
+                        <img src="uploads/profile_pictures/<?php echo $admin_profile_pic; ?>" class="user-avatar-img" alt="Profile">
+                    <?php else: ?>
+                        <div class="user-avatar">
+                            <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <strong><?php echo htmlspecialchars($admin_name); ?></strong><br>
@@ -2617,74 +2827,28 @@ if(isset($_SESSION['error'])){
 
             <!-- Rooms/Beds Tab -->
             <div class="tab-pane fade" id="room-tab">
-                <h3 class="mb-4"><i class="fas fa-bed mr-2"></i>Rooms & Beds</h3>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-bed mr-2"></i>Rooms & Beds Management</h3>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#addRoomModal">
+                        <i class="fas fa-plus mr-2"></i>Add New Room/Bed
+                    </button>
+                </div>
                 
-                <!-- Success/Error Messages -->
-                <?php if(isset($_SESSION['success']) || isset($_SESSION['error'])): ?>
-                    <?php if(isset($_SESSION['success'])): ?>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-                    <?php if(isset($_SESSION['error'])): ?>
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    <?php endif; ?>
+                <?php if($room_msg): echo $room_msg; endif; ?>
+                <?php if($success_msg): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?php echo $success_msg; ?>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
                 <?php endif; ?>
                 
-                <!-- Add Room Form -->
-                <div class="form-card mb-4">
-                    <div class="form-card-header">
-                        <h5 class="mb-0"><i class="fas fa-bed mr-2"></i>Add New Room/Bed</h5>
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="room-search" placeholder="Search rooms by number, type, or status..." onkeyup="filterTable('room-search', 'rooms-table-body')">
+                        <i class="fas fa-search search-icon"></i>
                     </div>
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Room Number *</label>
-                                    <input type="text" class="form-control" name="room_no" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Bed Number *</label>
-                                    <input type="text" class="form-control" name="bed_no" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Type *</label>
-                                    <select class="form-control" name="type" required>
-                                        <option value="">Select Type</option>
-                                        <option value="General">General</option>
-                                        <option value="ICU">ICU</option>
-                                        <option value="Private">Private</option>
-                                        <option value="Emergency">Emergency</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Status *</label>
-                                    <select class="form-control" name="status" required>
-                                        <option value="Available">Available</option>
-                                        <option value="Occupied">Occupied</option>
-                                        <option value="Maintenance">Under Maintenance</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="add_room" class="btn btn-success">
-                            <i class="fas fa-plus mr-1"></i> Add Room/Bed
-                        </button>
-                    </form>
                 </div>
                 
                 <div class="data-table">
@@ -2698,6 +2862,7 @@ if(isset($_SESSION['error'])){
                                     <th>Type</th>
                                     <th>Status</th>
                                     <th>Added Date</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="rooms-table-body">
@@ -2718,11 +2883,24 @@ if(isset($_SESSION['error'])){
                                             <?php endif; ?>
                                         </td>
                                         <td><?php echo date('Y-m-d', strtotime($room['created_date'])); ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning room-action-btn" data-toggle="modal" data-target="#editRoomModal"
+                                                    data-room-id="<?php echo $room['id']; ?>"
+                                                    data-room-no="<?php echo $room['room_no']; ?>"
+                                                    data-bed-no="<?php echo $room['bed_no']; ?>"
+                                                    data-type="<?php echo $room['type']; ?>"
+                                                    data-status="<?php echo $room['status']; ?>">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger room-action-btn" onclick="deleteRoom(<?php echo $room['id']; ?>)">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">No rooms found. Add your first room/bed above.</td>
+                                        <td colspan="7" class="text-center">No rooms found. Add your first room/bed above.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2736,6 +2914,46 @@ if(isset($_SESSION['error'])){
                 <h3 class="mb-4"><i class="fas fa-cog mr-2"></i>System Settings</h3>
                 
                 <?php if($settings_msg): echo $settings_msg; endif; ?>
+                
+                <!-- Admin Profile Picture -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h4>Admin Profile</h4>
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="profile-pic-container mb-3">
+                                <?php if($admin_profile_pic && file_exists('uploads/profile_pictures/' . $admin_profile_pic)): ?>
+                                    <img src="uploads/profile_pictures/<?php echo $admin_profile_pic; ?>" class="profile-pic" alt="Profile">
+                                <?php else: ?>
+                                    <div class="profile-pic" style="background: #0077b6; color: white; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold;">
+                                        <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <label class="profile-pic-upload">
+                                    <i class="fas fa-camera"></i>
+                                    <input type="file" id="profile-pic-input" accept="image/*" onchange="previewProfilePic(this)">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <form method="POST" enctype="multipart/form-data" id="profile-pic-form">
+                                <div class="form-group">
+                                    <label>Upload New Profile Picture</label>
+                                    <div class="custom-file">
+                                        <input type="file" class="custom-file-input" id="profile_pic" name="profile_pic" accept="image/*">
+                                        <label class="custom-file-label" for="profile_pic">Choose file</label>
+                                    </div>
+                                    <small class="text-muted">Max size: 2MB, Formats: JPG, PNG, GIF</small>
+                                </div>
+                                <button type="submit" name="update_profile_pic" class="btn btn-primary">
+                                    <i class="fas fa-upload mr-1"></i> Upload Profile Picture
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Hospital Information Settings -->
                 <div class="settings-card">
@@ -2838,12 +3056,15 @@ if(isset($_SESSION['error'])){
                     </form>
                 </div>
                 
-                <!-- Change Admin Password -->
+                <!-- Change Admin Password with Generator -->
                 <div class="settings-card">
                     <div class="settings-icon">
                         <i class="fas fa-key"></i>
                     </div>
                     <h4>Change Admin Password</h4>
+                    <div class="password-info">
+                        <small><i class="fas fa-info-circle"></i> If you forget your current password, enter any wrong password and a new random password will be generated for you.</small>
+                    </div>
                     <form method="POST">
                         <div class="row">
                             <div class="col-md-4">
@@ -2856,6 +3077,7 @@ if(isset($_SESSION['error'])){
                                 <div class="form-group">
                                     <label>New Password *</label>
                                     <input type="password" class="form-control" name="new_password" required>
+                                    <small class="text-muted">Min. 6 characters</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -2867,6 +3089,9 @@ if(isset($_SESSION['error'])){
                         </div>
                         <button type="submit" name="change_admin_password" class="btn btn-warning">
                             <i class="fas fa-key mr-1"></i> Change Password
+                        </button>
+                        <button type="button" class="btn btn-info ml-2" onclick="generatePassword()">
+                            <i class="fas fa-random mr-1"></i> Generate Strong Password
                         </button>
                     </form>
                 </div>
@@ -3156,6 +3381,124 @@ if(isset($_SESSION['error'])){
         </div>
     </div>
 
+    <!-- Add Room Modal -->
+    <div class="modal fade" id="addRoomModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Room/Bed</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Room Number *</label>
+                                    <input type="text" class="form-control" name="room_no" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Bed Number *</label>
+                                    <input type="text" class="form-control" name="bed_no" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Type *</label>
+                                    <select class="form-control" name="type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="General">General</option>
+                                        <option value="ICU">ICU</option>
+                                        <option value="Private">Private</option>
+                                        <option value="Emergency">Emergency</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Status *</label>
+                                    <select class="form-control" name="status" required>
+                                        <option value="Available">Available</option>
+                                        <option value="Occupied">Occupied</option>
+                                        <option value="Maintenance">Under Maintenance</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="add_room" class="btn btn-success btn-block">
+                            <i class="fas fa-plus mr-1"></i> Add Room/Bed
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Room Modal -->
+    <div class="modal fade" id="editRoomModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Room/Bed Details</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="edit-room-form">
+                        <input type="hidden" name="room_id" id="edit_room_id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Room Number *</label>
+                                    <input type="text" class="form-control" name="room_no" id="edit_room_no" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Bed Number *</label>
+                                    <input type="text" class="form-control" name="bed_no" id="edit_bed_no" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Type *</label>
+                                    <select class="form-control" name="type" id="edit_room_type" required>
+                                        <option value="General">General</option>
+                                        <option value="ICU">ICU</option>
+                                        <option value="Private">Private</option>
+                                        <option value="Emergency">Emergency</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Status *</label>
+                                    <select class="form-control" name="status" id="edit_room_status" required>
+                                        <option value="Available">Available</option>
+                                        <option value="Occupied">Occupied</option>
+                                        <option value="Maintenance">Under Maintenance</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="edit_room" class="btn btn-warning btn-block">
+                            <i class="fas fa-save mr-1"></i> Update Room/Bed
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -3213,6 +3556,16 @@ if(isset($_SESSION['error'])){
                 $('#update_staff_password_check').prop('checked', false);
             });
             
+            // Edit Room Modal
+            $('#editRoomModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                $('#edit_room_id').val(button.data('room-id'));
+                $('#edit_room_no').val(button.data('room-no'));
+                $('#edit_bed_no').val(button.data('bed-no'));
+                $('#edit_room_type').val(button.data('type'));
+                $('#edit_room_status').val(button.data('status'));
+            });
+            
             // Toggle password field in edit doctor modal
             $('#update_password_check').change(function() {
                 if(this.checked) {
@@ -3235,6 +3588,12 @@ if(isset($_SESSION['error'])){
                     $('#edit_spassword').prop('required', false);
                     $('#edit_spassword').val('');
                 }
+            });
+            
+            // File input label update
+            $('.custom-file-input').on('change', function() {
+                let fileName = $(this).val().split('\\').pop();
+                $(this).next('.custom-file-label').addClass("selected").html(fileName);
             });
             
             // Auto-hide alerts after 5 seconds
@@ -3487,6 +3846,31 @@ if(isset($_SESSION['error'])){
             }
         }
         
+        // Function to delete room
+        function deleteRoom(roomId) {
+            if(confirm('Are you sure you want to delete this room/bed? This action cannot be undone.')) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'room_id',
+                    value: roomId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_room',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
         // Function to send prescription to hospital pharmacy
         function sendToHospitalPharmacy(prescriptionId) {
             if(confirm('Send this prescription to Hospital Pharmacy?')) {
@@ -3562,6 +3946,31 @@ if(isset($_SESSION['error'])){
             }
         }
         
+        // Function to generate random password
+        function generatePassword() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+            let password = '';
+            for (let i = 0; i < 10; i++) {
+                password += chars[Math.floor(Math.random() * chars.length)];
+            }
+            
+            $('input[name="new_password"]').val(password);
+            $('input[name="confirm_password"]').val(password);
+            
+            alert('Strong password generated! Make sure to save it somewhere safe.');
+        }
+        
+        // Function to preview profile picture
+        function previewProfilePic(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('.profile-pic').attr('src', e.target.result);
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
         // Form validation for add patient
         $(document).ready(function() {
             $('#add-patient-form').submit(function(e) {
@@ -3602,6 +4011,17 @@ if(isset($_SESSION['error'])){
                 let value = $(this).val().replace(/[^0-9]/g, '');
                 if(value) {
                     $(this).val('NIC' + value);
+                }
+            });
+            
+            // Validate profile picture size
+            $('#profile_pic').on('change', function() {
+                const file = this.files[0];
+                if(file) {
+                    if(file.size > 2 * 1024 * 1024) {
+                        alert('File size must be less than 2MB');
+                        $(this).val('');
+                    }
                 }
             });
         });
