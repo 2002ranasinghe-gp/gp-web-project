@@ -71,7 +71,7 @@ body { background: #e9f4ff; }
         <div class="col-md-4 mt-3">
             <div class="card card-box p-4 text-center" onclick="showSection('normal')">
                 <i class="fa-solid fa-bed fa-3x mb-2 text-primary"></i>
-                <h4>Normal Room</h4>
+                <h4>Normal </h4>
             </div>
         </div>
         <div class="col-md-4 mt-3">
