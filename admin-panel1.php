@@ -24,6 +24,7 @@ $prescription_msg = "";
 $schedule_msg = "";
 $edit_doctor_msg = "";
 $edit_staff_msg = "";
+$settings_msg = "";
 
 // ===========================
 // GET ADMIN INFO
@@ -93,6 +94,57 @@ if(isset($_POST['add_patient'])){
                 }
             }
         }
+    }
+}
+
+// ===========================
+// ADD APPOINTMENT BY NIC (NEW FEATURE)
+// ===========================
+if(isset($_POST['add_appointment_by_nic'])){
+    $patient_nic = mysqli_real_escape_string($con, $_POST['patient_nic']);
+    $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
+    $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
+    $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    
+    // Get patient details by NIC
+    $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$patient_nic'");
+    if(mysqli_num_rows($patient_query) > 0){
+        $patient = mysqli_fetch_assoc($patient_query);
+        
+        // Get doctor fees
+        $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
+        if(mysqli_num_rows($doctor_query) > 0){
+            $doctor_data = mysqli_fetch_assoc($doctor_query);
+            $docFees = $doctor_data['docFees'];
+            
+            // Insert appointment
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+                      VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
+                              '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
+                              '$doctor', '$docFees', '$appdate', '$apptime')";
+            
+            if(mysqli_query($con, $query)){
+                $appointment_id = mysqli_insert_id($con);
+                
+                // Create corresponding payment record
+                $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
+                                  VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
+                                          '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
+                mysqli_query($con, $payment_query);
+                
+                $appointment_msg = "<div class='alert alert-success'>✅ Appointment created successfully using NIC!<br>
+                                   Appointment ID: $appointment_id<br>
+                                   Patient: {$patient['fname']} {$patient['lname']}<br>
+                                   NIC: {$patient['national_id']}</div>";
+                $_SESSION['success'] = "Appointment created using NIC!";
+            } else {
+                $appointment_msg = "<div class='alert alert-danger'>❌ Error creating appointment: " . mysqli_error($con) . "</div>";
+            }
+        } else {
+            $appointment_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
+        }
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Patient not found with NIC: $patient_nic</div>";
     }
 }
 
@@ -512,6 +564,185 @@ if(isset($_POST['send_to_patient'])){
 }
 
 // ===========================
+// UPDATE ADMIN SETTINGS
+// ===========================
+if(isset($_POST['update_settings'])){
+    $hospital_name = mysqli_real_escape_string($con, $_POST['hospital_name']);
+    $hospital_address = mysqli_real_escape_string($con, $_POST['hospital_address']);
+    $hospital_phone = mysqli_real_escape_string($con, $_POST['hospital_phone']);
+    $hospital_email = mysqli_real_escape_string($con, $_POST['hospital_email']);
+    $appointment_duration = mysqli_real_escape_string($con, $_POST['appointment_duration']);
+    $working_hours_start = mysqli_real_escape_string($con, $_POST['working_hours_start']);
+    $working_hours_end = mysqli_real_escape_string($con, $_POST['working_hours_end']);
+    $enable_online_payment = isset($_POST['enable_online_payment']) ? 1 : 0;
+    $sms_notifications = isset($_POST['sms_notifications']) ? 1 : 0;
+    $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
+    
+    // Check if settings table exists
+    $check_table = mysqli_query($con, "SHOW TABLES LIKE 'hospital_settings'");
+    if(mysqli_num_rows($check_table) == 0){
+        // Create settings table
+        $create_table = "CREATE TABLE IF NOT EXISTS hospital_settings (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            setting_key VARCHAR(100) UNIQUE NOT NULL,
+            setting_value TEXT,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        mysqli_query($con, $create_table);
+    }
+    
+    // Insert or update settings
+    $settings = [
+        'hospital_name' => $hospital_name,
+        'hospital_address' => $hospital_address,
+        'hospital_phone' => $hospital_phone,
+        'hospital_email' => $hospital_email,
+        'appointment_duration' => $appointment_duration,
+        'working_hours_start' => $working_hours_start,
+        'working_hours_end' => $working_hours_end,
+        'enable_online_payment' => $enable_online_payment,
+        'sms_notifications' => $sms_notifications,
+        'email_notifications' => $email_notifications
+    ];
+    
+    $success = true;
+    foreach($settings as $key => $value){
+        $check = mysqli_query($con, "SELECT * FROM hospital_settings WHERE setting_key='$key'");
+        if(mysqli_num_rows($check) > 0){
+            $query = "UPDATE hospital_settings SET setting_value='$value', updated_date=NOW() WHERE setting_key='$key'";
+        } else {
+            $query = "INSERT INTO hospital_settings (setting_key, setting_value) VALUES ('$key', '$value')";
+        }
+        if(!mysqli_query($con, $query)){
+            $success = false;
+            break;
+        }
+    }
+    
+    if($success){
+        $settings_msg = "<div class='alert alert-success'>✅ Hospital settings updated successfully!</div>";
+        $_SESSION['success'] = "Settings updated!";
+    } else {
+        $settings_msg = "<div class='alert alert-danger'>❌ Error updating settings: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// CHANGE ADMIN PASSWORD
+// ===========================
+if(isset($_POST['change_admin_password'])){
+    $current_password = mysqli_real_escape_string($con, $_POST['current_password']);
+    $new_password = mysqli_real_escape_string($con, $_POST['new_password']);
+    $confirm_password = mysqli_real_escape_string($con, $_POST['confirm_password']);
+    
+    // Check if admin table exists
+    $check_table = mysqli_query($con, "SHOW TABLES LIKE 'admintb'");
+    if(mysqli_num_rows($check_table) == 0){
+        // Create admin table with default admin
+        $create_table = "CREATE TABLE IF NOT EXISTS admintb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            full_name VARCHAR(100),
+            role VARCHAR(20) DEFAULT 'admin',
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        mysqli_query($con, $create_table);
+        
+        // Insert default admin if not exists
+        $default_password = 'admin123';
+        $check_admin = mysqli_query($con, "SELECT * FROM admintb WHERE username='admin'");
+        if(mysqli_num_rows($check_admin) == 0){
+            $insert_admin = "INSERT INTO admintb (username, password, email, full_name) 
+                            VALUES ('admin', '$default_password', 'admin@hospital.com', 'Administrator')";
+            mysqli_query($con, $insert_admin);
+        }
+    }
+    
+    // Verify current password (using plain text for now)
+    $check_password = mysqli_query($con, "SELECT * FROM admintb WHERE username='$admin_name' AND password='$current_password'");
+    if(mysqli_num_rows($check_password) == 0){
+        $settings_msg = "<div class='alert alert-danger'>❌ Current password is incorrect!</div>";
+    } elseif($new_password !== $confirm_password){
+        $settings_msg = "<div class='alert alert-danger'>❌ New passwords do not match!</div>";
+    } elseif(strlen($new_password) < 6){
+        $settings_msg = "<div class='alert alert-danger'>❌ New password must be at least 6 characters!</div>";
+    } else {
+        // Update password
+        $query = "UPDATE admintb SET password='$new_password', updated_date=NOW() WHERE username='$admin_name'";
+        if(mysqli_query($con, $query)){
+            $settings_msg = "<div class='alert alert-success'>✅ Admin password changed successfully!</div>";
+            $_SESSION['success'] = "Password changed!";
+        } else {
+            $settings_msg = "<div class='alert alert-danger'>❌ Error changing password: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// BACKUP DATABASE
+// ===========================
+if(isset($_POST['backup_database'])){
+    $backup_name = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
+    $backup_file = 'backups/' . $backup_name;
+    
+    // Create backups directory if not exists
+    if(!file_exists('backups')){
+        mkdir('backups', 0777, true);
+    }
+    
+    // Get all tables
+    $tables = [];
+    $result = mysqli_query($con, 'SHOW TABLES');
+    while($row = mysqli_fetch_row($result)){
+        $tables[] = $row[0];
+    }
+    
+    $return = '';
+    foreach($tables as $table){
+        $result = mysqli_query($con, 'SELECT * FROM ' . $table);
+        $num_fields = mysqli_num_fields($result);
+        
+        $return .= 'DROP TABLE IF EXISTS ' . $table . ';';
+        $row2 = mysqli_fetch_row(mysqli_query($con, 'SHOW CREATE TABLE ' . $table));
+        $return .= "\n\n" . $row2[1] . ";\n\n";
+        
+        for($i = 0; $i < $num_fields; $i++){
+            while($row = mysqli_fetch_row($result)){
+                $return .= 'INSERT INTO ' . $table . ' VALUES(';
+                for($j = 0; $j < $num_fields; $j++){
+                    $row[$j] = addslashes($row[$j]);
+                    $row[$j] = str_replace("\n", "\\n", $row[$j]);
+                    if(isset($row[$j])){
+                        $return .= '"' . $row[$j] . '"';
+                    } else {
+                        $return .= '""';
+                    }
+                    if($j < ($num_fields - 1)){
+                        $return .= ',';
+                    }
+                }
+                $return .= ");\n";
+            }
+        }
+        $return .= "\n\n\n";
+    }
+    
+    // Save file
+    if(file_put_contents($backup_file, $return)){
+        $settings_msg = "<div class='alert alert-success'>✅ Database backup created successfully!<br>
+                        File: $backup_name<br>
+                        Size: " . filesize($backup_file) . " bytes</div>";
+        $_SESSION['success'] = "Backup created!";
+    } else {
+        $settings_msg = "<div class='alert alert-danger'>❌ Error creating backup!</div>";
+    }
+}
+
+// ===========================
 // GET DATA FROM DATABASE
 // ===========================
 $patients = [];
@@ -522,6 +753,7 @@ $payments = [];
 $staff = [];
 $schedules = [];
 $rooms = [];
+$hospital_settings = [];
 
 // Get patients
 $patient_result = mysqli_query($con, "SELECT pid, fname, lname, gender, email, contact, dob, national_id FROM patreg ORDER BY pid DESC");
@@ -584,6 +816,14 @@ $room_result = mysqli_query($con, "SELECT * FROM roomtb ORDER BY room_no, bed_no
 if($room_result){
     while($row = mysqli_fetch_assoc($room_result)){
         $rooms[] = $row;
+    }
+}
+
+// Get hospital settings
+$settings_result = mysqli_query($con, "SELECT * FROM hospital_settings");
+if($settings_result){
+    while($row = mysqli_fetch_assoc($settings_result)){
+        $hospital_settings[$row['setting_key']] = $row['setting_value'];
     }
 }
 
@@ -720,6 +960,25 @@ function checkAndCreateTables($con){
             type VARCHAR(20) NOT NULL,
             status VARCHAR(20) DEFAULT 'Available',
             created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+        
+        'hospital_settings' => "CREATE TABLE IF NOT EXISTS hospital_settings (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            setting_key VARCHAR(100) UNIQUE NOT NULL,
+            setting_value TEXT,
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )",
+        
+        'admintb' => "CREATE TABLE IF NOT EXISTS admintb (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            full_name VARCHAR(100),
+            role VARCHAR(20) DEFAULT 'admin',
+            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )"
     ];
     
@@ -738,6 +997,37 @@ function checkAndCreateTables($con){
                     mysqli_query($con, $alter_query);
                 }
             }
+        }
+    }
+    
+    // Insert default admin if not exists
+    $check_admin = mysqli_query($con, "SELECT * FROM admintb WHERE username='admin'");
+    if(mysqli_num_rows($check_admin) == 0){
+        $default_password = 'admin123';
+        $insert_admin = "INSERT INTO admintb (username, password, email, full_name) 
+                        VALUES ('admin', '$default_password', 'admin@hospital.com', 'Administrator')";
+        mysqli_query($con, $insert_admin);
+    }
+    
+    // Insert default settings if not exists
+    $default_settings = [
+        ['hospital_name', 'Healthcare Hospital'],
+        ['hospital_address', '123 Medical Street, City, Country'],
+        ['hospital_phone', '+94 11 234 5678'],
+        ['hospital_email', 'info@healthcarehospital.com'],
+        ['appointment_duration', '30'],
+        ['working_hours_start', '08:00'],
+        ['working_hours_end', '18:00'],
+        ['enable_online_payment', '1'],
+        ['sms_notifications', '1'],
+        ['email_notifications', '1']
+    ];
+    
+    foreach($default_settings as $setting){
+        $check = mysqli_query($con, "SELECT * FROM hospital_settings WHERE setting_key='{$setting[0]}'");
+        if(mysqli_num_rows($check) == 0){
+            $insert = "INSERT INTO hospital_settings (setting_key, setting_value) VALUES ('{$setting[0]}', '{$setting[1]}')";
+            mysqli_query($con, $insert);
         }
     }
 }
@@ -1006,6 +1296,46 @@ if(isset($_SESSION['error'])){
             margin: -25px -25px 20px -25px;
         }
 
+        /* Settings Page Styles */
+        .settings-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-left: 5px solid #0077b6;
+        }
+        .settings-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0077b6, #0096c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: white;
+            font-size: 24px;
+        }
+        .backup-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .backup-item {
+            padding: 10px 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .backup-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -1089,6 +1419,62 @@ if(isset($_SESSION['error'])){
             font-size: 12px;
             border-radius: 5px;
         }
+        
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #0077b6;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #0077b6;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .slider.round {
+            border-radius: 34px;
+        }
+        
+        .slider.round:before {
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body>
@@ -1122,6 +1508,9 @@ if(isset($_SESSION['error'])){
             <li data-target="room-tab">
                 <i class="fas fa-bed"></i> <span>Rooms/Beds</span>
             </li>
+            <li data-target="settings-tab">
+                <i class="fas fa-cog"></i> <span>Settings</span>
+            </li>
             <li>
                 <a href="logout1.php" style="color: white; text-decoration: none; display: block;">
                     <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
@@ -1134,7 +1523,7 @@ if(isset($_SESSION['error'])){
     <div class="main-content">
         <!-- Topbar -->
         <div class="topbar">
-            <div class="brand">🏥 Healthcare Hospital Admin</div>
+            <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?> Admin</div>
             <div class="user-info">
                 <div class="user-avatar">
                     <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
@@ -1825,18 +2214,18 @@ if(isset($_SESSION['error'])){
                 
                 <?php if($appointment_msg): echo $appointment_msg; endif; ?>
                 
-                <!-- Add Appointment Form -->
-                <div class="form-card mb-4 collapse" id="addAppointmentForm">
+                <!-- Add Appointment Form with NIC Option -->
+                <div class="form-card mb-4 collapse show" id="addAppointmentForm">
                     <div class="form-card-header">
-                        <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Create New Appointment</h5>
+                        <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Create New Appointment (Using NIC)</h5>
                     </div>
                     <form method="POST">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Patient ID *</label>
-                                    <input type="number" class="form-control" name="patient_id" required>
-                                    <small class="text-muted">Enter patient ID</small>
+                                    <label>Patient NIC *</label>
+                                    <input type="text" class="form-control" name="patient_nic" placeholder="Enter patient NIC (e.g., NIC123456789)" required>
+                                    <small class="text-muted">Enter patient NIC (e.g., NIC123456789)</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1867,8 +2256,56 @@ if(isset($_SESSION['error'])){
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" name="add_appointment" class="btn btn-success">
-                            <i class="fas fa-calendar-plus mr-1"></i> Create Appointment
+                        <button type="submit" name="add_appointment_by_nic" class="btn btn-success">
+                            <i class="fas fa-calendar-plus mr-1"></i> Create Appointment Using NIC
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Alternative Appointment Form (by Patient ID) -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt mr-2"></i>Alternative: Create Appointment by Patient ID</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Patient ID *</label>
+                                    <input type="number" class="form-control" name="patient_id" placeholder="Enter patient ID">
+                                    <small class="text-muted">Enter patient ID (if NIC is not available)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Doctor *</label>
+                                    <select class="form-control" name="doctor" required>
+                                        <option value="">Select Doctor</option>
+                                        <?php foreach($doctors as $doctor): ?>
+                                        <option value="<?php echo $doctor['username']; ?>">
+                                            <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Date *</label>
+                                    <input type="date" class="form-control" name="appdate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Time *</label>
+                                    <input type="time" class="form-control" name="apptime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="add_appointment" class="btn btn-info">
+                            <i class="fas fa-calendar-alt mr-1"></i> Create Appointment by ID
                         </button>
                     </form>
                 </div>
@@ -2293,6 +2730,249 @@ if(isset($_SESSION['error'])){
                     </div>
                 </div>
             </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane fade" id="settings-tab">
+                <h3 class="mb-4"><i class="fas fa-cog mr-2"></i>System Settings</h3>
+                
+                <?php if($settings_msg): echo $settings_msg; endif; ?>
+                
+                <!-- Hospital Information Settings -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <h4>Hospital Information</h4>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Hospital Name *</label>
+                                    <input type="text" class="form-control" name="hospital_name" value="<?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Hospital Phone *</label>
+                                    <input type="text" class="form-control" name="hospital_phone" value="<?php echo isset($hospital_settings['hospital_phone']) ? $hospital_settings['hospital_phone'] : '+94 11 234 5678'; ?>" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Hospital Email *</label>
+                                    <input type="email" class="form-control" name="hospital_email" value="<?php echo isset($hospital_settings['hospital_email']) ? $hospital_settings['hospital_email'] : 'info@healthcarehospital.com'; ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Duration (minutes) *</label>
+                                    <input type="number" class="form-control" name="appointment_duration" value="<?php echo isset($hospital_settings['appointment_duration']) ? $hospital_settings['appointment_duration'] : '30'; ?>" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Hospital Address *</label>
+                            <textarea class="form-control" name="hospital_address" rows="2" required><?php echo isset($hospital_settings['hospital_address']) ? $hospital_settings['hospital_address'] : '123 Medical Street, City, Country'; ?></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Working Hours Start *</label>
+                                    <input type="time" class="form-control" name="working_hours_start" value="<?php echo isset($hospital_settings['working_hours_start']) ? $hospital_settings['working_hours_start'] : '08:00'; ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Working Hours End *</label>
+                                    <input type="time" class="form-control" name="working_hours_end" value="<?php echo isset($hospital_settings['working_hours_end']) ? $hospital_settings['working_hours_end'] : '18:00'; ?>" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="update_settings" class="btn btn-primary">
+                            <i class="fas fa-save mr-1"></i> Save Hospital Settings
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- System Settings -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <h4>System Configuration</h4>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Enable Online Payments</label><br>
+                                    <label class="switch">
+                                        <input type="checkbox" name="enable_online_payment" value="1" <?php echo (isset($hospital_settings['enable_online_payment']) && $hospital_settings['enable_online_payment'] == '1') ? 'checked' : ''; ?>>
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>SMS Notifications</label><br>
+                                    <label class="switch">
+                                        <input type="checkbox" name="sms_notifications" value="1" <?php echo (isset($hospital_settings['sms_notifications']) && $hospital_settings['sms_notifications'] == '1') ? 'checked' : ''; ?>>
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Email Notifications</label><br>
+                                    <label class="switch">
+                                        <input type="checkbox" name="email_notifications" value="1" <?php echo (isset($hospital_settings['email_notifications']) && $hospital_settings['email_notifications'] == '1') ? 'checked' : ''; ?>>
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="update_settings" class="btn btn-primary">
+                            <i class="fas fa-save mr-1"></i> Save System Settings
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Change Admin Password -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h4>Change Admin Password</h4>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Current Password *</label>
+                                    <input type="password" class="form-control" name="current_password" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>New Password *</label>
+                                    <input type="password" class="form-control" name="new_password" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Confirm New Password *</label>
+                                    <input type="password" class="form-control" name="confirm_password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="change_admin_password" class="btn btn-warning">
+                            <i class="fas fa-key mr-1"></i> Change Password
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Database Backup -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h4>Database Management</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <h5>Create Database Backup</h5>
+                                <p class="text-muted">Create a backup of the entire database</p>
+                                <form method="POST">
+                                    <button type="submit" name="backup_database" class="btn btn-success">
+                                        <i class="fas fa-download mr-1"></i> Create Backup Now
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <h5>Backup History</h5>
+                                <div class="backup-list">
+                                    <?php
+                                    $backup_dir = 'backups/';
+                                    if(file_exists($backup_dir)){
+                                        $backups = glob($backup_dir . '*.sql');
+                                        rsort($backups);
+                                        if(count($backups) > 0){
+                                            foreach($backups as $backup){
+                                                $filename = basename($backup);
+                                                $filesize = filesize($backup);
+                                                $filetime = filemtime($backup);
+                                                echo '<div class="backup-item">
+                                                    <div>
+                                                        <strong>' . $filename . '</strong><br>
+                                                        <small>' . date('Y-m-d H:i:s', $filetime) . ' | ' . round($filesize/1024, 2) . ' KB</small>
+                                                    </div>
+                                                    <a href="' . $backup . '" class="btn btn-sm btn-info" download>
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                </div>';
+                                            }
+                                        } else {
+                                            echo '<p class="text-muted">No backups found</p>';
+                                        }
+                                    } else {
+                                        echo '<p class="text-muted">Backup directory not found</p>';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Information -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h4>System Information</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>PHP Version</th>
+                                    <td><?php echo phpversion(); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Database Server</th>
+                                    <td><?php echo mysqli_get_server_info($con); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Total Tables</th>
+                                    <td>
+                                        <?php
+                                        $result = mysqli_query($con, "SHOW TABLES");
+                                        echo mysqli_num_rows($result);
+                                        ?>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Application Version</th>
+                                    <td>1.0.0</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated</th>
+                                    <td><?php echo date('Y-m-d H:i:s'); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Server Time</th>
+                                    <td id="server-time">Loading...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2571,6 +3251,22 @@ if(isset($_SESSION['error'])){
                 $('.sidebar ul li').removeClass('active');
                 $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
             }
+            
+            // Update server time every second
+            setInterval(function() {
+                const now = new Date();
+                document.getElementById('server-time').textContent = now.toLocaleTimeString();
+            }, 1000);
+            
+            // Set appointment date to today by default
+            $('input[name="appdate"]').val(new Date().toISOString().split('T')[0]);
+            
+            // Set appointment time to next hour by default
+            const nextHour = new Date();
+            nextHour.setHours(nextHour.getHours() + 1);
+            nextHour.setMinutes(0);
+            nextHour.setSeconds(0);
+            $('input[name="apptime"]').val(nextHour.toTimeString().slice(0,5));
         });
         
         // Function to show tab
@@ -2899,6 +3595,14 @@ if(isset($_SESSION['error'])){
                 }
                 
                 return true;
+            });
+            
+            // Format NIC input for appointment
+            $('input[name="patient_nic"]').on('input', function() {
+                let value = $(this).val().replace(/[^0-9]/g, '');
+                if(value) {
+                    $(this).val('NIC' + value);
+                }
             });
         });
     </script>
