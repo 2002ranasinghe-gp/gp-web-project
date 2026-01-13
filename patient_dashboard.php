@@ -858,7 +858,7 @@ if(isset($_SESSION['error'])){
                 <!-- Stats Cards with Images -->
                 <div class="row">
                     <div class="col-lg-3 col-md-6">
-                        <div class="stats-card card border-left-primary shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/images/bg.jpg') center/cover;">
+                        <div class="stats-card card border-left-primary shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/c:\xampp\htdocs\PR\images\bg.jpg') center/cover;">
                             <div class="card-overlay"></div>
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
