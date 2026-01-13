@@ -258,11 +258,11 @@ h2 {
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <a class="navbar-brand" href="#">
-        <i class="fas fa-hospital-alt mr-2"></i>HEALTHCARE@ 
+        <i class="fas fa-hospital-alt mr-2"></i>HEALTHCARE 
     </a>
     <div class="welcome">
         <i class="fas fa-user-circle mr-2"></i>Welcome  to, <?php echo $_SESSION['reception']; ?> 
-        | <a href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
+        | <a href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Logou</a>
     </div>
 </nav>
 
