@@ -1,21 +1,30 @@
 <?php
-$conn = mysqli_connect("localhost", "root", "", "hospital_db");
+// Database connection
+$conn = mysqli_connect("localhost", "root", "", "myhmsdb");
 
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Form submit handling
 if (isset($_POST['book_room'])) {
+
     $patient_name = $_POST['patient_name'];
     $patient_id   = $_POST['patient_id'];
     $address      = $_POST['address'];
     $room_type    = $_POST['room_type'];
     $room_no      = $_POST['room_no'];
 
-    $sql = "INSERT INTO room_bookings 
+    $sql = "INSERT INTO roomtb 
             (patient_name, patient_id, address, room_type, room_no)
             VALUES 
             ('$patient_name', '$patient_id', '$address', '$room_type', '$room_no')";
 
-    mysqli_query($conn, $sql);
-
-    echo "<script>alert('Room Booked Successfully');</script>";
+    if (mysqli_query($conn, $sql)) {
+        echo "<script>alert('Room Booked Successfully');</script>";
+    } else {
+        echo "<script>alert('Error: ".mysqli_error($conn)."');</script>";
+    }
 }
 ?>
 
@@ -24,6 +33,7 @@ if (isset($_POST['book_room'])) {
 <head>
 <meta charset="UTF-8">
 <title>Healthcare Hospital</title>
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -71,7 +81,7 @@ body { background: #e9f4ff; }
         <div class="col-md-4 mt-3">
             <div class="card card-box p-4 text-center" onclick="showSection('normal')">
                 <i class="fa-solid fa-bed fa-3x mb-2 text-primary"></i>
-                <h4>Normal </h4>
+                <h4>Normal Room</h4>
             </div>
         </div>
         <div class="col-md-4 mt-3">
@@ -132,12 +142,22 @@ body { background: #e9f4ff; }
 </div>
 
 <script>
+const homeSection = document.getElementById("homeSection");
+const normalRoom  = document.getElementById("normalRoom");
+const vipRoom     = document.getElementById("vipRoom");
+
 function showSection(type) {
     homeSection.style.display = "none";
     normalRoom.style.display = "none";
     vipRoom.style.display = "none";
-    type === "normal" ? normalRoom.style.display = "block" : vipRoom.style.display = "block";
+
+    if (type === "normal") {
+        normalRoom.style.display = "block";
+    } else {
+        vipRoom.style.display = "block";
+    }
 }
+
 function goHome() {
     homeSection.style.display = "block";
     normalRoom.style.display = "none";
