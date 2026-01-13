@@ -373,16 +373,17 @@ if(isset($_POST['add_appointment'])){
 }
 
 // ===========================
-// ADD SCHEDULE
+// ADD SCHEDULE (UPDATED TO SAVE STAFF ID)
 // ===========================
 if(isset($_POST['add_schedule'])){
     $staff_name = mysqli_real_escape_string($con, $_POST['staff_name']);
+    $staff_id = mysqli_real_escape_string($con, $_POST['staff_id']);
     $role = mysqli_real_escape_string($con, $_POST['role']);
     $day = mysqli_real_escape_string($con, $_POST['day']);
     $shift = mysqli_real_escape_string($con, $_POST['shift']);
     
-    $query = "INSERT INTO scheduletb (staff_name, role, day, shift) 
-              VALUES ('$staff_name', '$role', '$day', '$shift')";
+    $query = "INSERT INTO scheduletb (staff_name, staff_id, role, day, shift) 
+              VALUES ('$staff_name', '$staff_id', '$role', '$day', '$shift')";
     
     if(mysqli_query($con, $query)){
         $schedule_msg = "<div class='alert alert-success'>✅ Schedule added successfully!</div>";
@@ -538,7 +539,7 @@ if($staff_result){
     }
 }
 
-// Get schedules
+// Get schedules with staff/doctor ID
 $schedule_result = mysqli_query($con, "SELECT * FROM scheduletb ORDER BY day, shift");
 if($schedule_result){
     while($row = mysqli_fetch_assoc($schedule_result)){
@@ -689,6 +690,7 @@ function checkAndCreateTables($con){
         'scheduletb' => "CREATE TABLE IF NOT EXISTS scheduletb (
             id INT PRIMARY KEY AUTO_INCREMENT,
             staff_name VARCHAR(50) NOT NULL,
+            staff_id VARCHAR(20) NOT NULL,
             role VARCHAR(50) NOT NULL,
             day VARCHAR(20) NOT NULL,
             shift VARCHAR(20) NOT NULL,
@@ -710,6 +712,17 @@ function checkAndCreateTables($con){
         if(mysqli_num_rows($check) == 0){
             if(!mysqli_query($con, $create_sql)){
                 echo "<div class='alert alert-danger'>❌ Error creating table $table_name: " . mysqli_error($con) . "</div>";
+            }
+        } else {
+            // Check if staff_id column exists in scheduletb, if not add it
+            if($table_name == 'scheduletb') {
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM scheduletb LIKE 'staff_id'");
+                if(mysqli_num_rows($check_column) == 0) {
+                    $alter_sql = "ALTER TABLE scheduletb ADD COLUMN staff_id VARCHAR(20) NOT NULL AFTER staff_name";
+                    if(!mysqli_query($con, $alter_sql)){
+                        echo "<div class='alert alert-warning'>⚠️ Error adding staff_id column to scheduletb: " . mysqli_error($con) . "</div>";
+                    }
+                }
             }
         }
     }
@@ -1154,6 +1167,8 @@ if(isset($_SESSION['success'])){
         let currentScheduleIdToDelete = null;
         let currentDoctorIdToEdit = null;
         let currentStaffIdToEdit = null;
+        let selectedStaffId = '';
+        let selectedStaffType = '';
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1344,6 +1359,20 @@ if(isset($_SESSION['success'])){
                         return false;
                     }
                     
+                    return true;
+                });
+            }
+            
+            // Add Schedule form validation
+            const addScheduleForm = document.querySelector('form[action*="add_schedule"]');
+            if(addScheduleForm) {
+                addScheduleForm.addEventListener('submit', function(e) {
+                    const staffId = document.getElementById('staff_id').value;
+                    if(!staffId || staffId.trim() === '') {
+                        e.preventDefault();
+                        alert('Please select a staff/doctor from the suggestions to get their ID!');
+                        return false;
+                    }
                     return true;
                 });
             }
@@ -2004,6 +2033,8 @@ if(isset($_SESSION['success'])){
         // Function to setup staff search functionality
         function setupStaffSearch() {
             const staffNameInput = document.getElementById('staff_name');
+            const staffIdInput = document.getElementById('staff_id');
+            const roleInput = document.getElementById('role');
             const suggestionsContainer = document.getElementById('staff-suggestions');
             
             if(!staffNameInput || !suggestionsContainer) return;
@@ -2032,16 +2063,23 @@ if(isset($_SESSION['success'])){
                         div.className = 'staff-suggestion-item';
                         div.innerHTML = `
                             <strong>${staff.name}</strong>
-                            <span class="staff-id-badge badge-${staff.type.toLowerCase()}">${staff.type}: ${staff.id}</span>
+                            <span class="staff-id-badge badge-${staff.type === 'Doctor' ? 'doctor' : 'staff'}">
+                                ${staff.type}: ${staff.id}
+                            </span>
                         `;
                         div.addEventListener('click', function() {
                             staffNameInput.value = staff.name;
+                            staffIdInput.value = staff.id;
+                            selectedStaffId = staff.id;
+                            selectedStaffType = staff.type;
                             suggestionsContainer.style.display = 'none';
                             
                             // Auto-fill role if it's a doctor
-                            const roleInput = document.getElementById('role');
-                            if (staff.type === 'Doctor' && roleInput) {
+                            if (staff.type === 'Doctor') {
                                 roleInput.value = 'Doctor';
+                            } else {
+                                // Set to the role from staff data if available
+                                roleInput.value = staff.type;
                             }
                         });
                         suggestionsContainer.appendChild(div);
@@ -2243,7 +2281,6 @@ if(isset($_SESSION['success'])){
                 <div class="tab-content">
                     <!-- Dashboard Tab -->
                     <div class="tab-pane fade show active" id="dash-tab">
-                        <!-- Dashboard content remains the same -->
                         <div class="dashboard-bg"></div>
                         <div class="dashboard-content">
                             <h4 class="mb-4 text-dark">Dashboard Overview</h4>
@@ -3302,6 +3339,8 @@ if(isset($_SESSION['success'])){
                                             </div>
                                         </div>
                                     </div>
+                                    <!-- Hidden input for staff/doctor ID -->
+                                    <input type="hidden" id="staff_id" name="staff_id" required>
                                     <button type="submit" name="add_schedule" class="btn btn-info">
                                         <i class="fa fa-plus mr-1"></i> Add Schedule
                                     </button>
@@ -3318,9 +3357,11 @@ if(isset($_SESSION['success'])){
                                 <tr>
                                     <th>ID</th>
                                     <th>Staff Name</th>
+                                    <th>Staff/Doctor ID</th>
                                     <th>Role</th>
                                     <th>Day</th>
                                     <th>Shift</th>
+                                    <th>Created Date</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -3330,9 +3371,11 @@ if(isset($_SESSION['success'])){
                                     <tr>
                                         <td><?php echo $schedule['id']; ?></td>
                                         <td><?php echo $schedule['staff_name']; ?></td>
+                                        <td><strong><?php echo $schedule['staff_id']; ?></strong></td>
                                         <td><?php echo $schedule['role']; ?></td>
                                         <td><?php echo $schedule['day']; ?></td>
                                         <td><?php echo $schedule['shift']; ?></td>
+                                        <td><?php echo date('Y-m-d H:i:s', strtotime($schedule['created_date'])); ?></td>
                                         <td>
                                             <button class="btn btn-sm btn-danger schedule-delete-btn" onclick="deleteSchedule(<?php echo $schedule['id']; ?>)">
                                                 <i class="fa fa-trash"></i> Delete
@@ -3342,7 +3385,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">No schedules found</td>
+                                        <td colspan="8" class="text-center">No schedules found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
