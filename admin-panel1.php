@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <?php
 // ===========================
 // DATABASE CONNECTION
@@ -25,6 +24,25 @@ $prescription_msg = "";
 $schedule_msg = "";
 $edit_doctor_msg = "";
 $edit_staff_msg = "";
+
+// ===========================
+// GET ADMIN INFO
+// ===========================
+$admin_id = $_SESSION['admin_id'] ?? 'ADM001';
+$admin_name = $_SESSION['admin_name'] ?? 'Admin User';
+$admin_email = $_SESSION['admin_email'] ?? 'admin@hospital.com';
+
+// ===========================
+// GET STATISTICS
+// ===========================
+$total_doctors = mysqli_num_rows(mysqli_query($con, "SELECT * FROM doctb"));
+$total_patients = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patreg"));
+$total_appointments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb"));
+$total_staff = mysqli_num_rows(mysqli_query($con, "SELECT * FROM stafftb"));
+$today_appointments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb WHERE appdate = CURDATE()"));
+$pending_payments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM paymenttb WHERE pay_status = 'Pending'"));
+$available_rooms = mysqli_num_rows(mysqli_query($con, "SELECT * FROM roomtb WHERE status = 'Available'"));
+$active_prescriptions = mysqli_num_rows(mysqli_query($con, "SELECT * FROM prestb WHERE emailStatus = 'Not Sent'"));
 
 // ===========================
 // ADD PATIENT (NO PASSWORD ENCRYPTION)
@@ -554,23 +572,7 @@ if($room_result){
     }
 }
 
-// Get dashboard counts
-$total_doctors = count($doctors);
-$total_patients = count($patients);
-$total_appointments = count($appointments);
-$total_staff = count($staff);
-$today_appointments = 0;
-$today = date('Y-m-d');
-
-foreach($appointments as $app){
-    if($app['appdate'] == $today){
-        $today_appointments++;
-    }
-}
-
-// ===========================
-// GET ALL STAFF NAMES FOR SCHEDULE DATALIST
-// ===========================
+// Get all staff names for schedule datalist
 $all_staff_names = [];
 // Get doctor names
 foreach($doctors as $doctor){
@@ -725,185 +727,192 @@ if(isset($_SESSION['success'])){
     $success_msg = "";
 }
 ?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Heth Care Hospital</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Admin Panel - Healthcare Hospital</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary: #342ac1;
-            --primary-gradient: linear-gradient(to right, #3931af, #00c6ff);
-            --secondary: #6c757d;
-            --success: #28a745;
-            --info: #17a2b8;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --light: #f8f9fa;
-            --dark: #343a40;
+        body { 
+            background: #f8f9fa; 
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
         }
-        
-        body {
-            padding-top: 70px;
-            background-color: #f5f7fb;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 16px;
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #0077b6 0%, #0096c7 100%);
+            color: white;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,.1);
+            z-index: 1000;
         }
-        
-        .navbar {
-            background: var(--primary-gradient) !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .list-group-item.active {
-            background: var(--primary-gradient) !important;
-            border-color: var(--primary);
-        }
-        
-        .dashboard-bg {
-            background: linear-gradient(rgba(52, 42, 193, 0.9), rgba(0, 198, 255, 0.9)), url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
-            height: 200px;
-            border-radius: 10px;
-            margin-bottom: -50px;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-        }
-        
-        .dashboard-content {
+        .sidebar .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
             background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            position: relative;
-            z-index: 1;
+            object-fit: contain;
+            margin: 0 auto 20px;
+            display: block;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .sidebar h4 { 
+            text-align: center; 
+            font-weight: 700; 
+            font-size: 22px; 
+            margin-bottom: 30px; 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        .sidebar ul { 
+            list-style: none; 
+            padding-left: 0; 
+        }
+        .sidebar ul li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all .3s;
+            border-left: 4px solid transparent;
+            font-size: 15px;
+        }
+        .sidebar ul li:hover, 
+        .sidebar ul li.active {
+            background: rgba(255,255,255,0.1);
+            border-left: 4px solid #fff;
+        }
+        .sidebar ul li i {
+            width: 25px;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        /* Main content */
+        .main-content { 
+            margin-left: 250px; 
+            width: calc(100% - 250px); 
         }
         
-        .dash-card {
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .dash-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .dash-icon {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 40px;
-            opacity: 0.3;
-        }
-        
-        .card-value {
-            font-size: 36px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .quick-actions {
+        .topbar {
+            background: linear-gradient(90deg, #0077b6 0%, #0096c7 100%);
+            color: white;
+            padding: 15px 30px;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            margin: 30px 0;
-            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+            position: sticky;
+            top: 0;
+            z-index: 999;
         }
-        
-        .quick-action-btn {
+        .brand { 
+            font-weight: 700; 
+            font-size: 24px; 
+            letter-spacing: 1px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            width: 18%;
-            margin-bottom: 10px;
-            color: var(--dark);
-            text-decoration: none;
-            transition: all 0.3s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            color: #0077b6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
         }
-        
-        .quick-action-btn:hover {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            text-decoration: none;
-            transform: translateY(-3px);
-        }
-        
-        .chart-container {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
+
+        /* Dashboard Cards */
+        .stats-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
             margin-bottom: 20px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .stats-icon {
+            font-size: 40px;
+            opacity: 0.8;
         }
         
-        .recent-activity {
-            max-height: 300px;
-            overflow-y: auto;
+        /* Quick Actions */
+        .quick-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+            height: 100%;
+            border: 2px solid transparent;
         }
-        
-        .activity-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #0077b6;
         }
-        
-        .activity-item:last-child {
-            border-bottom: none;
+        .quick-action-card i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #0077b6;
         }
-        
-        .activity-time {
-            color: #6c757d;
-            font-size: 12px;
-        }
-        
-        .patient-registration-card {
+
+        /* Tables */
+        .data-table {
             background: white;
             border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             overflow: hidden;
         }
-        
-        .card-header-custom {
-            background: var(--primary-gradient);
+        .table-header {
+            background: #0077b6;
             color: white;
-            padding: 20px;
-            font-size: 18px;
-            font-weight: bold;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
         }
-        
-        .card-body {
+
+        /* Tabs Content */
+        .tab-content {
             padding: 30px;
+            animation: fadeIn 0.5s;
         }
-        
-        .generated-nic {
-            background: #f8f9fa;
-            border: 2px dashed #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 10px;
-            text-align: center;
-            font-weight: bold;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
+
+        /* Search and Filter */
         .search-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             margin-bottom: 20px;
         }
-        
         .search-bar {
             position: relative;
         }
-        
         .search-icon {
             position: absolute;
             right: 15px;
@@ -911,1563 +920,460 @@ if(isset($_SESSION['success'])){
             transform: translateY(-50%);
             color: #6c757d;
         }
-        
-        .table th {
-            background: var(--primary);
-            color: white;
-            border: none;
-        }
-        
-        .table td {
-            vertical-align: middle;
-        }
-        
-        .action-btn {
-            margin: 2px;
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-        
+
+        /* Status Badges */
         .status-badge {
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
         }
-        
         .status-active {
             background: #d4edda;
             color: #155724;
         }
-        
         .status-cancelled {
             background: #f8d7da;
             color: #721c24;
         }
-        
         .status-pending {
             background: #fff3cd;
             color: #856404;
         }
-        
         .status-available {
             background: #d1ecf1;
             color: #0c5460;
         }
-        
         .status-occupied {
             background: #f8d7da;
             color: #721c24;
         }
-        
-        .status-not-sent {
-            background: #f8f9fa;
-            color: #6c757d;
-        }
-        
-        .status-hospital-pharmacy {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        .status-patient-sms {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .prescription-action-btn {
-            margin: 2px;
-            padding: 5px 8px;
-            font-size: 11px;
-            white-space: nowrap;
-        }
-        
-        .search-options {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .search-option-btn {
-            padding: 10px 20px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .search-option-btn:hover,
-        .search-option-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-        
-        .send-option-card {
-            border: 2px solid #dee2e6;
+
+        /* Charts Container */
+        .chart-container {
+            background: white;
             border-radius: 10px;
             padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            height: 100%;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        
-        .send-option-card:hover,
-        .send-option-card.selected {
-            border-color: var(--primary);
-            background: rgba(52, 42, 193, 0.05);
+
+        /* Form Cards */
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
         }
-        
-        .send-option-icon {
-            font-size: 40px;
-            color: var(--primary);
-            margin-bottom: 15px;
+        .form-card-header {
+            background: #0077b6;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            margin: -25px -25px 20px -25px;
         }
-        
-        .send-option-title {
-            font-weight: bold;
-            margin-bottom: 10px;
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar h4, .sidebar ul li span {
+                display: none;
+            }
+            .sidebar ul li i {
+                margin-right: 0;
+                font-size: 20px;
+            }
+            .main-content {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+            }
         }
-        
-        .send-option-desc {
-            font-size: 14px;
-            color: #6c757d;
-        }
-        
-        .prescription-modal .modal-content {
+
+        /* Additional Admin Styles */
+        .alert {
             border-radius: 10px;
             border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         
-        .staff-search-container {
-            position: relative;
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
         }
         
-        .staff-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            border: none;
+            font-weight: bold;
+        }
+        
+        .btn {
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
-        .staff-suggestion-item {
-            padding: 10px 15px;
-            cursor: pointer;
-            border-bottom: 1px solid #f8f9fa;
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
-        .staff-suggestion-item:hover {
+        .table th {
             background: #f8f9fa;
+            border: none;
+            font-weight: 600;
+            padding: 15px;
         }
         
-        .staff-suggestion-item:last-child {
-            border-bottom: none;
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-top: 1px solid #eee;
         }
         
-        .staff-id-badge {
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 5px;
+        .table tr:hover {
+            background-color: rgba(0,119,182,0.05);
         }
         
-        .badge-doctor {
-            background: #007bff;
-            color: white;
-        }
-        
-        .badge-staff {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .schedule-delete-btn {
+        .action-btn {
+            margin: 2px;
             padding: 5px 10px;
             font-size: 12px;
-        }
-        
-        .edit-btn {
-            background-color: #17a2b8;
-            border-color: #17a2b8;
-        }
-        
-        .edit-btn:hover {
-            background-color: #138496;
-            border-color: #117a8b;
-        }
-        
-        .staff-management-tabs .nav-link {
-            color: #495057;
-            border: 1px solid #dee2e6;
-            border-bottom: none;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
-        }
-        
-        .staff-management-tabs .nav-link.active {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #f8f9fa;
-        }
-        
-        .staff-management-content {
-            border: 1px solid #dee2e6;
-            border-radius: 0 5px 5px 5px;
-            padding: 20px;
-            background-color: white;
-        }
-        
-        @media (max-width: 768px) {
-            .quick-action-btn {
-                width: 48%;
-                margin-bottom: 10px;
-            }
-            
-            .search-options {
-                flex-direction: column;
-            }
-            
-            .staff-management-tabs .nav-link {
-                font-size: 14px;
-                padding: 8px 12px;
-            }
+            border-radius: 5px;
         }
     </style>
-    <script>
-        // Global variables
-        let currentPaymentId = null;
-        let currentPrescriptionId = null;
-        let currentPatientContact = '';
-        let currentAppointmentIdToCancel = null;
-        let currentPaymentSearchMode = 'patientId';
-        let currentSendOption = '';
-        let currentScheduleIdToDelete = null;
-        let currentDoctorIdToEdit = null;
-        let currentStaffIdToEdit = null;
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Update dashboard counts with real data from PHP
-            updateDashboardCounts();
-            
-            // Set up form validations
-            setupFormValidations();
-            
-            // Set up modal functionality
-            setupModalFunctionality();
-            
-            // Populate doctor select for delete modal
-            populateDoctorSelect();
-            
-            // Set initial payment search mode
-            setPaymentSearchMode('patientId');
-            
-            // Auto-refresh success messages
-            autoRefreshMessages();
-            
-            // Show patient tab if there's a patient message
-            <?php if(!empty($patient_msg)): ?>
-                setTimeout(function() {
-                    document.querySelector('a[href="#pat-tab"]').click();
-                }, 500);
-            <?php endif; ?>
-            
-            // Setup staff search functionality
-            setupStaffSearch();
-            
-            // Initialize staff management tabs
-            initializeStaffTabs();
-        });
-        
-        // Function to update dashboard counts
-        function updateDashboardCounts() {
-            // These values are set by PHP
-            document.getElementById('total-doctors').textContent = '<?php echo $total_doctors; ?>';
-            document.getElementById('total-patients').textContent = '<?php echo $total_patients; ?>';
-            document.getElementById('total-appointments').textContent = '<?php echo $total_appointments; ?>';
-            document.getElementById('total-staff').textContent = '<?php echo $total_staff; ?>';
-            
-            // Initialize charts with real data
-            initializeCharts();
-        }
-        
-        // Function to format NIC input
-        function formatNIC() {
-            const nicInput = document.getElementById('patientNIC');
-            const nicDisplay = document.getElementById('generatedNICDisplay');
-            
-            let nicValue = nicInput.value.replace(/[^0-9]/g, '');
-            nicInput.value = nicValue;
-            
-            if (nicValue) {
-                nicDisplay.innerHTML = `<strong>NIC will be:</strong> NIC${nicValue}`;
-            } else {
-                nicDisplay.innerHTML = 'Enter NIC number above';
-            }
-        }
-        
-        // Function to check patient password match
-        function checkPatientPassword() {
-            let pass = document.getElementById('patientPassword').value;
-            let cpass = document.getElementById('patientConfirmPassword').value;
-            const message = document.getElementById('patientPasswordMessage');
-            
-            if (pass === cpass) {
-                message.style.color = '#28a745';
-                message.innerText = 'Passwords match ✓';
-            } else {
-                message.style.color = '#dc3545';
-                message.innerText = 'Passwords do not match ✗';
-            }
-        }
-        
-        // Function to check doctor password match
-        function checkDoctorPassword() {
-            let pass = document.getElementById('dpassword').value;
-            let cpass = document.getElementById('cdpassword').value;
-            const message = document.getElementById('message');
-            
-            if (pass === cpass) {
-                message.style.color = '#28a745';
-                message.innerText = 'Passwords match ✓';
-            } else {
-                message.style.color = '#dc3545';
-                message.innerText = 'Passwords do not match ✗';
-            }
-        }
-        
-        // Function to check edit doctor password
-        function checkEditDoctorPassword() {
-            let pass = document.getElementById('edit_dpassword').value;
-            let cpass = document.getElementById('edit_cdpassword').value;
-            const message = document.getElementById('edit-message');
-            
-            if(pass || cpass) {
-                if (pass === cpass) {
-                    message.style.color = '#28a745';
-                    message.innerText = 'Passwords match ✓';
-                    document.getElementById('update_password').value = '1';
-                } else {
-                    message.style.color = '#dc3545';
-                    message.innerText = 'Passwords do not match ✗';
-                    document.getElementById('update_password').value = '0';
-                }
-            } else {
-                message.style.color = '#6c757d';
-                message.innerText = 'Leave blank to keep current password';
-                document.getElementById('update_password').value = '0';
-            }
-        }
-        
-        // Function to check edit staff password
-        function checkEditStaffPassword() {
-            let pass = document.getElementById('edit_spassword').value;
-            let cpass = document.getElementById('edit_cspassword').value;
-            const message = document.getElementById('edit-staff-message');
-            
-            if(pass || cpass) {
-                if (pass === cpass) {
-                    message.style.color = '#28a745';
-                    message.innerText = 'Passwords match ✓';
-                    document.getElementById('update_staff_password').value = '1';
-                } else {
-                    message.style.color = '#dc3545';
-                    message.innerText = 'Passwords do not match ✗';
-                    document.getElementById('update_staff_password').value = '0';
-                }
-            } else {
-                message.style.color = '#6c757d';
-                message.innerText = 'Leave blank to keep current password';
-                document.getElementById('update_staff_password').value = '0';
-            }
-        }
-        
-        // Alpha only validation for names
-        function alphaOnly(event) {
-            let key = event.keyCode;
-            return ((key >= 65 && key <= 90) || (key >= 97 && key <= 122) || key == 8 || key == 32);
-        }
-        
-        // Function to setup form validations
-        function setupFormValidations() {
-            // Add Patient form validation
-            const addPatientForm = document.getElementById('add-patient-form');
-            if(addPatientForm) {
-                addPatientForm.addEventListener('submit', function(e) {
-                    const password = document.getElementById('patientPassword').value;
-                    const confirmPassword = document.getElementById('patientConfirmPassword').value;
-                    
-                    if(password !== confirmPassword) {
-                        e.preventDefault();
-                        alert('Passwords do not match! Please check and try again.');
-                        return false;
-                    }
-                    
-                    const nic = document.getElementById('patientNIC').value;
-                    if(!nic || nic.trim() === '') {
-                        e.preventDefault();
-                        alert('Please enter NIC number!');
-                        return false;
-                    }
-                    
-                    const email = document.getElementById('patientEmail').value;
-                    if(!email || !email.includes('@')) {
-                        e.preventDefault();
-                        alert('Please enter a valid email address!');
-                        return false;
-                    }
-                    
-                    return true;
-                });
-            }
-            
-            // Add Doctor form validation
-            const addDoctorForm = document.getElementById('add-doctor-form');
-            if(addDoctorForm) {
-                addDoctorForm.addEventListener('submit', function(e) {
-                    const password = document.getElementById('dpassword').value;
-                    const confirmPassword = document.getElementById('cdpassword').value;
-                    
-                    if(password !== confirmPassword) {
-                        e.preventDefault();
-                        alert('Passwords do not match! Please check and try again.');
-                        return false;
-                    }
-                    
-                    return true;
-                });
-            }
-        }
-        
-        // Function to setup modal functionality
-        function setupModalFunctionality() {
-            // Cancel appointment modal
-            $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const appointmentId = button.data('appointment-id');
-                currentAppointmentIdToCancel = appointmentId;
-            });
-            
-            // Edit payment modal
-            $('#editPaymentModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const paymentId = button.data('payment-id');
-                currentPaymentId = paymentId;
-            });
-            
-            // Prescription send modal
-            $('#sendPrescriptionModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const prescriptionId = button.data('prescription-id');
-                currentPrescriptionId = prescriptionId;
-                
-                // Reset selection
-                currentSendOption = '';
-                document.querySelectorAll('.send-option-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                
-                // Load prescription details
-                loadPrescriptionDetails(prescriptionId);
-            });
-            
-            // Delete schedule modal
-            $('#deleteScheduleModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const scheduleId = button.data('schedule-id');
-                currentScheduleIdToDelete = scheduleId;
-            });
-            
-            // Edit doctor modal
-            $('#editDoctorModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const doctorId = button.data('doctor-id');
-                const doctorName = button.data('doctor-name');
-                const doctorSpec = button.data('doctor-spec');
-                const doctorEmail = button.data('doctor-email');
-                const doctorFees = button.data('doctor-fees');
-                const doctorContact = button.data('doctor-contact');
-                
-                currentDoctorIdToEdit = doctorId;
-                
-                // Populate form fields
-                document.getElementById('edit_doctorId').value = doctorId;
-                document.getElementById('edit_doctor').value = doctorName;
-                document.getElementById('edit_special').value = doctorSpec;
-                document.getElementById('edit_demail').value = doctorEmail;
-                document.getElementById('edit_docFees').value = doctorFees;
-                document.getElementById('edit_doctorContact').value = doctorContact;
-                
-                // Reset password fields
-                document.getElementById('edit_dpassword').value = '';
-                document.getElementById('edit_cdpassword').value = '';
-                document.getElementById('edit-message').innerText = 'Leave blank to keep current password';
-                document.getElementById('edit-message').style.color = '#6c757d';
-            });
-            
-            // Edit staff modal
-            $('#editStaffModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const staffId = button.data('staff-id');
-                const staffName = button.data('staff-name');
-                const staffRole = button.data('staff-role');
-                const staffEmail = button.data('staff-email');
-                const staffContact = button.data('staff-contact');
-                
-                currentStaffIdToEdit = staffId;
-                
-                // Populate form fields
-                document.getElementById('edit_staffId').value = staffId;
-                document.getElementById('edit_staff').value = staffName;
-                document.getElementById('edit_role').value = staffRole;
-                document.getElementById('edit_semail').value = staffEmail;
-                document.getElementById('edit_scontact').value = staffContact;
-                
-                // Reset password fields
-                document.getElementById('edit_spassword').value = '';
-                document.getElementById('edit_cspassword').value = '';
-                document.getElementById('edit-staff-message').innerText = 'Leave blank to keep current password';
-                document.getElementById('edit-staff-message').style.color = '#6c757d';
-            });
-            
-            // Payment status change listener
-            const editPaymentStatus = document.getElementById('edit-payment-status');
-            if(editPaymentStatus) {
-                editPaymentStatus.addEventListener('change', function() {
-                    togglePaymentMethodSection(this.value);
-                });
-            }
-        }
-        
-        // Function to toggle payment method section
-        function togglePaymentMethodSection(status) {
-            const methodSection = document.getElementById('payment-method-section');
-            if (status === 'Paid') {
-                methodSection.style.display = 'block';
-            } else {
-                methodSection.style.display = 'none';
-            }
-        }
-        
-        // Function to populate doctor select dropdown
-        function populateDoctorSelect() {
-            // This is handled by PHP inline
-        }
-        
-        // Function to set payment search mode
-        function setPaymentSearchMode(mode) {
-            currentPaymentSearchMode = mode;
-            
-            // Update active button
-            const buttons = document.querySelectorAll('.search-option-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            if (mode === 'patientId') {
-                document.querySelector('.search-option-btn:nth-child(1)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'block';
-                document.getElementById('nic-search-form').style.display = 'none';
-                showAllPayments();
-            } else if (mode === 'nic') {
-                document.querySelector('.search-option-btn:nth-child(2)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'none';
-                document.getElementById('nic-search-form').style.display = 'block';
-                document.getElementById('payment-nic-search').value = '';
-                showAllPayments();
-            } else if (mode === 'all') {
-                document.querySelector('.search-option-btn:nth-child(3)').classList.add('active');
-                document.getElementById('patientId-search-form').style.display = 'none';
-                document.getElementById('nic-search-form').style.display = 'none';
-                showAllPayments();
-            }
-        }
-        
-        // Function to show all payments in table
-        function showAllPayments() {
-            const tbody = document.getElementById('payments-table-body');
-            if(tbody) {
-                const rows = tbody.getElementsByTagName('tr');
-                for (let i = 0; i < rows.length; i++) {
-                    rows[i].style.display = '';
-                }
-            }
-        }
-        
-        // Function to filter patients by NIC
-        function filterPatientsByNIC() {
-            const input = document.getElementById('patient-search');
-            const filter = input.value.toUpperCase();
-            const tbody = document.getElementById('patients-table-body');
-            
-            if(!tbody) return;
-            
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                if (cells.length >= 8) {
-                    const nicCell = cells[7];
-                    if (nicCell) {
-                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
-                        let nicWithoutPrefix = nicText.replace('NIC', '');
-                        
-                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
-                            found = true;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-        
-        // Function to filter payments by NIC
-        function filterPaymentsByNIC() {
-            const input = document.getElementById('payment-nic-search');
-            const filter = input.value.toUpperCase();
-            const tbody = document.getElementById('payments-table-body');
-            
-            if(!tbody) return;
-            
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                if (cells.length >= 5) {
-                    const nicCell = cells[4];
-                    if (nicCell) {
-                        let nicText = (nicCell.textContent || nicCell.innerText).toUpperCase();
-                        let nicWithoutPrefix = nicText.replace('NIC', '');
-                        
-                        if (nicText.indexOf(filter) > -1 || nicWithoutPrefix.indexOf(filter) > -1) {
-                            found = true;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-        
-        // Function to search payments by patient ID
-        function searchPaymentsByPatient() {
-            const patientId = document.getElementById('payment-patient-id').value;
-            const tbody = document.getElementById('payments-table-body');
-            
-            if(!tbody || !patientId) {
-                showAllPayments();
-                return;
-            }
-            
-            const rows = tbody.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                if (cells.length > 1 && cells[1].textContent == patientId) {
-                    rows[i].style.display = '';
-                } else {
-                    rows[i].style.display = 'none';
-                }
-            }
-        }
-        
-        // Function to export table to CSV
-        function exportTable(tableBodyId, filename) {
-            const table = document.getElementById(tableBodyId);
-            if(!table) return;
-            
-            const rows = table.getElementsByTagName('tr');
-            let csv = [];
-            
-            // Get headers
-            const headerCells = table.parentNode.getElementsByTagName('thead')[0].getElementsByTagName('th');
-            const headerRow = [];
-            for (let i = 0; i < headerCells.length; i++) {
-                if(headerCells[i].innerText !== 'Actions') {
-                    headerRow.push(headerCells[i].innerText);
-                }
-            }
-            csv.push(headerRow.join(','));
-            
-            // Get data
-            for (let i = 0; i < rows.length; i++) {
-                const row = [];
-                const cols = rows[i].querySelectorAll('td');
-                
-                for (let j = 0; j < cols.length; j++) {
-                    const colText = cols[j].innerText;
-                    if(!colText.includes('View') && !colText.includes('Edit') && !colText.includes('Delete') && !colText.includes('Cancel') && !colText.includes('Send')) {
-                        row.push(cols[j].innerText);
-                    }
-                }
-                
-                if(row.length > 0) {
-                    csv.push(row.join(','));
-                }
-            }
-            
-            // Download CSV
-            const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
-            const downloadLink = document.createElement('a');
-            downloadLink.download = filename + '.csv';
-            downloadLink.href = window.URL.createObjectURL(csvFile);
-            downloadLink.style.display = 'none';
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        }
-        
-        // Function to initialize charts
-        function initializeCharts() {
-            // Appointments Chart
-            const appointmentsCtx = document.getElementById('appointmentsChart');
-            if(appointmentsCtx) {
-                <?php
-                $active_apps = 0;
-                $cancelled_apps = 0;
-                foreach($appointments as $app) {
-                    if($app['appointmentStatus'] == 'active') {
-                        $active_apps++;
-                    } else {
-                        $cancelled_apps++;
-                    }
-                }
-                ?>
-                
-                const appointmentsChart = new Chart(appointmentsCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Active', 'Cancelled'],
-                        datasets: [{
-                            data: [<?php echo $active_apps; ?>, <?php echo $cancelled_apps; ?>],
-                            backgroundColor: [
-                                'rgba(54, 162, 235, 0.5)',
-                                'rgba(255, 99, 132, 0.5)'
-                            ],
-                            borderColor: [
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 99, 132, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true
-                    }
-                });
-            }
-            
-            // Department Chart
-            const departmentCtx = document.getElementById('departmentChart');
-            if(departmentCtx) {
-                <?php
-                // Count doctors by specialization
-                $spec_count = [];
-                foreach($doctors as $doctor) {
-                    $spec = $doctor['spec'];
-                    if(!isset($spec_count[$spec])) {
-                        $spec_count[$spec] = 0;
-                    }
-                    $spec_count[$spec]++;
-                }
-                
-                $spec_labels = json_encode(array_keys($spec_count));
-                $spec_values = json_encode(array_values($spec_count));
-                ?>
-                
-                const specCount = <?php echo $spec_values; ?>;
-                const specLabels = <?php echo $spec_labels; ?>;
-                
-                const departmentChart = new Chart(departmentCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: specLabels,
-                        datasets: [{
-                            data: specCount,
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.5)',
-                                'rgba(54, 162, 235, 0.5)',
-                                'rgba(255, 206, 86, 0.5)',
-                                'rgba(75, 192, 192, 0.5)',
-                                'rgba(153, 102, 255, 0.5)',
-                                'rgba(255, 159, 64, 0.5)'
-                            ],
-                            borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(153, 102, 255, 1)',
-                                'rgba(255, 159, 64, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true
-                    }
-                });
-            }
-        }
-        
-        // Function to auto-refresh success messages
-        function autoRefreshMessages() {
-            setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(function(alert) {
-                    if(alert.classList.contains('alert-success') || alert.classList.contains('alert-danger')) {
-                        alert.style.opacity = '0.7';
-                        setTimeout(function() {
-                            alert.style.display = 'none';
-                        }, 3000);
-                    }
-                });
-            }, 5000);
-        }
-        
-        // Function to confirm appointment cancellation
-        function confirmCancelAppointment() {
-            if(!currentAppointmentIdToCancel) return;
-            
-            const reason = document.getElementById('cancellationReason').value;
-            const cancelledBy = document.querySelector('input[name="cancelledBy"]:checked').value;
-            
-            // Submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.style.display = 'none';
-            
-            const appointmentIdInput = document.createElement('input');
-            appointmentIdInput.type = 'hidden';
-            appointmentIdInput.name = 'appointmentId';
-            appointmentIdInput.value = currentAppointmentIdToCancel;
-            form.appendChild(appointmentIdInput);
-            
-            const reasonInput = document.createElement('input');
-            reasonInput.type = 'hidden';
-            reasonInput.name = 'reason';
-            reasonInput.value = reason;
-            form.appendChild(reasonInput);
-            
-            const cancelledByInput = document.createElement('input');
-            cancelledByInput.type = 'hidden';
-            cancelledByInput.name = 'cancelledBy';
-            cancelledByInput.value = cancelledBy;
-            form.appendChild(cancelledByInput);
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'cancel_appointment';
-            actionInput.value = '1';
-            form.appendChild(actionInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
-        
-        // Function to update payment status
-        function updatePaymentStatus() {
-            if(!currentPaymentId) return;
-            
-            const status = document.getElementById('edit-payment-status').value;
-            const method = document.getElementById('edit-payment-method').value;
-            const receipt = document.getElementById('edit-receipt-number').value;
-            
-            // Submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.style.display = 'none';
-            
-            const paymentIdInput = document.createElement('input');
-            paymentIdInput.type = 'hidden';
-            paymentIdInput.name = 'paymentId';
-            paymentIdInput.value = currentPaymentId;
-            form.appendChild(paymentIdInput);
-            
-            const statusInput = document.createElement('input');
-            statusInput.type = 'hidden';
-            statusInput.name = 'status';
-            statusInput.value = status;
-            form.appendChild(statusInput);
-            
-            const methodInput = document.createElement('input');
-            methodInput.type = 'hidden';
-            methodInput.name = 'method';
-            methodInput.value = method;
-            form.appendChild(methodInput);
-            
-            const receiptInput = document.createElement('input');
-            receiptInput.type = 'hidden';
-            receiptInput.name = 'receipt';
-            receiptInput.value = receipt;
-            form.appendChild(receiptInput);
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'update_payment';
-            actionInput.value = '1';
-            form.appendChild(actionInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
-        
-        // Function to delete doctor from dashboard
-        function deleteDoctorFromDashboard() {
-            const doctorId = document.getElementById('doctor-select').value;
-            
-            if(!doctorId) {
-                alert('Please select a doctor to delete!');
-                return;
-            }
-            
-            if(confirm('Are you sure you want to delete this doctor?')) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const doctorIdInput = document.createElement('input');
-                doctorIdInput.type = 'hidden';
-                doctorIdInput.name = 'doctorId';
-                doctorIdInput.value = doctorId;
-                form.appendChild(doctorIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'delete_doctor';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to filter table rows
-        function filterTable(searchInputId, tableBodyId) {
-            const input = document.getElementById(searchInputId);
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById(tableBodyId);
-            if(!table) return;
-            
-            const rows = table.getElementsByTagName('tr');
-            
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                let found = false;
-                
-                for (let j = 0; j < cells.length; j++) {
-                    const cell = cells[j];
-                    if (cell) {
-                        const text = cell.textContent || cell.innerText;
-                        if (text.toLowerCase().indexOf(filter) > -1) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                
-                rows[i].style.display = found ? '' : 'none';
-            }
-        }
-        
-        // Function to load prescription details
-        function loadPrescriptionDetails(prescriptionId) {
-            // This would typically be an AJAX call
-            document.getElementById('prescription-details-content').innerHTML = 
-                '<p>Loading prescription details...</p>';
-            
-            setTimeout(() => {
-                document.getElementById('prescription-details-content').innerHTML = 
-                    '<p>Prescription details loaded. Select a sending option below.</p>';
-            }, 500);
-        }
-        
-        // Function to select send option
-        function selectSendOption(option) {
-            currentSendOption = option;
-            
-            // Update UI
-            document.querySelectorAll('.send-option-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            event.currentTarget.classList.add('selected');
-            
-            // Enable confirm button
-            document.getElementById('confirm-send-btn').disabled = false;
-        }
-        
-        // Function to confirm prescription sending
-        function confirmSendPrescription() {
-            if(!currentPrescriptionId || !currentSendOption) {
-                alert('Please select a sending option!');
-                return;
-            }
-            
-            let formAction = '';
-            let formName = '';
-            
-            if(currentSendOption === 'hospital') {
-                formAction = 'send_to_hospital';
-                formName = 'send_to_hospital';
-            } else if(currentSendOption === 'patient') {
-                formAction = 'send_to_patient';
-                formName = 'send_to_patient';
-            }
-            
-            // Submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.style.display = 'none';
-            
-            const prescriptionIdInput = document.createElement('input');
-            prescriptionIdInput.type = 'hidden';
-            prescriptionIdInput.name = 'prescription_id';
-            prescriptionIdInput.value = currentPrescriptionId;
-            form.appendChild(prescriptionIdInput);
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = formName;
-            actionInput.value = '1';
-            form.appendChild(actionInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
-        
-        // Function to directly send to hospital pharmacy
-        function sendToHospitalPharmacy(prescriptionId) {
-            if(confirm('Send this prescription to Hospital Pharmacy?')) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const prescriptionIdInput = document.createElement('input');
-                prescriptionIdInput.type = 'hidden';
-                prescriptionIdInput.name = 'prescription_id';
-                prescriptionIdInput.value = prescriptionId;
-                form.appendChild(prescriptionIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'send_to_hospital';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to directly send to patient contact
-        function sendToPatientContact(prescriptionId) {
-            if(confirm('Send this prescription to Patient\'s Contact Number via SMS?')) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const prescriptionIdInput = document.createElement('input');
-                prescriptionIdInput.type = 'hidden';
-                prescriptionIdInput.name = 'prescription_id';
-                prescriptionIdInput.value = prescriptionId;
-                form.appendChild(prescriptionIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'send_to_patient';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to setup staff search functionality
-        function setupStaffSearch() {
-            const staffNameInput = document.getElementById('staff_name');
-            const suggestionsContainer = document.getElementById('staff-suggestions');
-            
-            if(!staffNameInput || !suggestionsContainer) return;
-            
-            staffNameInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                suggestionsContainer.innerHTML = '';
-                
-                if (searchTerm.length < 2) {
-                    suggestionsContainer.style.display = 'none';
-                    return;
-                }
-                
-                // Get staff data from PHP (embedded in the page)
-                const staffData = <?php echo json_encode($all_staff_names); ?>;
-                
-                // Filter matching staff
-                const matches = staffData.filter(staff => 
-                    staff.name.toLowerCase().includes(searchTerm) || 
-                    staff.id.toLowerCase().includes(searchTerm)
-                ).slice(0, 10); // Limit to 10 results
-                
-                if (matches.length > 0) {
-                    matches.forEach(staff => {
-                        const div = document.createElement('div');
-                        div.className = 'staff-suggestion-item';
-                        div.innerHTML = `
-                            <strong>${staff.name}</strong>
-                            <span class="staff-id-badge badge-${staff.type.toLowerCase()}">${staff.type}: ${staff.id}</span>
-                        `;
-                        div.addEventListener('click', function() {
-                            staffNameInput.value = staff.name;
-                            suggestionsContainer.style.display = 'none';
-                            
-                            // Auto-fill role if it's a doctor
-                            const roleInput = document.getElementById('role');
-                            if (staff.type === 'Doctor' && roleInput) {
-                                roleInput.value = 'Doctor';
-                            }
-                        });
-                        suggestionsContainer.appendChild(div);
-                    });
-                    suggestionsContainer.style.display = 'block';
-                } else {
-                    suggestionsContainer.style.display = 'none';
-                }
-            });
-            
-            // Hide suggestions when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!staffNameInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                    suggestionsContainer.style.display = 'none';
-                }
-            });
-        }
-        
-        // Function to confirm schedule deletion
-        function confirmDeleteSchedule() {
-            if(!currentScheduleIdToDelete) return;
-            
-            // Submit form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.style.display = 'none';
-            
-            const scheduleIdInput = document.createElement('input');
-            scheduleIdInput.type = 'hidden';
-            scheduleIdInput.name = 'schedule_id';
-            scheduleIdInput.value = currentScheduleIdToDelete;
-            form.appendChild(scheduleIdInput);
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'delete_schedule';
-            actionInput.value = '1';
-            form.appendChild(actionInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        }
-        
-        // Function to directly delete schedule
-        function deleteSchedule(scheduleId) {
-            if(confirm('Are you sure you want to delete this schedule?')) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const scheduleIdInput = document.createElement('input');
-                scheduleIdInput.type = 'hidden';
-                scheduleIdInput.name = 'schedule_id';
-                scheduleIdInput.value = scheduleId;
-                form.appendChild(scheduleIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'delete_schedule';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete doctor
-        function deleteDoctor(doctorId, doctorName) {
-            if(confirm(`Are you sure you want to delete doctor ${doctorName}?`)) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const doctorIdInput = document.createElement('input');
-                doctorIdInput.type = 'hidden';
-                doctorIdInput.name = 'doctorId';
-                doctorIdInput.value = doctorId;
-                form.appendChild(doctorIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'delete_doctor';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete staff
-        function deleteStaff(staffId, staffName) {
-            if(confirm(`Are you sure you want to delete staff member ${staffName}?`)) {
-                // Submit form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const staffIdInput = document.createElement('input');
-                staffIdInput.type = 'hidden';
-                staffIdInput.name = 'staffId';
-                staffIdInput.value = staffId;
-                form.appendChild(staffIdInput);
-                
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'delete_staff';
-                actionInput.value = '1';
-                form.appendChild(actionInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Function to initialize staff management tabs
-        function initializeStaffTabs() {
-            // Switch to doctors tab if there's a doctor message
-            <?php if(!empty($doctor_msg) || !empty($edit_doctor_msg)): ?>
-                setTimeout(function() {
-                    document.querySelector('a[href="#doctors-tab"]').click();
-                }, 500);
-            <?php endif; ?>
-            
-            // Switch to staff tab if there's a staff message
-            <?php if(!empty($staff_msg) || !empty($edit_staff_msg)): ?>
-                setTimeout(function() {
-                    document.querySelector('a[href="#staff-tab"]').click();
-                }, 500);
-            <?php endif; ?>
-        }
-    </script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-        <a class="navbar-brand" href="#"><i class="fa fa-user-plus"></i> Heth Care Hospital</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarContent">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="#" id="notification-badge">
-                        <i class="fa fa-bell"></i> Notifications 
-                        <span class="badge badge-light" id="notification-count"><?php echo $today_appointments; ?></span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#"><i class="fa fa-user"></i> Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="logout1.php"><i class="fa fa-sign-out"></i> Logout</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
 
-    <div class="container-fluid">
-        <h3 class="text-center mb-4">ADMIN PANEL</h3>
-        
-        <?php if($success_msg): ?>
-            <div class="alert alert-success text-center"><?php echo $success_msg; ?></div>
-        <?php endif; ?>
-        
-        <div class="row">
-            <div class="col-md-3">
-                <div class="list-group" id="list-tab" role="tablist">
-                    <a class="list-group-item list-group-item-action active" data-toggle="list" href="#dash-tab">
-                        <i class="fa fa-tachometer mr-2"></i>Dashboard
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#staff-management-tab">
-                        <i class="fa fa-id-badge mr-2"></i>Staff Management
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#pat-tab">
-                        <i class="fa fa-users mr-2"></i>Patients
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#app-tab">
-                        <i class="fa fa-calendar mr-2"></i>Appointments
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#pres-tab">
-                        <i class="fa fa-file-text mr-2"></i>Prescriptions
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#pay-tab">
-                        <i class="fa fa-credit-card mr-2"></i>Payments
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#sched-tab">
-                        <i class="fa fa-clock-o mr-2"></i>Schedules
-                    </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#room-tab">
-                        <i class="fa fa-bed mr-2"></i>Rooms/Beds
-                    </a>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <img class="logo" src="images/medical-logo.jpg" alt="Hospital Logo">
+        <h4>Admin Portal</h4>
+        <ul>
+            <li data-target="dash-tab" class="active">
+                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+            </li>
+            <li data-target="staff-management-tab">
+                <i class="fas fa-users-cog"></i> <span>Staff Management</span>
+            </li>
+            <li data-target="pat-tab">
+                <i class="fas fa-user-injured"></i> <span>Patients</span>
+            </li>
+            <li data-target="app-tab">
+                <i class="fas fa-calendar-check"></i> <span>Appointments</span>
+            </li>
+            <li data-target="pres-tab">
+                <i class="fas fa-prescription"></i> <span>Prescriptions</span>
+            </li>
+            <li data-target="pay-tab">
+                <i class="fas fa-credit-card"></i> <span>Payments</span>
+            </li>
+            <li data-target="sched-tab">
+                <i class="fas fa-clock"></i> <span>Schedules</span>
+            </li>
+            <li data-target="room-tab">
+                <i class="fas fa-bed"></i> <span>Rooms/Beds</span>
+            </li>
+            <li>
+                <a href="logout1.php" style="color: white; text-decoration: none; display: block;">
+                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="brand">🏥 Healthcare Hospital Admin</div>
+            <div class="user-info">
+                <div class="user-avatar">
+                    <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
+                </div>
+                <div>
+                    <strong><?php echo htmlspecialchars($admin_name); ?></strong><br>
+                    <small>Administrator</small>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-9">
-                <div class="tab-content">
-                    <!-- Dashboard Tab -->
-                    <div class="tab-pane fade show active" id="dash-tab">
-                        <!-- Dashboard content remains the same -->
-                        <div class="dashboard-bg"></div>
-                        <div class="dashboard-content">
-                            <h4 class="mb-4 text-dark">Dashboard Overview</h4>
-                            
-                            <!-- Quick Actions -->
-                            <div class="quick-actions">
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-management-tab">
-                                    <i class="fa fa-user-md fa-2x mb-2"></i>
-                                    <div>Manage Doctors</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-management-tab">
-                                    <i class="fa fa-id-badge fa-2x mb-2"></i>
-                                    <div>Manage Staff</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#app-tab">
-                                    <i class="fa fa-calendar fa-2x mb-2"></i>
-                                    <div>View Appointments</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#pay-tab">
-                                    <i class="fa fa-credit-card fa-2x mb-2"></i>
-                                    <div>Payments</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#room-tab">
-                                    <i class="fa fa-bed fa-2x mb-2"></i>
-                                    <div>Rooms/Beds</div>
-                                </a>
-                                <a class="quick-action-btn" data-toggle="modal" data-target="#deleteDoctorModal">
-                                    <i class="fa fa-trash fa-2x mb-2"></i>
-                                    <div>Delete Doctor</div>
-                                </a>
-                            </div>
-                            
-                            <!-- Stats Cards -->
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #1976d2);">
-                                        <i class="fa fa-user-md dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Total Doctors</h5>
-                                            <h3 class="card-value" id="total-doctors">0</h3>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dash-tab">
+                <?php if($success_msg): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?php echo $success_msg; ?>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Welcome Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="alert alert-primary" role="alert">
+                            <h4 class="alert-heading">Welcome back, <?php echo htmlspecialchars($admin_name); ?>!</h4>
+                            <p class="mb-0">Here's your admin dashboard. You can manage all hospital activities from here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total Doctors
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $total_doctors; ?>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #2196f3);">
-                                        <i class="fa fa-users dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Total Patients</h5>
-                                            <h3 class="card-value" id="total-patients">0</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #42a5f5);">
-                                        <i class="fa fa-calendar dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Appointments</h5>
-                                            <h3 class="card-value" id="total-appointments">0</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="dash-card text-white" style="background: linear-gradient(135deg, #0d47a1, #64b5f6);">
-                                        <i class="fa fa-id-badge dash-icon"></i>
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">Staff Members</h5>
-                                            <h3 class="card-value" id="total-staff">0</h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Charts and Additional Stats -->
-                            <div class="row mt-4">
-                                <div class="col-md-8">
-                                    <div class="chart-container">
-                                        <h5>Appointments Overview</h5>
-                                        <canvas id="appointmentsChart" height="250"></canvas>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="chart-container">
-                                        <h5>Department Distribution</h5>
-                                        <canvas id="departmentChart" height="250"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Recent Activity -->
-                            <div class="row mt-4">
-                                <div class="col-md-6">
-                                    <div class="chart-container">
-                                        <h5>Recent Activity</h5>
-                                        <div class="recent-activity" id="recent-activity">
-                                            <div class="activity-item">
-                                                <div class="d-flex justify-content-between">
-                                                    <div><strong>System Started</strong></div>
-                                                    <div class="activity-time">Just now</div>
-                                                </div>
-                                                <div>Admin Panel loaded successfully</div>
-                                            </div>
-                                            <?php if($total_patients > 0): ?>
-                                            <div class="activity-item">
-                                                <div class="d-flex justify-content-between">
-                                                    <div><strong>Patients Registered</strong></div>
-                                                    <div class="activity-time">Today</div>
-                                                </div>
-                                                <div>Total <?php echo $total_patients; ?> patients in system</div>
-                                            </div>
-                                            <?php endif; ?>
-                                            <?php if($total_doctors > 0): ?>
-                                            <div class="activity-item">
-                                                <div class="d-flex justify-content-between">
-                                                    <div><strong>Doctors Available</strong></div>
-                                                    <div class="activity-time">Today</div>
-                                                </div>
-                                                <div>Total <?php echo $total_doctors; ?> doctors in system</div>
-                                            </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="chart-container">
-                                        <h5>Today's Appointments</h5>
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Time</th>
-                                                    <th>Patient</th>
-                                                    <th>Doctor</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="today-appointments">
-                                                <?php if($today_appointments > 0): ?>
-                                                    <?php foreach($appointments as $app): ?>
-                                                        <?php if($app['appdate'] == $today): ?>
-                                                        <tr>
-                                                            <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
-                                                            <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
-                                                            <td><?php echo $app['doctor']; ?></td>
-                                                            <td>
-                                                                <?php if($app['appointmentStatus'] == 'active'): ?>
-                                                                    <span class="status-badge status-active">Active</span>
-                                                                <?php else: ?>
-                                                                    <span class="status-badge status-cancelled">Cancelled</span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                        </tr>
-                                                        <?php endif; ?>
-                                                    <?php endforeach; ?>
-                                                <?php else: ?>
-                                                    <tr>
-                                                        <td colspan="4" class="text-center">No appointments for today</td>
-                                                    </tr>
-                                                <?php endif; ?>
-                                            </tbody>
-                                        </table>
+                                    <div class="col-auto">
+                                        <i class="fas fa-user-md stats-icon text-primary"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Staff Management Tab -->
-                    <div class="tab-pane fade" id="staff-management-tab">
-                        <h4>Staff & Doctor Management</h4>
-                        
-                        <!-- Tab Navigation -->
-                        <ul class="nav nav-tabs staff-management-tabs" id="staffManagementTabs" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link active" id="doctors-tab" data-toggle="tab" href="#doctors-content" role="tab">
-                                    <i class="fa fa-user-md mr-2"></i>Doctors
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="staff-tab" data-toggle="tab" href="#staff-content" role="tab">
-                                    <i class="fa fa-id-badge mr-2"></i>Staff Members
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="add-doctor-tab" data-toggle="tab" href="#add-doctor-content" role="tab">
-                                    <i class="fa fa-plus-circle mr-2"></i>Add Doctor
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="add-staff-tab" data-toggle="tab" href="#add-staff-content" role="tab">
-                                    <i class="fa fa-plus mr-2"></i>Add Staff
-                                </a>
-                            </li>
-                        </ul>
-                        
-                        <!-- Tab Content -->
-                        <div class="tab-content staff-management-content" id="staffManagementContent">
-                            <!-- Doctors Content -->
-                            <div class="tab-pane fade show active" id="doctors-content" role="tabpanel">
-                                <?php if($doctor_msg): echo $doctor_msg; endif; ?>
-                                <?php if($edit_doctor_msg): echo $edit_doctor_msg; endif; ?>
-                                
-                                <div class="search-container mb-3">
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <div class="search-bar">
-                                                <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name, ID, or specialization..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
-                                                <i class="fa fa-search search-icon"></i>
-                                            </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Total Patients
                                         </div>
-                                        <div class="col-md-4">
-                                            <button class="btn btn-primary w-100" onclick="exportTable('doctors-table-body', 'doctors')">
-                                                <i class="fa fa-download mr-2"></i>Export Doctors
-                                            </button>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $total_patients; ?>
                                         </div>
                                     </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-user-injured stats-icon text-success"></i>
+                                    </div>
                                 </div>
-                                
-                                <table class="table table-hover table-bordered">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Today's Appointments
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $today_appointments; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-calendar-day stats-icon text-info"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Pending Payments
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $pending_payments; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-money-bill-wave stats-icon text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="row mt-4">
+                    <div class="col-12 mb-3">
+                        <h4>Quick Actions</h4>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('staff-management-tab')">
+                            <i class="fas fa-user-plus"></i>
+                            <h5>Add Staff</h5>
+                            <p>Add new doctors or staff members</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('pat-tab')">
+                            <i class="fas fa-user-plus"></i>
+                            <h5>Register Patient</h5>
+                            <p>Register a new patient</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('app-tab')">
+                            <i class="fas fa-calendar-plus"></i>
+                            <h5>Create Appointment</h5>
+                            <p>Schedule a new appointment</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('room-tab')">
+                            <i class="fas fa-bed"></i>
+                            <h5>Manage Rooms</h5>
+                            <p>Add or manage rooms/beds</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Appointments Overview</h5>
+                            <canvas id="appointmentsChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Department Distribution</h5>
+                            <canvas id="departmentChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="data-table">
+                            <div class="table-header">
+                                <h5 class="mb-0"><i class="fas fa-history mr-2"></i>Recent Activity</h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Activity</th>
+                                            <th>Details</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if($total_patients > 0): ?>
+                                        <tr>
+                                            <td>Just now</td>
+                                            <td>Patients Registered</td>
+                                            <td>Total <?php echo $total_patients; ?> patients</td>
+                                            <td><span class="badge badge-success">Active</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <?php if($total_doctors > 0): ?>
+                                        <tr>
+                                            <td>Just now</td>
+                                            <td>Doctors Available</td>
+                                            <td>Total <?php echo $total_doctors; ?> doctors</td>
+                                            <td><span class="badge badge-success">Active</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <?php if($today_appointments > 0): ?>
+                                        <tr>
+                                            <td>Today</td>
+                                            <td>Today's Appointments</td>
+                                            <td><?php echo $today_appointments; ?> appointments</td>
+                                            <td><span class="badge badge-info">Scheduled</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Management Tab -->
+            <div class="tab-pane fade" id="staff-management-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-users-cog mr-2"></i>Staff Management</h3>
+                </div>
+                
+                <?php if($doctor_msg): echo $doctor_msg; endif; ?>
+                <?php if($staff_msg): echo $staff_msg; endif; ?>
+                
+                <!-- Tabs for Staff Management -->
+                <ul class="nav nav-tabs" id="staffManagementTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="doctors-tab" data-toggle="tab" href="#doctors-content" role="tab">
+                            <i class="fas fa-user-md mr-2"></i>Doctors
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="staff-tab" data-toggle="tab" href="#staff-content" role="tab">
+                            <i class="fas fa-id-badge mr-2"></i>Staff Members
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="add-doctor-tab" data-toggle="tab" href="#add-doctor-content" role="tab">
+                            <i class="fas fa-plus-circle mr-2"></i>Add Doctor
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="add-staff-tab" data-toggle="tab" href="#add-staff-content" role="tab">
+                            <i class="fas fa-plus mr-2"></i>Add Staff
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-4">
+                    <!-- Doctors Content -->
+                    <div class="tab-pane fade show active" id="doctors-content" role="tabpanel">
+                        <div class="search-container">
+                            <div class="search-bar">
+                                <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name, ID, or specialization..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="data-table">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
                                     <thead>
                                         <tr>
                                             <th>Doctor ID</th>
                                             <th>Name</th>
                                             <th>Specialization</th>
                                             <th>Email</th>
-                                            <th>Contact Number</th>
+                                            <th>Contact</th>
                                             <th>Fees (Rs.)</th>
                                             <th>Actions</th>
                                         </tr>
@@ -2480,23 +1386,20 @@ if(isset($_SESSION['success'])){
                                                 <td><?php echo $doctor['username']; ?></td>
                                                 <td><?php echo $doctor['spec']; ?></td>
                                                 <td><?php echo $doctor['email']; ?></td>
-                                                <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
+                                                <td><?php echo $doctor['contact'] ?: 'N/A'; ?></td>
                                                 <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nContact: <?php echo $doctor['contact']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
-                                                        <i class="fa fa-eye"></i> View
-                                                    </button>
-                                                    <button class="btn btn-sm btn-warning action-btn edit-btn" data-toggle="modal" data-target="#editDoctorModal"
+                                                    <button class="btn btn-sm btn-info action-btn" data-toggle="modal" data-target="#editDoctorModal"
                                                             data-doctor-id="<?php echo $doctor['id']; ?>"
                                                             data-doctor-name="<?php echo $doctor['username']; ?>"
                                                             data-doctor-spec="<?php echo $doctor['spec']; ?>"
                                                             data-doctor-email="<?php echo $doctor['email']; ?>"
                                                             data-doctor-fees="<?php echo $doctor['docFees']; ?>"
                                                             data-doctor-contact="<?php echo $doctor['contact']; ?>">
-                                                        <i class="fa fa-edit"></i> Edit
+                                                        <i class="fas fa-edit"></i> Edit
                                                     </button>
                                                     <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctor('<?php echo $doctor['id']; ?>', '<?php echo $doctor['username']; ?>')">
-                                                        <i class="fa fa-trash"></i> Delete
+                                                        <i class="fas fa-trash"></i> Delete
                                                     </button>
                                                 </td>
                                             </tr>
@@ -2509,36 +1412,28 @@ if(isset($_SESSION['success'])){
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            <!-- Staff Content -->
-                            <div class="tab-pane fade" id="staff-content" role="tabpanel">
-                                <?php if($staff_msg): echo $staff_msg; endif; ?>
-                                <?php if($edit_staff_msg): echo $edit_staff_msg; endif; ?>
-                                
-                                <div class="search-container mb-3">
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <div class="search-bar">
-                                                <input type="text" class="form-control" id="staff-search" placeholder="Search staff by name, ID, or role..." onkeyup="filterTable('staff-search', 'staff-table-body')">
-                                                <i class="fa fa-search search-icon"></i>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <button class="btn btn-primary w-100" onclick="exportTable('staff-table-body', 'staff')">
-                                                <i class="fa fa-download mr-2"></i>Export Staff
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <table class="table table-hover table-bordered">
+                        </div>
+                    </div>
+                    
+                    <!-- Staff Content -->
+                    <div class="tab-pane fade" id="staff-content" role="tabpanel">
+                        <div class="search-container">
+                            <div class="search-bar">
+                                <input type="text" class="form-control" id="staff-search" placeholder="Search staff by name, ID, or role..." onkeyup="filterTable('staff-search', 'staff-table-body')">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="data-table">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
                                     <thead>
                                         <tr>
                                             <th>Staff ID</th>
                                             <th>Name</th>
                                             <th>Role</th>
                                             <th>Email</th>
-                                            <th>Contact Number</th>
+                                            <th>Contact</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -2552,19 +1447,16 @@ if(isset($_SESSION['success'])){
                                                 <td><?php echo $staff_member['email']; ?></td>
                                                 <td><?php echo $staff_member['contact']; ?></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>\\nContact: <?php echo $staff_member['contact']; ?>')">
-                                                        <i class="fa fa-eye"></i> View
-                                                    </button>
-                                                    <button class="btn btn-sm btn-warning action-btn edit-btn" data-toggle="modal" data-target="#editStaffModal"
+                                                    <button class="btn btn-sm btn-info action-btn" data-toggle="modal" data-target="#editStaffModal"
                                                             data-staff-id="<?php echo $staff_member['id']; ?>"
                                                             data-staff-name="<?php echo $staff_member['name']; ?>"
                                                             data-staff-role="<?php echo $staff_member['role']; ?>"
                                                             data-staff-email="<?php echo $staff_member['email']; ?>"
                                                             data-staff-contact="<?php echo $staff_member['contact']; ?>">
-                                                        <i class="fa fa-edit"></i> Edit
+                                                        <i class="fas fa-edit"></i> Edit
                                                     </button>
                                                     <button class="btn btn-sm btn-danger action-btn" onclick="deleteStaff('<?php echo $staff_member['id']; ?>', '<?php echo $staff_member['name']; ?>')">
-                                                        <i class="fa fa-trash"></i> Delete
+                                                        <i class="fas fa-trash"></i> Delete
                                                     </button>
                                                 </td>
                                             </tr>
@@ -2577,314 +1469,268 @@ if(isset($_SESSION['success'])){
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            <!-- Add Doctor Content -->
-                            <div class="tab-pane fade" id="add-doctor-content" role="tabpanel">
-                                <div class="card">
-                                    <div class="card-header bg-success text-white">
-                                        <i class="fa fa-user-md mr-2"></i>Add New Doctor
-                                    </div>
-                                    <div class="card-body">
-                                        <form method="POST" id="add-doctor-form">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Doctor ID *</label>
-                                                        <input type="text" name="doctorId" class="form-control" required>
-                                                        <small class="text-muted">Unique identifier for the doctor</small>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Name *</label>
-                                                        <input type="text" name="doctor" class="form-control" onkeydown="return alphaOnly(event)" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Contact Number *</label>
-                                                        <input type="tel" name="doctorContact" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Specialization *</label>
-                                                        <select name="special" class="form-control" required>
-                                                            <option value="">Select Specialization</option>
-                                                            <option value="General">General Physician</option>
-                                                            <option value="Cardiologist">Cardiologist</option>
-                                                            <option value="Pediatrician">Pediatrician</option>
-                                                            <option value="Neurologist">Neurologist</option>
-                                                            <option value="Dermatologist">Dermatologist</option>
-                                                            <option value="Orthopedic">Orthopedic</option>
-                                                            <option value="Gynecologist">Gynecologist</option>
-                                                            <option value="ENT">ENT Specialist</option>
-                                                            <option value="Psychiatrist">Psychiatrist</option>
-                                                            <option value="Surgeon">Surgeon</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Email *</label>
-                                                        <input type="email" name="demail" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Fees (Rs.) *</label>
-                                                        <input type="number" name="docFees" class="form-control" required step="0.01">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Password *</label>
-                                                        <input type="password" id="dpassword" name="dpassword" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Confirm Password *</label>
-                                                        <input type="password" id="cdpassword" class="form-control" onkeyup="checkDoctorPassword()" required>
-                                                        <small id="message"></small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <button type="submit" name="add_doctor" class="btn btn-success btn-block">Add Doctor</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Add Staff Content -->
-                            <div class="tab-pane fade" id="add-staff-content" role="tabpanel">
-                                <div class="card">
-                                    <div class="card-header bg-primary text-white">
-                                        <i class="fa fa-id-badge mr-2"></i>Add New Staff Member
-                                    </div>
-                                    <div class="card-body">
-                                        <form method="POST" id="add-staff-form">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Staff ID *</label>
-                                                        <input type="text" name="staffId" class="form-control" required>
-                                                        <small class="text-muted">Unique identifier for the staff member</small>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Name *</label>
-                                                        <input type="text" name="staff" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Role *</label>
-                                                        <select name="role" class="form-control" required>
-                                                            <option value="">Select Role</option>
-                                                            <option value="Nurse">Nurse</option>
-                                                            <option value="Receptionist">Receptionist</option>
-                                                            <option value="Admin">Admin</option>
-                                                            <option value="Lab Technician">Lab Technician</option>
-                                                            <option value="Pharmacist">Pharmacist</option>
-                                                            <option value="Cleaner">Cleaner</option>
-                                                            <option value="Security">Security</option>
-                                                            <option value="Accountant">Accountant</option>
-                                                            <option value="HR Manager">HR Manager</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Contact *</label>
-                                                        <input type="text" name="scontact" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Email *</label>
-                                                        <input type="email" name="semail" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>Password *</label>
-                                                        <input type="password" name="spassword" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <button type="submit" name="add_staff" class="btn btn-primary btn-block">Add Staff Member</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
-
-                    <!-- Patients Tab -->
-                    <div class="tab-pane fade" id="pat-tab">
-                        <!-- Patient Registration Form -->
-                        <div class="patient-registration-card">
-                            <div class="card-header-custom">
-                                <i class="fa fa-user-plus mr-2"></i>Register New Patient
+                    
+                    <!-- Add Doctor Content -->
+                    <div class="tab-pane fade" id="add-doctor-content" role="tabpanel">
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h5 class="mb-0"><i class="fas fa-user-md mr-2"></i>Add New Doctor</h5>
                             </div>
-                            <div class="card-body">
-                                <?php if($patient_msg): echo $patient_msg; endif; ?>
-                                <form method="POST" id="add-patient-form">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientFirstName">First Name *</label>
-                                                <input type="text" class="form-control" id="patientFirstName" name="fname" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientLastName">Last Name *</label>
-                                                <input type="text" class="form-control" id="patientLastName" name="lname" required>
-                                            </div>
+                            <form method="POST" id="add-doctor-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Doctor ID *</label>
+                                            <input type="text" name="doctorId" class="form-control" required>
                                         </div>
                                     </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientGender">Gender *</label>
-                                                <select class="form-control" id="patientGender" name="gender" required>
-                                                    <option value="">Select Gender</option>
-                                                    <option value="Male">Male</option>
-                                                    <option value="Female">Female</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientDOB">Date of Birth *</label>
-                                                <input type="date" class="form-control" id="patientDOB" name="dob" required>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Name *</label>
+                                            <input type="text" name="doctor" class="form-control" required>
                                         </div>
                                     </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientEmail">Email Address *</label>
-                                                <input type="email" class="form-control" id="patientEmail" name="email" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientContact">Contact Number *</label>
-                                                <input type="tel" class="form-control" id="patientContact" name="contact" required>
-                                            </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Contact Number *</label>
+                                            <input type="tel" name="doctorContact" class="form-control" required>
                                         </div>
                                     </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientAddress">Address</label>
-                                                <textarea class="form-control" id="patientAddress" name="address" rows="2"></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientEmergencyContact">Emergency Contact</label>
-                                                <input type="tel" class="form-control" id="patientEmergencyContact" name="emergencyContact">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label for="patientNIC">National ID (NIC) * <small class="text-muted">(Enter numbers only, "NIC" will be added automatically)</small></label>
-                                                <input type="text" class="form-control" id="patientNIC" name="nic" 
-                                                       placeholder="Enter NIC numbers only (e.g., 199012345678)" 
-                                                       oninput="formatNIC()" required>
-                                                <small class="text-muted">Example: 199012345678 → Will be stored as NIC199012345678</small>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Specialization *</label>
+                                            <select name="special" class="form-control" required>
+                                                <option value="">Select Specialization</option>
+                                                <option value="General">General Physician</option>
+                                                <option value="Cardiologist">Cardiologist</option>
+                                                <option value="Pediatrician">Pediatrician</option>
+                                                <option value="Neurologist">Neurologist</option>
+                                                <option value="Dermatologist">Dermatologist</option>
+                                                <option value="Orthopedic">Orthopedic</option>
+                                                <option value="Gynecologist">Gynecologist</option>
+                                                <option value="ENT">ENT Specialist</option>
+                                            </select>
                                         </div>
                                     </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientPassword">Password *</label>
-                                                <input type="password" class="form-control" id="patientPassword" name="password" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patientConfirmPassword">Confirm Password *</label>
-                                                <input type="password" class="form-control" id="patientConfirmPassword" name="cpassword" onkeyup="checkPatientPassword()" required>
-                                                <small id="patientPasswordMessage" class="form-text"></small>
-                                            </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Email *</label>
+                                            <input type="email" name="demail" class="form-control" required>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Generated NIC Display -->
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="generated-nic">
-                                                <i class="fa fa-id-card mr-2"></i>
-                                                <span id="generatedNICDisplay">Enter NIC number above</span>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Fees (Rs.) *</label>
+                                            <input type="number" name="docFees" class="form-control" required>
                                         </div>
                                     </div>
-                                    
-                                    <div class="mt-3">
-                                        <button type="submit" name="add_patient" class="btn btn-success">
-                                            <i class="fa fa-user-plus mr-1"></i> Register Patient
-                                        </button>
-                                        <button type="reset" class="btn btn-secondary ml-2">
-                                            <i class="fa fa-refresh mr-1"></i> Reset Form
-                                        </button>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Password *</label>
+                                            <input type="password" name="dpassword" class="form-control" required>
+                                        </div>
                                     </div>
-                                </form>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Confirm Password *</label>
+                                            <input type="password" class="form-control" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" name="add_doctor" class="btn btn-success btn-block">Add Doctor</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Add Staff Content -->
+                    <div class="tab-pane fade" id="add-staff-content" role="tabpanel">
+                        <div class="form-card">
+                            <div class="form-card-header">
+                                <h5 class="mb-0"><i class="fas fa-id-badge mr-2"></i>Add New Staff Member</h5>
+                            </div>
+                            <form method="POST" id="add-staff-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Staff ID *</label>
+                                            <input type="text" name="staffId" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Name *</label>
+                                            <input type="text" name="staff" class="form-control" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Role *</label>
+                                            <select name="role" class="form-control" required>
+                                                <option value="">Select Role</option>
+                                                <option value="Nurse">Nurse</option>
+                                                <option value="Receptionist">Receptionist</option>
+                                                <option value="Admin">Admin</option>
+                                                <option value="Lab Technician">Lab Technician</option>
+                                                <option value="Pharmacist">Pharmacist</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Contact *</label>
+                                            <input type="text" name="scontact" class="form-control" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Email *</label>
+                                            <input type="email" name="semail" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Password *</label>
+                                            <input type="password" name="spassword" class="form-control" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" name="add_staff" class="btn btn-primary btn-block">Add Staff Member</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patients Tab -->
+            <div class="tab-pane fade" id="pat-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-user-injured mr-2"></i>Patient Management</h3>
+                    <button class="btn btn-primary" onclick="showTab('pat-tab')">
+                        <i class="fas fa-user-plus mr-2"></i>Register New Patient
+                    </button>
+                </div>
+                
+                <?php if($patient_msg): echo $patient_msg; endif; ?>
+                
+                <!-- Patient Registration Form -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Register New Patient</h5>
+                    </div>
+                    <form method="POST" id="add-patient-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>First Name *</label>
+                                    <input type="text" class="form-control" name="fname" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Last Name *</label>
+                                    <input type="text" class="form-control" name="lname" required>
+                                </div>
                             </div>
                         </div>
                         
-                        <h4>Patients List</h4>
-                        <div class="search-container">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="search-bar">
-                                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients by NIC only..." onkeyup="filterPatientsByNIC()">
-                                        <i class="fa fa-search search-icon"></i>
-                                        <small class="text-muted form-text">Search by National ID (NIC) only</small>
-                                    </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Gender *</label>
+                                    <select class="form-control" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportTable('patients-table-body', 'patients')">
-                                        <i class="fa fa-download mr-2"></i>Export Patients
-                                    </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Date of Birth *</label>
+                                    <input type="date" class="form-control" name="dob" required>
                                 </div>
                             </div>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Email Address *</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contact Number *</label>
+                                    <input type="tel" class="form-control" name="contact" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>National ID (NIC) *</label>
+                                    <input type="text" class="form-control" name="nic" required>
+                                    <small class="text-muted">Enter NIC numbers only</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Password *</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <textarea class="form-control" name="address" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" name="add_patient" class="btn btn-success">
+                            <i class="fas fa-user-plus mr-1"></i> Register Patient
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Patients List -->
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients..." onkeyup="filterTable('patient-search', 'patients-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Patient ID</th>
                                     <th>First Name</th>
                                     <th>Last Name</th>
                                     <th>Gender</th>
@@ -2916,88 +1762,85 @@ if(isset($_SESSION['success'])){
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Appointments Tab -->
-                    <div class="tab-pane fade" id="app-tab">
-                        <h4>Appointments</h4>
-                        <?php if($appointment_msg): echo $appointment_msg; endif; ?>
-                        
-                        <!-- Add Appointment Form -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-primary text-white">
-                                <i class="fa fa-plus-circle mr-2"></i>Create New Appointment
-                            </div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="patient_id">Patient ID *</label>
-                                                <input type="number" class="form-control" id="patient_id" name="patient_id" required>
-                                                <small class="text-muted">Enter patient ID from patients list</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="doctor">Doctor *</label>
-                                                <select class="form-control" id="doctor" name="doctor" required>
-                                                    <option value="">Select Doctor</option>
-                                                    <?php foreach($doctors as $doctor): ?>
-                                                    <option value="<?php echo $doctor['username']; ?>">
-                                                        <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
-                                                    </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="appdate">Appointment Date *</label>
-                                                <input type="date" class="form-control" id="appdate" name="appdate" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="apptime">Appointment Time *</label>
-                                                <input type="time" class="form-control" id="apptime" name="apptime" required>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" name="add_appointment" class="btn btn-success">
-                                        <i class="fa fa-calendar-plus mr-1"></i> Create Appointment
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        
-                        <div class="search-container">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="search-bar">
-                                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
-                                        <i class="fa fa-search search-icon"></i>
-                                    </div>
+            <!-- Appointments Tab -->
+            <div class="tab-pane fade" id="app-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-calendar-check mr-2"></i>Appointments</h3>
+                    <button class="btn btn-primary" data-toggle="collapse" data-target="#addAppointmentForm">
+                        <i class="fas fa-calendar-plus mr-2"></i>Create New Appointment
+                    </button>
+                </div>
+                
+                <?php if($appointment_msg): echo $appointment_msg; endif; ?>
+                
+                <!-- Add Appointment Form -->
+                <div class="form-card mb-4 collapse" id="addAppointmentForm">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Create New Appointment</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Patient ID *</label>
+                                    <input type="number" class="form-control" name="patient_id" required>
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportTable('appointments-table-body', 'appointments')">
-                                        <i class="fa fa-download mr-2"></i>Export Appointments
-                                    </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Doctor *</label>
+                                    <select class="form-control" name="doctor" required>
+                                        <option value="">Select Doctor</option>
+                                        <?php foreach($doctors as $doctor): ?>
+                                        <option value="<?php echo $doctor['username']; ?>">
+                                            <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                             </div>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Date *</label>
+                                    <input type="date" class="form-control" name="appdate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Time *</label>
+                                    <input type="time" class="form-control" name="apptime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="add_appointment" class="btn btn-success">
+                            <i class="fas fa-calendar-plus mr-1"></i> Create Appointment
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Appointment ID</th>
-                                    <th>Patient ID</th>
-                                    <th>Patient Name</th>
-                                    <th>National ID</th>
+                                    <th>Patient</th>
                                     <th>Doctor</th>
-                                    <th>Fees (Rs.)</th>
                                     <th>Date</th>
                                     <th>Time</th>
+                                    <th>Fees (Rs.)</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -3007,13 +1850,11 @@ if(isset($_SESSION['success'])){
                                     <?php foreach($appointments as $app): ?>
                                     <tr>
                                         <td><?php echo $app['ID']; ?></td>
-                                        <td><?php echo $app['pid']; ?></td>
                                         <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
-                                        <td><?php echo $app['national_id']; ?></td>
                                         <td><?php echo $app['doctor']; ?></td>
-                                        <td>Rs. <?php echo number_format($app['docFees'], 2); ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($app['appdate'])); ?></td>
                                         <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
+                                        <td>Rs. <?php echo number_format($app['docFees'], 2); ?></td>
                                         <td>
                                             <?php if($app['appointmentStatus'] == 'active'): ?>
                                                 <span class="status-badge status-active">Active</span>
@@ -3024,62 +1865,49 @@ if(isset($_SESSION['success'])){
                                         <td>
                                             <?php if($app['appointmentStatus'] == 'active'): ?>
                                                 <button class="btn btn-sm btn-danger action-btn" data-toggle="modal" data-target="#cancelAppointmentModal" data-appointment-id="<?php echo $app['ID']; ?>">
-                                                    <i class="fa fa-times"></i> Cancel
-                                                </button>
-                                            <?php else: ?>
-                                                <button class="btn btn-sm btn-secondary action-btn" disabled>
-                                                    <i class="fa fa-times"></i> Cancelled
+                                                    <i class="fas fa-times"></i> Cancel
                                                 </button>
                                             <?php endif; ?>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Appointment Details:\\nID: <?php echo $app['ID']; ?>\\nPatient: <?php echo $app['fname'] . ' ' . $app['lname']; ?>\\nDoctor: <?php echo $app['doctor']; ?>\\nDate: <?php echo $app['appdate']; ?>\\nTime: <?php echo $app['apptime']; ?>\\nStatus: <?php echo $app['appointmentStatus']; ?>')">
-                                                <i class="fa fa-eye"></i> View
-                                            </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="10" class="text-center">No appointments found</td>
+                                        <td colspan="8" class="text-center">No appointments found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Prescriptions Tab -->
-                    <div class="tab-pane fade" id="pres-tab">
-                        <h4>Prescriptions</h4>
-                        <?php if($prescription_msg): echo $prescription_msg; endif; ?>
-                        
-                        <div class="search-container">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="search-bar">
-                                        <input type="text" class="form-control" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
-                                        <i class="fa fa-search search-icon"></i>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportTable('prescriptions-table-body', 'prescriptions')">
-                                        <i class="fa fa-download mr-2"></i>Export Prescriptions
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <table class="table table-hover table-bordered">
+            <!-- Prescriptions Tab -->
+            <div class="tab-pane fade" id="pres-tab">
+                <h3 class="mb-4"><i class="fas fa-prescription mr-2"></i>Prescriptions</h3>
+                
+                <?php if($prescription_msg): echo $prescription_msg; endif; ?>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Doctor</th>
-                                    <th>Patient ID</th>
-                                    <th>Patient Name</th>
-                                    <th>National ID</th>
+                                    <th>Patient</th>
                                     <th>Date</th>
                                     <th>Disease</th>
                                     <th>Prescription</th>
                                     <th>Status</th>
-                                    <th>Send Options</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="prescriptions-table-body">
@@ -3088,106 +1916,54 @@ if(isset($_SESSION['success'])){
                                     <tr>
                                         <td><?php echo $pres['id']; ?></td>
                                         <td><?php echo $pres['doctor']; ?></td>
-                                        <td><?php echo $pres['pid']; ?></td>
                                         <td><?php echo $pres['fname'] . ' ' . $pres['lname']; ?></td>
-                                        <td><?php echo $pres['national_id']; ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($pres['appdate'])); ?></td>
                                         <td><?php echo $pres['disease']; ?></td>
-                                        <td style="max-width: 200px; word-wrap: break-word;"><?php echo $pres['prescription']; ?></td>
+                                        <td><?php echo substr($pres['prescription'], 0, 50) . '...'; ?></td>
+                                        <td><?php echo $pres['emailStatus']; ?></td>
                                         <td>
-                                            <?php 
-                                            $status = $pres['emailStatus'];
-                                            if($status == 'Not Sent'): ?>
-                                                <span class="status-badge status-not-sent">Not Sent</span>
-                                            <?php elseif($status == 'Sent to Hospital Pharmacy'): ?>
-                                                <span class="status-badge status-hospital-pharmacy">Sent to Hospital</span>
-                                            <?php elseif($status == 'Sent to Patient Contact (SMS)'): ?>
-                                                <span class="status-badge status-patient-sms">Sent via SMS</span>
-                                            <?php else: ?>
-                                                <span class="status-badge status-not-sent"><?php echo $status; ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex flex-wrap">
-                                                <button class="btn btn-sm btn-primary prescription-action-btn" onclick="sendToHospitalPharmacy(<?php echo $pres['id']; ?>)">
-                                                    <i class="fa fa-hospital-o mr-1"></i> Send to Hospital Pharmacy
-                                                </button>
-                                                <button class="btn btn-sm btn-success prescription-action-btn" onclick="sendToPatientContact(<?php echo $pres['id']; ?>)">
-                                                    <i class="fa fa-mobile mr-1"></i> Send to Patient Contact
-                                                </button>
-                                                <!-- Alternative: Open modal for options -->
-                                                <button class="btn btn-sm btn-info prescription-action-btn" data-toggle="modal" data-target="#sendPrescriptionModal" data-prescription-id="<?php echo $pres['id']; ?>">
-                                                    <i class="fa fa-send mr-1"></i> Send Options
-                                                </button>
-                                            </div>
+                                            <button class="btn btn-sm btn-primary action-btn" onclick="sendToHospitalPharmacy(<?php echo $pres['id']; ?>)">
+                                                <i class="fas fa-hospital"></i> Send
+                                            </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="10" class="text-center">No prescriptions found</td>
+                                        <td colspan="8" class="text-center">No prescriptions found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Payments Tab -->
-                    <div class="tab-pane fade" id="pay-tab">
-                        <h4>Payments</h4>
-                        <?php if($payment_msg): echo $payment_msg; endif; ?>
-                        
-                        <!-- Search Options -->
-                        <div class="search-options mb-3">
-                            <div class="search-option-btn active" onclick="setPaymentSearchMode('patientId')">
-                                <i class="fa fa-user mr-2"></i>Search by Patient ID
-                            </div>
-                            <div class="search-option-btn" onclick="setPaymentSearchMode('nic')">
-                                <i class="fa fa-id-card mr-2"></i>Search by NIC
-                            </div>
-                            <div class="search-option-btn" onclick="setPaymentSearchMode('all')">
-                                <i class="fa fa-list mr-2"></i>Show All Payments
-                            </div>
-                        </div>
-                        
-                        <!-- Search Forms -->
-                        <div id="patientId-search-form" class="mb-3">
-                            <div class="form-inline">
-                                <input type="number" class="form-control mr-2" placeholder="Enter Patient ID" id="payment-patient-id">
-                                <button type="button" class="btn btn-success" onclick="searchPaymentsByPatient()">
-                                    <i class="fa fa-search mr-1"></i> Search Payments
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="nic-search-form" class="mb-3" style="display: none;">
-                            <div class="search-bar">
-                                <input type="text" class="form-control" id="payment-nic-search" placeholder="Search payments by NIC only..." onkeyup="filterPaymentsByNIC()">
-                                <i class="fa fa-search search-icon"></i>
-                                <small class="text-muted form-text">Search by National ID (NIC) only</small>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between mb-3">
-                            <div></div>
-                            <button class="btn btn-primary" onclick="exportTable('payments-table-body', 'payments')">
-                                <i class="fa fa-download mr-2"></i>Export Payments
-                            </button>
-                        </div>
-                        
-                        <table class="table table-hover table-bordered">
+            <!-- Payments Tab -->
+            <div class="tab-pane fade" id="pay-tab">
+                <h3 class="mb-4"><i class="fas fa-credit-card mr-2"></i>Payments</h3>
+                
+                <?php if($payment_msg): echo $payment_msg; endif; ?>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="payment-search" placeholder="Search payments..." onkeyup="filterTable('payment-search', 'payments-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Payment ID</th>
-                                    <th>Patient ID</th>
-                                    <th>Appointment ID</th>
-                                    <th>Patient Name</th>
-                                    <th>National ID</th>
+                                    <th>Patient</th>
                                     <th>Doctor</th>
-                                    <th>Fees (Rs.)</th>
+                                    <th>Amount (Rs.)</th>
                                     <th>Date</th>
                                     <th>Status</th>
-                                    <th>Payment Method</th>
+                                    <th>Method</th>
                                     <th>Receipt No</th>
                                     <th>Actions</th>
                                 </tr>
@@ -3197,10 +1973,7 @@ if(isset($_SESSION['success'])){
                                     <?php foreach($payments as $pay): ?>
                                     <tr>
                                         <td><?php echo $pay['id']; ?></td>
-                                        <td><?php echo $pay['pid']; ?></td>
-                                        <td><?php echo $pay['appointment_id']; ?></td>
                                         <td><?php echo $pay['patient_name']; ?></td>
-                                        <td><span class="badge badge-info"><?php echo $pay['national_id']; ?></span></td>
                                         <td><?php echo $pay['doctor']; ?></td>
                                         <td>Rs. <?php echo number_format($pay['fees'], 2); ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($pay['pay_date'])); ?></td>
@@ -3211,109 +1984,93 @@ if(isset($_SESSION['success'])){
                                                 <span class="status-badge status-pending">Pending</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td><?php echo $pay['payment_method'] ? $pay['payment_method'] : 'N/A'; ?></td>
-                                        <td><?php echo $pay['receipt_no'] ? $pay['receipt_no'] : 'N/A'; ?></td>
+                                        <td><?php echo $pay['payment_method'] ?: 'N/A'; ?></td>
+                                        <td><?php echo $pay['receipt_no'] ?: 'N/A'; ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Payment Details:\\nID: <?php echo $pay['id']; ?>\\nPatient: <?php echo $pay['patient_name']; ?>\\nDoctor: <?php echo $pay['doctor']; ?>\\nAmount: Rs. <?php echo number_format($pay['fees'], 2); ?>\\nDate: <?php echo $pay['pay_date']; ?>\\nStatus: <?php echo $pay['pay_status']; ?>\\nMethod: <?php echo $pay['payment_method']; ?>\\nReceipt: <?php echo $pay['receipt_no']; ?>')">
-                                                <i class="fa fa-eye"></i> View
-                                            </button>
                                             <button class="btn btn-sm btn-warning action-btn" data-toggle="modal" data-target="#editPaymentModal" data-payment-id="<?php echo $pay['id']; ?>">
-                                                <i class="fa fa-edit"></i> Edit Status
+                                                <i class="fas fa-edit"></i> Edit
                                             </button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="12" class="text-center">No payments found</td>
+                                        <td colspan="9" class="text-center">No payments found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Staff Schedules Tab -->
-                    <div class="tab-pane fade" id="sched-tab">
-                        <h4>Staff Schedules</h4>
-                        
-                        <?php if($schedule_msg): echo $schedule_msg; endif; ?>
-                        
-                        <!-- Add Schedule Form -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-info text-white">
-                                <i class="fa fa-clock-o mr-2"></i>Add New Schedule
+            <!-- Schedules Tab -->
+            <div class="tab-pane fade" id="sched-tab">
+                <h3 class="mb-4"><i class="fas fa-clock mr-2"></i>Staff Schedules</h3>
+                
+                <?php if($schedule_msg): echo $schedule_msg; endif; ?>
+                
+                <!-- Add Schedule Form -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-clock mr-2"></i>Add New Schedule</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Staff Name *</label>
+                                    <input type="text" class="form-control" name="staff_name" required>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="staff_name">Staff Name *</label>
-                                                <div class="staff-search-container">
-                                                    <input type="text" class="form-control" id="staff_name" name="staff_name" required placeholder="Type to search staff/doctors...">
-                                                    <div class="staff-suggestions" id="staff-suggestions"></div>
-                                                </div>
-                                                <small class="text-muted">Start typing to see suggestions from doctors and staff</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="role">Role *</label>
-                                                <select class="form-control" id="role" name="role" required>
-                                                    <option value="">Select Role</option>
-                                                    <option value="Doctor">Doctor</option>
-                                                    <option value="Nurse">Nurse</option>
-                                                    <option value="Receptionist">Receptionist</option>
-                                                    <option value="Admin">Admin</option>
-                                                    <option value="Lab Technician">Lab Technician</option>
-                                                    <option value="Pharmacist">Pharmacist</option>
-                                                    <option value="Cleaner">Cleaner</option>
-                                                    <option value="Security">Security</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="day">Day *</label>
-                                                <select class="form-control" id="day" name="day" required>
-                                                    <option value="">Select Day</option>
-                                                    <option value="Monday">Monday</option>
-                                                    <option value="Tuesday">Tuesday</option>
-                                                    <option value="Wednesday">Wednesday</option>
-                                                    <option value="Thursday">Thursday</option>
-                                                    <option value="Friday">Friday</option>
-                                                    <option value="Saturday">Saturday</option>
-                                                    <option value="Sunday">Sunday</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="shift">Shift *</label>
-                                                <select class="form-control" id="shift" name="shift" required>
-                                                    <option value="">Select Shift</option>
-                                                    <option value="Morning">Morning (8AM - 2PM)</option>
-                                                    <option value="Afternoon">Afternoon (2PM - 8PM)</option>
-                                                    <option value="Night">Night (8PM - 8AM)</option>
-                                                    <option value="Full Day">Full Day</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" name="add_schedule" class="btn btn-info">
-                                        <i class="fa fa-plus mr-1"></i> Add Schedule
-                                    </button>
-                                </form>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Role *</label>
+                                    <select class="form-control" name="role" required>
+                                        <option value="">Select Role</option>
+                                        <option value="Doctor">Doctor</option>
+                                        <option value="Nurse">Nurse</option>
+                                        <option value="Receptionist">Receptionist</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="schedule-search" placeholder="Search schedules..." onkeyup="filterTable('schedule-search', 'schedules-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('schedules-table-body', 'schedules')">Export</button>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Day *</label>
+                                    <select class="form-control" name="day" required>
+                                        <option value="">Select Day</option>
+                                        <option value="Monday">Monday</option>
+                                        <option value="Tuesday">Tuesday</option>
+                                        <option value="Wednesday">Wednesday</option>
+                                        <option value="Thursday">Thursday</option>
+                                        <option value="Friday">Friday</option>
+                                        <option value="Saturday">Saturday</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Shift *</label>
+                                    <select class="form-control" name="shift" required>
+                                        <option value="">Select Shift</option>
+                                        <option value="Morning">Morning</option>
+                                        <option value="Afternoon">Afternoon</option>
+                                        <option value="Night">Night</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <table class="table table-hover table-bordered">
+                        <button type="submit" name="add_schedule" class="btn btn-info">
+                            <i class="fas fa-plus mr-1"></i> Add Schedule
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -3334,8 +2091,8 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $schedule['day']; ?></td>
                                         <td><?php echo $schedule['shift']; ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-danger schedule-delete-btn" onclick="deleteSchedule(<?php echo $schedule['id']; ?>)">
-                                                <i class="fa fa-trash"></i> Delete
+                                            <button class="btn btn-sm btn-danger action-btn" onclick="deleteSchedule(<?php echo $schedule['id']; ?>)">
+                                                <i class="fas fa-trash"></i> Delete
                                             </button>
                                         </td>
                                     </tr>
@@ -3348,68 +2105,62 @@ if(isset($_SESSION['success'])){
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Rooms / Beds Tab -->
-                    <div class="tab-pane fade" id="room-tab">
-                        <h4>Rooms / Beds</h4>
-                        
-                        <!-- Add Room Form -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-success text-white">
-                                <i class="fa fa-bed mr-2"></i>Add New Room/Bed
+            <!-- Rooms/Beds Tab -->
+            <div class="tab-pane fade" id="room-tab">
+                <h3 class="mb-4"><i class="fas fa-bed mr-2"></i>Rooms & Beds</h3>
+                
+                <!-- Add Room Form -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-bed mr-2"></i>Add New Room/Bed</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Room Number *</label>
+                                    <input type="text" class="form-control" name="room_no" required>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="room_no">Room Number *</label>
-                                                <input type="text" class="form-control" id="room_no" name="room_no" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="bed_no">Bed Number *</label>
-                                                <input type="text" class="form-control" id="bed_no" name="bed_no" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="type">Type *</label>
-                                                <select class="form-control" id="type" name="type" required>
-                                                    <option value="">Select Type</option>
-                                                    <option value="General">General</option>
-                                                    <option value="ICU">ICU</option>
-                                                    <option value="Private">Private</option>
-                                                    <option value="Semi-Private">Semi-Private</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="status">Status *</label>
-                                                <select class="form-control" id="status" name="status" required>
-                                                    <option value="Available">Available</option>
-                                                    <option value="Occupied">Occupied</option>
-                                                    <option value="Maintenance">Maintenance</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" name="add_room" class="btn btn-success">
-                                        <i class="fa fa-plus mr-1"></i> Add Room/Bed
-                                    </button>
-                                </form>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Bed Number *</label>
+                                    <input type="text" class="form-control" name="bed_no" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Type *</label>
+                                    <select class="form-control" name="type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="General">General</option>
+                                        <option value="ICU">ICU</option>
+                                        <option value="Private">Private</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Status *</label>
+                                    <select class="form-control" name="status" required>
+                                        <option value="Available">Available</option>
+                                        <option value="Occupied">Occupied</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="room-search" placeholder="Search rooms..." onkeyup="filterTable('room-search', 'rooms-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('rooms-table-body', 'rooms')">Export</button>
-                        </div>
-                        <table class="table table-hover table-bordered">
+                        <button type="submit" name="add_room" class="btn btn-success">
+                            <i class="fas fa-plus mr-1"></i> Add Room/Bed
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -3438,7 +2189,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">No rooms found</td>
+                                        <td colspan="5" class="text-center">No rooms found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -3449,67 +2200,22 @@ if(isset($_SESSION['success'])){
         </div>
     </div>
 
-    <!-- Delete Doctor Modal -->
-    <div class="modal fade" id="deleteDoctorModal" tabindex="-1" role="dialog" aria-labelledby="deleteDoctorModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteDoctorModalLabel">Delete Doctor</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="delete-doctor-form">
-                        <div class="form-group">
-                            <label>Select Doctor</label>
-                            <select name="doctorId" class="form-control" id="doctor-select" required>
-                                <option value="">Select doctor to delete</option>
-                                <?php foreach($doctors as $doctor): ?>
-                                <option value="<?php echo $doctor['id']; ?>">
-                                    <?php echo $doctor['id']; ?> - <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteDoctorFromDashboard()">Delete Doctor</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Modals -->
     <!-- Cancel Appointment Modal -->
-    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog" aria-labelledby="cancelAppointmentModalLabel" aria-hidden="true">
+    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="cancelAppointmentModalLabel">Cancel Appointment</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                    <h5 class="modal-title">Cancel Appointment</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form id="cancel-appointment-form">
                         <div class="form-group">
-                            <label for="cancellationReason">Cancellation Reason</label>
-                            <textarea class="form-control" id="cancellationReason" rows="3" placeholder="Enter reason for cancellation"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Cancelled By</label>
-                            <div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByAdmin" value="admin" checked>
-                                    <label class="form-check-label" for="cancelledByAdmin">Admin</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="cancelledBy" id="cancelledByPatient" value="patient">
-                                    <label class="form-check-label" for="cancelledByPatient">Patient</label>
-                                </div>
-                            </div>
+                            <label>Reason for Cancellation</label>
+                            <textarea class="form-control" id="cancellationReason" rows="3"></textarea>
                         </div>
                         <input type="hidden" id="appointmentToCancelId">
                     </form>
@@ -3522,369 +2228,447 @@ if(isset($_SESSION['success'])){
         </div>
     </div>
 
-    <!-- Edit Payment Status Modal -->
-    <div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
+    <!-- Edit Payment Modal -->
+    <div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-white">
-                    <h5 class="modal-title" id="editPaymentModalLabel">Edit Payment Status</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true" style="color: white;">&times;</span>
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Payment Status</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form id="edit-payment-form">
                         <input type="hidden" id="edit-payment-id">
-                        
                         <div class="form-group">
-                            <label for="edit-payment-status">Payment Status</label>
-                            <select class="form-control" id="edit-payment-status" required>
-                                <option value="">Select Status</option>
-                                <option value="Paid">Paid</option>
+                            <label>Payment Status</label>
+                            <select class="form-control" id="edit-payment-status">
                                 <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
                             </select>
                         </div>
-                        
-                        <div id="payment-method-section" style="display: none;">
-                            <div class="form-group">
-                                <label for="edit-payment-method">Payment Method</label>
-                                <select class="form-control" id="edit-payment-method">
-                                    <option value="">Select Payment Method</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Credit Card">Credit Card</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Online Payment">Online Payment</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="edit-receipt-number">Receipt Number (Optional)</label>
-                                <input type="text" class="form-control" id="edit-receipt-number" placeholder="Enter receipt number">
-                            </div>
-                        </div>
-                        
                         <div class="form-group">
-                            <label for="edit-payment-notes">Notes (Optional)</label>
-                            <textarea class="form-control" id="edit-payment-notes" rows="3" placeholder="Add any additional notes"></textarea>
+                            <label>Payment Method</label>
+                            <input type="text" class="form-control" id="edit-payment-method">
+                        </div>
+                        <div class="form-group">
+                            <label>Receipt Number</label>
+                            <input type="text" class="form-control" id="edit-receipt-number">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-warning" onclick="updatePaymentStatus()">Update Payment</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Send Prescription Modal -->
-    <div class="modal fade prescription-modal" id="sendPrescriptionModal" tabindex="-1" role="dialog" aria-labelledby="sendPrescriptionModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+    <!-- Edit Doctor Modal -->
+    <div class="modal fade" id="editDoctorModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="sendPrescriptionModalLabel"><i class="fa fa-send mr-2"></i>Send Prescription</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="prescription-details" id="prescription-details-content">
-                        <h6>Prescription Details</h6>
-                        <p>Select a prescription to view details.</p>
-                    </div>
-                    
-                    <h6 class="mb-3">Select Sending Option:</h6>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="send-option-card" onclick="selectSendOption('hospital')">
-                                <div class="text-center">
-                                    <i class="fa fa-hospital-o send-option-icon"></i>
-                                    <div class="send-option-title">Hospital Pharmacy</div>
-                                    <div class="send-option-desc">
-                                        Send directly to the hospital pharmacy for medicine dispensing.
-                                        Pharmacists will prepare medications based on this prescription.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="send-option-card" onclick="selectSendOption('patient')">
-                                <div class="text-center">
-                                    <i class="fa fa-mobile send-option-icon"></i>
-                                    <div class="send-option-title">Patient Contact (SMS)</div>
-                                    <div class="send-option-desc">
-                                        Send prescription details to patient's registered mobile number via SMS.
-                                        Patient can use this to get medications from any pharmacy.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info mt-3">
-                        <i class="fa fa-info-circle mr-2"></i>
-                        <strong>Note:</strong> 
-                        <ul class="mb-0 mt-2">
-                            <li>Hospital Pharmacy option sends prescription to internal pharmacy system</li>
-                            <li>Patient Contact option sends SMS with prescription details</li>
-                            <li>Both options will update the prescription status accordingly</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success" id="confirm-send-btn" onclick="confirmSendPrescription()" disabled>
-                        <i class="fa fa-send mr-1"></i> Send Prescription
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Schedule Modal -->
-    <div class="modal fade" id="deleteScheduleModal" tabindex="-1" role="dialog" aria-labelledby="deleteScheduleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="deleteScheduleModalLabel">Delete Schedule</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true" style="color: white;">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this schedule?</p>
-                    <p>This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="confirmDeleteSchedule()">Delete Schedule</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Doctor Modal -->
-    <div class="modal fade" id="editDoctorModal" tabindex="-1" role="dialog" aria-labelledby="editDoctorModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-white">
-                    <h5 class="modal-title" id="editDoctorModalLabel"><i class="fa fa-edit mr-2"></i>Edit Doctor Details</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    <h5 class="modal-title">Edit Doctor</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form method="POST" id="edit-doctor-form">
-                        <input type="hidden" name="update_password" id="update_password" value="0">
-                        
+                        <input type="hidden" name="edit_doctorId" id="edit_doctorId">
                         <div class="form-group">
-                            <label>Doctor ID</label>
-                            <input type="text" id="edit_doctorId" name="edit_doctorId" class="form-control" readonly>
+                            <label>Name</label>
+                            <input type="text" class="form-control" name="edit_doctor" id="edit_doctor">
                         </div>
-                        
                         <div class="form-group">
-                            <label>Name *</label>
-                            <input type="text" id="edit_doctor" name="edit_doctor" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Contact Number *</label>
-                            <input type="tel" id="edit_doctorContact" name="edit_doctorContact" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Specialization *</label>
-                            <select id="edit_special" name="edit_special" class="form-control" required>
-                                <option value="">Select Specialization</option>
+                            <label>Specialization</label>
+                            <select class="form-control" name="edit_special" id="edit_special">
                                 <option value="General">General Physician</option>
                                 <option value="Cardiologist">Cardiologist</option>
                                 <option value="Pediatrician">Pediatrician</option>
-                                <option value="Neurologist">Neurologist</option>
-                                <option value="Dermatologist">Dermatologist</option>
-                                <option value="Orthopedic">Orthopedic</option>
-                                <option value="Gynecologist">Gynecologist</option>
-                                <option value="ENT">ENT Specialist</option>
-                                <option value="Psychiatrist">Psychiatrist</option>
-                                <option value="Surgeon">Surgeon</option>
                             </select>
                         </div>
-                        
                         <div class="form-group">
-                            <label>Email *</label>
-                            <input type="email" id="edit_demail" name="edit_demail" class="form-control" required>
+                            <label>Email</label>
+                            <input type="email" class="form-control" name="edit_demail" id="edit_demail">
                         </div>
-                        
                         <div class="form-group">
-                            <label>Fees (Rs.) *</label>
-                            <input type="number" id="edit_docFees" name="edit_docFees" class="form-control" required step="0.01">
+                            <label>Fees</label>
+                            <input type="number" class="form-control" name="edit_docFees" id="edit_docFees">
                         </div>
-                        
                         <div class="form-group">
-                            <label>New Password (Leave blank to keep current)</label>
-                            <input type="password" id="edit_dpassword" name="edit_dpassword" class="form-control" onkeyup="checkEditDoctorPassword()">
+                            <label>Contact</label>
+                            <input type="text" class="form-control" name="edit_doctorContact" id="edit_doctorContact">
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Confirm New Password</label>
-                            <input type="password" id="edit_cdpassword" class="form-control" onkeyup="checkEditDoctorPassword()">
-                            <small id="edit-message" class="form-text">Leave blank to keep current password</small>
-                        </div>
+                        <button type="submit" name="edit_doctor" class="btn btn-warning">Update Doctor</button>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" onclick="document.getElementById('edit-doctor-form').submit();">
-                        <i class="fa fa-save mr-1"></i> Save Changes
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Edit Staff Modal -->
-    <div class="modal fade" id="editStaffModal" tabindex="-1" role="dialog" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+    <div class="modal fade" id="editStaffModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-white">
-                    <h5 class="modal-title" id="editStaffModalLabel"><i class="fa fa-edit mr-2"></i>Edit Staff Details</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true" style="color: white;">&times;</span>
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Staff</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form method="POST" id="edit-staff-form">
-                        <input type="hidden" name="update_staff_password" id="update_staff_password" value="0">
-                        
+                        <input type="hidden" name="edit_staffId" id="edit_staffId">
                         <div class="form-group">
-                            <label>Staff ID</label>
-                            <input type="text" id="edit_staffId" name="edit_staffId" class="form-control" readonly>
+                            <label>Name</label>
+                            <input type="text" class="form-control" name="edit_staff" id="edit_staff">
                         </div>
-                        
                         <div class="form-group">
-                            <label>Name *</label>
-                            <input type="text" id="edit_staff" name="edit_staff" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Role *</label>
-                            <select id="edit_role" name="edit_role" class="form-control" required>
-                                <option value="">Select Role</option>
+                            <label>Role</label>
+                            <select class="form-control" name="edit_role" id="edit_role">
                                 <option value="Nurse">Nurse</option>
                                 <option value="Receptionist">Receptionist</option>
                                 <option value="Admin">Admin</option>
-                                <option value="Lab Technician">Lab Technician</option>
-                                <option value="Pharmacist">Pharmacist</option>
-                                <option value="Cleaner">Cleaner</option>
-                                <option value="Security">Security</option>
-                                <option value="Accountant">Accountant</option>
-                                <option value="HR Manager">HR Manager</option>
                             </select>
                         </div>
-                        
                         <div class="form-group">
-                            <label>Email *</label>
-                            <input type="email" id="edit_semail" name="edit_semail" class="form-control" required>
+                            <label>Email</label>
+                            <input type="email" class="form-control" name="edit_semail" id="edit_semail">
                         </div>
-                        
                         <div class="form-group">
-                            <label>Contact *</label>
-                            <input type="text" id="edit_scontact" name="edit_scontact" class="form-control" required>
+                            <label>Contact</label>
+                            <input type="text" class="form-control" name="edit_scontact" id="edit_scontact">
                         </div>
-                        
-                        <div class="form-group">
-                            <label>New Password (Leave blank to keep current)</label>
-                            <input type="password" id="edit_spassword" name="edit_spassword" class="form-control" onkeyup="checkEditStaffPassword()">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Confirm New Password</label>
-                            <input type="password" id="edit_cspassword" class="form-control" onkeyup="checkEditStaffPassword()">
-                            <small id="edit-staff-message" class="form-text">Leave blank to keep current password</small>
-                        </div>
+                        <button type="submit" name="edit_staff" class="btn btn-warning">Update Staff</button>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" onclick="document.getElementById('edit-staff-form').submit();">
-                        <i class="fa fa-save mr-1"></i> Save Changes
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-    
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Initialize charts when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Update counts immediately
-            updateDashboardCounts();
+        // Global variables
+        let currentPaymentId = null;
+        let currentAppointmentIdToCancel = null;
+        
+        // Initialize on page load
+        $(document).ready(function() {
+            // Initialize charts
+            initializeCharts();
+            
+            // Set up sidebar navigation
+            $('.sidebar ul li[data-target]').click(function() {
+                const target = $(this).data('target');
+                showTab(target);
+                
+                // Update active state
+                $('.sidebar ul li').removeClass('active');
+                $(this).addClass('active');
+            });
+            
+            // Set up modal functionality
+            $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                currentAppointmentIdToCancel = button.data('appointment-id');
+            });
+            
+            $('#editPaymentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                currentPaymentId = button.data('payment-id');
+            });
+            
+            $('#editDoctorModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                $('#edit_doctorId').val(button.data('doctor-id'));
+                $('#edit_doctor').val(button.data('doctor-name'));
+                $('#edit_special').val(button.data('doctor-spec'));
+                $('#edit_demail').val(button.data('doctor-email'));
+                $('#edit_docFees').val(button.data('doctor-fees'));
+                $('#edit_doctorContact').val(button.data('doctor-contact'));
+            });
+            
+            $('#editStaffModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                $('#edit_staffId').val(button.data('staff-id'));
+                $('#edit_staff').val(button.data('staff-name'));
+                $('#edit_role').val(button.data('staff-role'));
+                $('#edit_semail').val(button.data('staff-email'));
+                $('#edit_scontact').val(button.data('staff-contact'));
+            });
             
             // Auto-hide alerts after 5 seconds
             setTimeout(function() {
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(function(alert) {
-                    if(alert.classList.contains('alert-success') || alert.classList.contains('alert-danger')) {
-                        alert.style.opacity = '0.7';
-                        setTimeout(function() {
-                            alert.style.display = 'none';
-                        }, 3000);
-                    }
-                });
+                $('.alert').fadeOut('slow');
             }, 5000);
+        });
+        
+        // Function to show tab
+        function showTab(tabId) {
+            // Hide all tab panes
+            $('.tab-pane').removeClass('show active');
             
-            // Add form submission for edit forms
-            const editDoctorForm = document.getElementById('edit-doctor-form');
-            if(editDoctorForm) {
-                editDoctorForm.addEventListener('submit', function(e) {
-                    const password = document.getElementById('edit_dpassword').value;
-                    const confirmPassword = document.getElementById('edit_cdpassword').value;
-                    const updatePassword = document.getElementById('update_password').value;
-                    
-                    if(updatePassword === '1' && password !== confirmPassword) {
-                        e.preventDefault();
-                        alert('Passwords do not match! Please check and try again.');
-                        return false;
+            // Show selected tab
+            $('#' + tabId).addClass('show active');
+            
+            // Update URL hash
+            window.location.hash = tabId;
+        }
+        
+        // Function to filter table rows
+        function filterTable(searchInputId, tableBodyId) {
+            const input = $('#' + searchInputId).val().toLowerCase();
+            $('#' + tableBodyId + ' tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(input) > -1);
+            });
+        }
+        
+        // Function to initialize charts
+        function initializeCharts() {
+            // Appointments Chart
+            const appointmentsCtx = document.getElementById('appointmentsChart');
+            if(appointmentsCtx) {
+                const appointmentsChart = new Chart(appointmentsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Cancelled'],
+                        datasets: [{
+                            data: [<?php echo $total_appointments - count(array_filter($appointments, function($app) { return $app['appointmentStatus'] == 'cancelled'; })); ?>, 
+                                   <?php echo count(array_filter($appointments, function($app) { return $app['appointmentStatus'] == 'cancelled'; })); ?>],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 99, 132, 0.8)'
+                            ]
+                        }]
                     }
-                    
-                    // Create hidden input for edit_doctor action
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'edit_doctor';
-                    actionInput.value = '1';
-                    this.appendChild(actionInput);
-                    
-                    return true;
                 });
             }
             
-            const editStaffForm = document.getElementById('edit-staff-form');
-            if(editStaffForm) {
-                editStaffForm.addEventListener('submit', function(e) {
-                    const password = document.getElementById('edit_spassword').value;
-                    const confirmPassword = document.getElementById('edit_cspassword').value;
-                    const updatePassword = document.getElementById('update_staff_password').value;
-                    
-                    if(updatePassword === '1' && password !== confirmPassword) {
-                        e.preventDefault();
-                        alert('Passwords do not match! Please check and try again.');
-                        return false;
+            // Department Chart
+            const departmentCtx = document.getElementById('departmentChart');
+            if(departmentCtx) {
+                const departmentChart = new Chart(departmentCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['General', 'Cardiology', 'Pediatrics', 'Neurology', 'Dermatology', 'Orthopedics'],
+                        datasets: [{
+                            data: [5, 3, 4, 2, 3, 2],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ]
+                        }]
                     }
-                    
-                    // Create hidden input for edit_staff action
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'edit_staff';
-                    actionInput.value = '1';
-                    this.appendChild(actionInput);
-                    
-                    return true;
                 });
+            }
+        }
+        
+        // Function to confirm appointment cancellation
+        function confirmCancelAppointment() {
+            if(!currentAppointmentIdToCancel) return;
+            
+            const reason = $('#cancellationReason').val();
+            
+            // Submit form
+            const form = $('<form>').attr({
+                method: 'POST',
+                style: 'display: none;'
+            });
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'appointmentId',
+                value: currentAppointmentIdToCancel
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'reason',
+                value: reason
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'cancelledBy',
+                value: 'admin'
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'cancel_appointment',
+                value: '1'
+            }));
+            
+            $('body').append(form);
+            form.submit();
+        }
+        
+        // Function to update payment status
+        function updatePaymentStatus() {
+            if(!currentPaymentId) return;
+            
+            const status = $('#edit-payment-status').val();
+            const method = $('#edit-payment-method').val();
+            const receipt = $('#edit-receipt-number').val();
+            
+            // Submit form
+            const form = $('<form>').attr({
+                method: 'POST',
+                style: 'display: none;'
+            });
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'paymentId',
+                value: currentPaymentId
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'status',
+                value: status
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'method',
+                value: method
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'receipt',
+                value: receipt
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'update_payment',
+                value: '1'
+            }));
+            
+            $('body').append(form);
+            form.submit();
+        }
+        
+        // Function to delete doctor
+        function deleteDoctor(doctorId, doctorName) {
+            if(confirm(`Are you sure you want to delete ${doctorName}?`)) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'doctorId',
+                    value: doctorId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_doctor',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
+        // Function to delete staff
+        function deleteStaff(staffId, staffName) {
+            if(confirm(`Are you sure you want to delete ${staffName}?`)) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'staffId',
+                    value: staffId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_staff',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
+        // Function to send prescription to hospital pharmacy
+        function sendToHospitalPharmacy(prescriptionId) {
+            if(confirm('Send this prescription to Hospital Pharmacy?')) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'prescription_id',
+                    value: prescriptionId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'send_to_hospital',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
+        // Function to delete schedule
+        function deleteSchedule(scheduleId) {
+            if(confirm('Are you sure you want to delete this schedule?')) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'schedule_id',
+                    value: scheduleId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_schedule',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
+        // Check URL hash on page load
+        $(window).on('load', function() {
+            if(window.location.hash) {
+                const tabId = window.location.hash.substring(1);
+                showTab(tabId);
+                
+                // Update sidebar active state
+                $('.sidebar ul li').removeClass('active');
+                $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
             }
         });
     </script>
