@@ -1727,7 +1727,7 @@ if(isset($_SESSION['error'])){
     <div class="main-content">
         <!-- Topbar -->
         <div class="topbar">
-            <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?> Admin</div>
+            <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?> Helthcare Hospital</div>
             <div class="user-info">
                 <div class="profile-pic-container">
                     <?php if($admin_profile_pic && file_exists('uploads/profile_pictures/' . $admin_profile_pic)): ?>
