@@ -309,7 +309,7 @@ h2 {
 <div class="main">
 <?php
 switch($page){
-    //===========================
+    //=================
     case 'patients':
         $result = $con->query("SELECT * FROM patreg ORDER BY pid DESC");
         echo "<div class='dashboard-header'>
