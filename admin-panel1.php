@@ -45,7 +45,7 @@ $available_rooms = mysqli_num_rows(mysqli_query($con, "SELECT * FROM roomtb WHER
 $active_prescriptions = mysqli_num_rows(mysqli_query($con, "SELECT * FROM prestb WHERE emailStatus = 'Not Sent'"));
 
 // ===========================
-// ADD PATIENT (NO PASSWORD ENCRYPTION)
+// ADD PATIENT (WITH PASSWORD VALIDATION FIXED)
 // ===========================
 if(isset($_POST['add_patient'])){
     $fname = mysqli_real_escape_string($con, $_POST['fname']);
@@ -86,6 +86,8 @@ if(isset($_POST['add_patient'])){
                     $new_patient_id = mysqli_insert_id($con);
                     $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
                     $_SESSION['success'] = "Patient added successfully!";
+                    // Clear form fields
+                    echo "<script>document.getElementById('add-patient-form').reset();</script>";
                 } else {
                     $patient_msg = "<div class='alert alert-danger'>❌ Database Error: " . mysqli_error($con) . "</div>";
                 }
@@ -95,7 +97,7 @@ if(isset($_POST['add_patient'])){
 }
 
 // ===========================
-// ADD DOCTOR (NO PASSWORD ENCRYPTION)
+// ADD DOCTOR
 // ===========================
 if(isset($_POST['add_doctor'])){
     $doctorId = mysqli_real_escape_string($con, $_POST['doctorId']);
@@ -118,6 +120,7 @@ if(isset($_POST['add_doctor'])){
         if(mysqli_query($con, $query)){
             $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId</div>";
             $_SESSION['success'] = "Doctor added successfully!";
+            echo "<script>document.getElementById('add-doctor-form').reset();</script>";
         } else {
             $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
@@ -199,7 +202,7 @@ if(isset($_POST['delete_doctor'])){
 }
 
 // ===========================
-// ADD STAFF (NO PASSWORD ENCRYPTION)
+// ADD STAFF
 // ===========================
 if(isset($_POST['add_staff'])){
     $staffId = mysqli_real_escape_string($con, $_POST['staffId']);
@@ -221,6 +224,7 @@ if(isset($_POST['add_staff'])){
         if(mysqli_query($con, $query)){
             $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
             $_SESSION['success'] = "Staff added successfully!";
+            echo "<script>document.getElementById('add-staff-form').reset();</script>";
         } else {
             $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
@@ -391,16 +395,17 @@ if(isset($_POST['add_appointment'])){
 }
 
 // ===========================
-// ADD SCHEDULE
+// ADD SCHEDULE (WITH STAFF/DOCTOR ID FIXED)
 // ===========================
 if(isset($_POST['add_schedule'])){
+    $staff_id = mysqli_real_escape_string($con, $_POST['staff_id']);
     $staff_name = mysqli_real_escape_string($con, $_POST['staff_name']);
     $role = mysqli_real_escape_string($con, $_POST['role']);
     $day = mysqli_real_escape_string($con, $_POST['day']);
     $shift = mysqli_real_escape_string($con, $_POST['shift']);
     
-    $query = "INSERT INTO scheduletb (staff_name, role, day, shift) 
-              VALUES ('$staff_name', '$role', '$day', '$shift')";
+    $query = "INSERT INTO scheduletb (staff_id, staff_name, role, day, shift) 
+              VALUES ('$staff_id', '$staff_name', '$role', '$day', '$shift')";
     
     if(mysqli_query($con, $query)){
         $schedule_msg = "<div class='alert alert-success'>✅ Schedule added successfully!</div>";
@@ -427,7 +432,7 @@ if(isset($_POST['delete_schedule'])){
 }
 
 // ===========================
-// ADD ROOM
+// ADD ROOM (FIXED TO SAVE TO DATABASE)
 // ===========================
 if(isset($_POST['add_room'])){
     $room_no = mysqli_real_escape_string($con, $_POST['room_no']);
@@ -435,14 +440,24 @@ if(isset($_POST['add_room'])){
     $type = mysqli_real_escape_string($con, $_POST['type']);
     $status = mysqli_real_escape_string($con, $_POST['status']);
     
-    $query = "INSERT INTO roomtb (room_no, bed_no, type, status) 
-              VALUES ('$room_no', '$bed_no', '$type', '$status')";
+    // Check if room/bed already exists
+    $check_query = "SELECT * FROM roomtb WHERE room_no='$room_no' AND bed_no='$bed_no'";
+    $check_result = mysqli_query($con, $check_query);
     
-    if(mysqli_query($con, $query)){
-        $_SESSION['success'] = "Room/Bed added successfully!";
-        header("Location: " . $_SERVER['PHP_SELF'] . "#room-tab");
-        exit();
+    if(mysqli_num_rows($check_result) > 0){
+        $_SESSION['error'] = "❌ Room/Bed combination already exists!";
+    } else {
+        $query = "INSERT INTO roomtb (room_no, bed_no, type, status) 
+                  VALUES ('$room_no', '$bed_no', '$type', '$status')";
+        
+        if(mysqli_query($con, $query)){
+            $_SESSION['success'] = "✅ Room/Bed added successfully!";
+        } else {
+            $_SESSION['error'] = "❌ Error: " . mysqli_error($con);
+        }
     }
+    header("Location: " . $_SERVER['PHP_SELF'] . "#room-tab");
+    exit();
 }
 
 // ===========================
@@ -462,7 +477,7 @@ if(isset($_POST['send_to_hospital'])){
 }
 
 // ===========================
-// SEND PRESCRIPTION TO PATIENT CONTACT
+// SEND PRESCRIPTION TO PATIENT CONTACT (SMS)
 // ===========================
 if(isset($_POST['send_to_patient'])){
     $prescription_id = mysqli_real_escape_string($con, $_POST['prescription_id']);
@@ -486,7 +501,7 @@ if(isset($_POST['send_to_patient'])){
             $prescription_msg = "<div class='alert alert-success'>✅ Prescription sent to patient's contact number via SMS!<br>
                                 <small>Patient: $patient_name<br>
                                 Contact: $contact<br>
-                                Message: Prescription details have been sent to your mobile number.</small></div>";
+                                Message: Your prescription has been sent to your mobile number.</small></div>";
             $_SESSION['success'] = "Prescription sent to patient via SMS!";
         } else {
             $prescription_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
@@ -524,8 +539,8 @@ if($doctor_result){
     }
 }
 
-// Get appointments
-$appointment_result = mysqli_query($con, "SELECT * FROM appointmenttb ORDER BY appdate DESC, apptime DESC");
+// Get appointments WITH NIC
+$appointment_result = mysqli_query($con, "SELECT *, national_id as patient_nic FROM appointmenttb ORDER BY appdate DESC, apptime DESC");
 if($appointment_result){
     while($row = mysqli_fetch_assoc($appointment_result)){
         $appointments[] = $row;
@@ -540,8 +555,8 @@ if($prescription_result){
     }
 }
 
-// Get payments
-$payment_result = mysqli_query($con, "SELECT * FROM paymenttb ORDER BY pay_date DESC");
+// Get payments WITH NIC
+$payment_result = mysqli_query($con, "SELECT *, national_id as patient_nic FROM paymenttb ORDER BY pay_date DESC");
 if($payment_result){
     while($row = mysqli_fetch_assoc($payment_result)){
         $payments[] = $row;
@@ -556,7 +571,7 @@ if($staff_result){
     }
 }
 
-// Get schedules
+// Get schedules WITH STAFF ID
 $schedule_result = mysqli_query($con, "SELECT * FROM scheduletb ORDER BY day, shift");
 if($schedule_result){
     while($row = mysqli_fetch_assoc($schedule_result)){
@@ -572,27 +587,27 @@ if($room_result){
     }
 }
 
-// Get all staff names for schedule datalist
-$all_staff_names = [];
-// Get doctor names
+// Get all staff names for schedule datalist with ID
+$all_staff_with_id = [];
+// Get doctor names with ID
 foreach($doctors as $doctor){
-    $all_staff_names[] = [
-        'name' => $doctor['username'],
+    $all_staff_with_id[] = [
         'id' => $doctor['id'],
+        'name' => $doctor['username'],
         'type' => 'Doctor'
     ];
 }
-// Get staff names
+// Get staff names with ID
 foreach($staff as $staff_member){
-    $all_staff_names[] = [
-        'name' => $staff_member['name'],
+    $all_staff_with_id[] = [
         'id' => $staff_member['id'],
+        'name' => $staff_member['name'],
         'type' => $staff_member['role']
     ];
 }
 
 // ===========================
-// FUNCTION TO CHECK/CREATE TABLES
+// FUNCTION TO CHECK/CREATE TABLES (UPDATED FOR SCHEDULE ID)
 // ===========================
 function checkAndCreateTables($con){
     $tables = [
@@ -690,6 +705,7 @@ function checkAndCreateTables($con){
         
         'scheduletb' => "CREATE TABLE IF NOT EXISTS scheduletb (
             id INT PRIMARY KEY AUTO_INCREMENT,
+            staff_id VARCHAR(20) NOT NULL,
             staff_name VARCHAR(50) NOT NULL,
             role VARCHAR(50) NOT NULL,
             day VARCHAR(20) NOT NULL,
@@ -713,6 +729,15 @@ function checkAndCreateTables($con){
             if(!mysqli_query($con, $create_sql)){
                 echo "<div class='alert alert-danger'>❌ Error creating table $table_name: " . mysqli_error($con) . "</div>";
             }
+        } else {
+            // Check if scheduletb has staff_id column, add if not
+            if($table_name == 'scheduletb'){
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM scheduletb LIKE 'staff_id'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE scheduletb ADD COLUMN staff_id VARCHAR(20) AFTER id";
+                    mysqli_query($con, $alter_query);
+                }
+            }
         }
     }
 }
@@ -725,6 +750,13 @@ if(isset($_SESSION['success'])){
     unset($_SESSION['success']);
 } else {
     $success_msg = "";
+}
+
+if(isset($_SESSION['error'])){
+    $error_msg = $_SESSION['error'];
+    unset($_SESSION['error']);
+} else {
+    $error_msg = "";
 }
 ?>
 <!DOCTYPE html>
@@ -1127,6 +1159,15 @@ if(isset($_SESSION['success'])){
                     </div>
                 <?php endif; ?>
                 
+                <?php if($error_msg): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?php echo $error_msg; ?>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                <?php endif; ?>
+                
                 <!-- Welcome Section -->
                 <div class="row mb-4">
                     <div class="col-12">
@@ -1329,6 +1370,8 @@ if(isset($_SESSION['success'])){
                 
                 <?php if($doctor_msg): echo $doctor_msg; endif; ?>
                 <?php if($staff_msg): echo $staff_msg; endif; ?>
+                <?php if($edit_doctor_msg): echo $edit_doctor_msg; endif; ?>
+                <?php if($edit_staff_msg): echo $edit_staff_msg; endif; ?>
                 
                 <!-- Tabs for Staff Management -->
                 <ul class="nav nav-tabs" id="staffManagementTabs" role="tablist">
@@ -1544,7 +1587,7 @@ if(isset($_SESSION['success'])){
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Confirm Password *</label>
-                                            <input type="password" class="form-control" required>
+                                            <input type="password" name="confirm_dpassword" class="form-control" required>
                                         </div>
                                     </div>
                                 </div>
@@ -1703,10 +1746,16 @@ if(isset($_SESSION['success'])){
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Confirm Password *</label>
+                                    <input type="password" class="form-control" name="cpassword" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Address</label>
-                                    <textarea class="form-control" name="address" rows="2"></textarea>
+                                    <textarea class="form-control" name="address" rows="1"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -1720,7 +1769,7 @@ if(isset($_SESSION['success'])){
                 <!-- Patients List -->
                 <div class="search-container">
                     <div class="search-bar">
-                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients..." onkeyup="filterTable('patient-search', 'patients-table-body')">
+                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients by name, ID, NIC, or contact..." onkeyup="filterTable('patient-search', 'patients-table-body')">
                         <i class="fas fa-search search-icon"></i>
                     </div>
                 </div>
@@ -1787,6 +1836,7 @@ if(isset($_SESSION['success'])){
                                 <div class="form-group">
                                     <label>Patient ID *</label>
                                     <input type="number" class="form-control" name="patient_id" required>
+                                    <small class="text-muted">Enter patient ID</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1825,7 +1875,7 @@ if(isset($_SESSION['success'])){
                 
                 <div class="search-container">
                     <div class="search-bar">
-                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
+                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments by patient name, doctor, date, or NIC..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
                         <i class="fas fa-search search-icon"></i>
                     </div>
                 </div>
@@ -1837,6 +1887,7 @@ if(isset($_SESSION['success'])){
                                 <tr>
                                     <th>Appointment ID</th>
                                     <th>Patient</th>
+                                    <th>NIC</th>
                                     <th>Doctor</th>
                                     <th>Date</th>
                                     <th>Time</th>
@@ -1851,6 +1902,7 @@ if(isset($_SESSION['success'])){
                                     <tr>
                                         <td><?php echo $app['ID']; ?></td>
                                         <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
+                                        <td><?php echo $app['patient_nic'] ?: $app['national_id']; ?></td>
                                         <td><?php echo $app['doctor']; ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($app['appdate'])); ?></td>
                                         <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
@@ -1873,7 +1925,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center">No appointments found</td>
+                                        <td colspan="9" class="text-center">No appointments found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -1923,7 +1975,10 @@ if(isset($_SESSION['success'])){
                                         <td><?php echo $pres['emailStatus']; ?></td>
                                         <td>
                                             <button class="btn btn-sm btn-primary action-btn" onclick="sendToHospitalPharmacy(<?php echo $pres['id']; ?>)">
-                                                <i class="fas fa-hospital"></i> Send
+                                                <i class="fas fa-hospital"></i> Hospital
+                                            </button>
+                                            <button class="btn btn-sm btn-info action-btn" onclick="sendToPatientContact(<?php echo $pres['id']; ?>)">
+                                                <i class="fas fa-mobile-alt"></i> Patient SMS
                                             </button>
                                         </td>
                                     </tr>
@@ -1947,7 +2002,7 @@ if(isset($_SESSION['success'])){
                 
                 <div class="search-container">
                     <div class="search-bar">
-                        <input type="text" class="form-control" id="payment-search" placeholder="Search payments..." onkeyup="filterTable('payment-search', 'payments-table-body')">
+                        <input type="text" class="form-control" id="payment-search" placeholder="Search payments by patient name, NIC, or doctor..." onkeyup="filterTable('payment-search', 'payments-table-body')">
                         <i class="fas fa-search search-icon"></i>
                     </div>
                 </div>
@@ -1959,6 +2014,7 @@ if(isset($_SESSION['success'])){
                                 <tr>
                                     <th>Payment ID</th>
                                     <th>Patient</th>
+                                    <th>NIC</th>
                                     <th>Doctor</th>
                                     <th>Amount (Rs.)</th>
                                     <th>Date</th>
@@ -1974,6 +2030,7 @@ if(isset($_SESSION['success'])){
                                     <tr>
                                         <td><?php echo $pay['id']; ?></td>
                                         <td><?php echo $pay['patient_name']; ?></td>
+                                        <td><?php echo $pay['patient_nic'] ?: $pay['national_id']; ?></td>
                                         <td><?php echo $pay['doctor']; ?></td>
                                         <td>Rs. <?php echo number_format($pay['fees'], 2); ?></td>
                                         <td><?php echo date('Y-m-d', strtotime($pay['pay_date'])); ?></td>
@@ -1995,7 +2052,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="9" class="text-center">No payments found</td>
+                                        <td colspan="10" class="text-center">No payments found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2019,23 +2076,31 @@ if(isset($_SESSION['success'])){
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Staff Name *</label>
-                                    <input type="text" class="form-control" name="staff_name" required>
+                                    <label>Select Staff/Doctor *</label>
+                                    <select class="form-control" name="staff_id" id="staff_id" required onchange="updateStaffName()">
+                                        <option value="">Select Staff/Doctor</option>
+                                        <?php foreach($all_staff_with_id as $person): ?>
+                                        <option value="<?php echo $person['id']; ?>" data-name="<?php echo $person['name']; ?>" data-type="<?php echo $person['type']; ?>">
+                                            <?php echo $person['id'] . ' - ' . $person['name'] . ' (' . $person['type'] . ')'; ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Role *</label>
-                                    <select class="form-control" name="role" required>
-                                        <option value="">Select Role</option>
-                                        <option value="Doctor">Doctor</option>
-                                        <option value="Nurse">Nurse</option>
-                                        <option value="Receptionist">Receptionist</option>
-                                    </select>
+                                    <label>Staff Name *</label>
+                                    <input type="text" class="form-control" name="staff_name" id="staff_name" readonly required>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Role *</label>
+                                    <input type="text" class="form-control" name="role" id="staff_role" readonly required>
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Day *</label>
@@ -2047,17 +2112,20 @@ if(isset($_SESSION['success'])){
                                         <option value="Thursday">Thursday</option>
                                         <option value="Friday">Friday</option>
                                         <option value="Saturday">Saturday</option>
+                                        <option value="Sunday">Sunday</option>
                                     </select>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Shift *</label>
                                     <select class="form-control" name="shift" required>
                                         <option value="">Select Shift</option>
-                                        <option value="Morning">Morning</option>
-                                        <option value="Afternoon">Afternoon</option>
-                                        <option value="Night">Night</option>
+                                        <option value="Morning">Morning (8AM - 2PM)</option>
+                                        <option value="Afternoon">Afternoon (2PM - 8PM)</option>
+                                        <option value="Night">Night (8PM - 8AM)</option>
                                     </select>
                                 </div>
                             </div>
@@ -2073,8 +2141,9 @@ if(isset($_SESSION['success'])){
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Staff Name</th>
+                                    <th>Schedule ID</th>
+                                    <th>Staff/Doctor ID</th>
+                                    <th>Name</th>
                                     <th>Role</th>
                                     <th>Day</th>
                                     <th>Shift</th>
@@ -2086,6 +2155,7 @@ if(isset($_SESSION['success'])){
                                     <?php foreach($schedules as $schedule): ?>
                                     <tr>
                                         <td><?php echo $schedule['id']; ?></td>
+                                        <td><strong><?php echo $schedule['staff_id']; ?></strong></td>
                                         <td><?php echo $schedule['staff_name']; ?></td>
                                         <td><?php echo $schedule['role']; ?></td>
                                         <td><?php echo $schedule['day']; ?></td>
@@ -2099,7 +2169,7 @@ if(isset($_SESSION['success'])){
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="6" class="text-center">No schedules found</td>
+                                        <td colspan="7" class="text-center">No schedules found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2111,6 +2181,26 @@ if(isset($_SESSION['success'])){
             <!-- Rooms/Beds Tab -->
             <div class="tab-pane fade" id="room-tab">
                 <h3 class="mb-4"><i class="fas fa-bed mr-2"></i>Rooms & Beds</h3>
+                
+                <!-- Success/Error Messages -->
+                <?php if(isset($_SESSION['success']) || isset($_SESSION['error'])): ?>
+                    <?php if(isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                    <?php if(isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
                 
                 <!-- Add Room Form -->
                 <div class="form-card mb-4">
@@ -2139,6 +2229,7 @@ if(isset($_SESSION['success'])){
                                         <option value="General">General</option>
                                         <option value="ICU">ICU</option>
                                         <option value="Private">Private</option>
+                                        <option value="Emergency">Emergency</option>
                                     </select>
                                 </div>
                             </div>
@@ -2148,6 +2239,7 @@ if(isset($_SESSION['success'])){
                                     <select class="form-control" name="status" required>
                                         <option value="Available">Available</option>
                                         <option value="Occupied">Occupied</option>
+                                        <option value="Maintenance">Under Maintenance</option>
                                     </select>
                                 </div>
                             </div>
@@ -2168,6 +2260,7 @@ if(isset($_SESSION['success'])){
                                     <th>Bed No</th>
                                     <th>Type</th>
                                     <th>Status</th>
+                                    <th>Added Date</th>
                                 </tr>
                             </thead>
                             <tbody id="rooms-table-body">
@@ -2181,15 +2274,18 @@ if(isset($_SESSION['success'])){
                                         <td>
                                             <?php if($room['status'] == 'Available'): ?>
                                                 <span class="status-badge status-available">Available</span>
-                                            <?php else: ?>
+                                            <?php elseif($room['status'] == 'Occupied'): ?>
                                                 <span class="status-badge status-occupied">Occupied</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-cancelled"><?php echo $room['status']; ?></span>
                                             <?php endif; ?>
                                         </td>
+                                        <td><?php echo date('Y-m-d', strtotime($room['created_date'])); ?></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="5" class="text-center">No rooms found</td>
+                                        <td colspan="6" class="text-center">No rooms found. Add your first room/bed above.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2215,7 +2311,7 @@ if(isset($_SESSION['success'])){
                     <form id="cancel-appointment-form">
                         <div class="form-group">
                             <label>Reason for Cancellation</label>
-                            <textarea class="form-control" id="cancellationReason" rows="3"></textarea>
+                            <textarea class="form-control" id="cancellationReason" rows="3" required></textarea>
                         </div>
                         <input type="hidden" id="appointmentToCancelId">
                     </form>
@@ -2246,15 +2342,23 @@ if(isset($_SESSION['success'])){
                             <select class="form-control" id="edit-payment-status">
                                 <option value="Pending">Pending</option>
                                 <option value="Paid">Paid</option>
+                                <option value="Cancelled">Cancelled</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Payment Method</label>
-                            <input type="text" class="form-control" id="edit-payment-method">
+                            <select class="form-control" id="edit-payment-method">
+                                <option value="">Select Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Online">Online Payment</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Receipt Number</label>
-                            <input type="text" class="form-control" id="edit-receipt-number">
+                            <input type="text" class="form-control" id="edit-receipt-number" placeholder="Auto-generated if empty">
                         </div>
                     </form>
                 </div>
@@ -2271,7 +2375,7 @@ if(isset($_SESSION['success'])){
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Doctor</h5>
+                    <h5 class="modal-title">Edit Doctor Details</h5>
                     <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
@@ -2281,29 +2385,41 @@ if(isset($_SESSION['success'])){
                         <input type="hidden" name="edit_doctorId" id="edit_doctorId">
                         <div class="form-group">
                             <label>Name</label>
-                            <input type="text" class="form-control" name="edit_doctor" id="edit_doctor">
+                            <input type="text" class="form-control" name="edit_doctor" id="edit_doctor" required>
                         </div>
                         <div class="form-group">
                             <label>Specialization</label>
-                            <select class="form-control" name="edit_special" id="edit_special">
+                            <select class="form-control" name="edit_special" id="edit_special" required>
                                 <option value="General">General Physician</option>
                                 <option value="Cardiologist">Cardiologist</option>
                                 <option value="Pediatrician">Pediatrician</option>
+                                <option value="Neurologist">Neurologist</option>
+                                <option value="Dermatologist">Dermatologist</option>
+                                <option value="Orthopedic">Orthopedic</option>
+                                <option value="Gynecologist">Gynecologist</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" class="form-control" name="edit_demail" id="edit_demail">
+                            <input type="email" class="form-control" name="edit_demail" id="edit_demail" required>
                         </div>
                         <div class="form-group">
-                            <label>Fees</label>
-                            <input type="number" class="form-control" name="edit_docFees" id="edit_docFees">
+                            <label>Fees (Rs.)</label>
+                            <input type="number" class="form-control" name="edit_docFees" id="edit_docFees" required>
                         </div>
                         <div class="form-group">
                             <label>Contact</label>
-                            <input type="text" class="form-control" name="edit_doctorContact" id="edit_doctorContact">
+                            <input type="text" class="form-control" name="edit_doctorContact" id="edit_doctorContact" required>
                         </div>
-                        <button type="submit" name="edit_doctor" class="btn btn-warning">Update Doctor</button>
+                        <div class="form-group form-check">
+                            <input type="checkbox" class="form-check-input" id="update_password_check" name="update_password" value="1">
+                            <label class="form-check-label" for="update_password_check">Update Password</label>
+                        </div>
+                        <div class="form-group" id="password_field" style="display: none;">
+                            <label>New Password</label>
+                            <input type="password" class="form-control" name="edit_dpassword" id="edit_dpassword">
+                        </div>
+                        <button type="submit" name="edit_doctor" class="btn btn-warning btn-block">Update Doctor</button>
                     </form>
                 </div>
             </div>
@@ -2315,7 +2431,7 @@ if(isset($_SESSION['success'])){
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Staff</h5>
+                    <h5 class="modal-title">Edit Staff Details</h5>
                     <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
@@ -2325,25 +2441,35 @@ if(isset($_SESSION['success'])){
                         <input type="hidden" name="edit_staffId" id="edit_staffId">
                         <div class="form-group">
                             <label>Name</label>
-                            <input type="text" class="form-control" name="edit_staff" id="edit_staff">
+                            <input type="text" class="form-control" name="edit_staff" id="edit_staff" required>
                         </div>
                         <div class="form-group">
                             <label>Role</label>
-                            <select class="form-control" name="edit_role" id="edit_role">
+                            <select class="form-control" name="edit_role" id="edit_role" required>
                                 <option value="Nurse">Nurse</option>
                                 <option value="Receptionist">Receptionist</option>
                                 <option value="Admin">Admin</option>
+                                <option value="Lab Technician">Lab Technician</option>
+                                <option value="Pharmacist">Pharmacist</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" class="form-control" name="edit_semail" id="edit_semail">
+                            <input type="email" class="form-control" name="edit_semail" id="edit_semail" required>
                         </div>
                         <div class="form-group">
                             <label>Contact</label>
-                            <input type="text" class="form-control" name="edit_scontact" id="edit_scontact">
+                            <input type="text" class="form-control" name="edit_scontact" id="edit_scontact" required>
                         </div>
-                        <button type="submit" name="edit_staff" class="btn btn-warning">Update Staff</button>
+                        <div class="form-group form-check">
+                            <input type="checkbox" class="form-check-input" id="update_staff_password_check" name="update_staff_password" value="1">
+                            <label class="form-check-label" for="update_staff_password_check">Update Password</label>
+                        </div>
+                        <div class="form-group" id="staff_password_field" style="display: none;">
+                            <label>New Password</label>
+                            <input type="password" class="form-control" name="edit_spassword" id="edit_spassword">
+                        </div>
+                        <button type="submit" name="edit_staff" class="btn btn-warning btn-block">Update Staff</button>
                     </form>
                 </div>
             </div>
@@ -2376,6 +2502,7 @@ if(isset($_SESSION['success'])){
             $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
                 const button = $(event.relatedTarget);
                 currentAppointmentIdToCancel = button.data('appointment-id');
+                $('#cancellationReason').val('');
             });
             
             $('#editPaymentModal').on('show.bs.modal', function(event) {
@@ -2391,6 +2518,8 @@ if(isset($_SESSION['success'])){
                 $('#edit_demail').val(button.data('doctor-email'));
                 $('#edit_docFees').val(button.data('doctor-fees'));
                 $('#edit_doctorContact').val(button.data('doctor-contact'));
+                $('#password_field').hide();
+                $('#update_password_check').prop('checked', false);
             });
             
             $('#editStaffModal').on('show.bs.modal', function(event) {
@@ -2400,12 +2529,48 @@ if(isset($_SESSION['success'])){
                 $('#edit_role').val(button.data('staff-role'));
                 $('#edit_semail').val(button.data('staff-email'));
                 $('#edit_scontact').val(button.data('staff-contact'));
+                $('#staff_password_field').hide();
+                $('#update_staff_password_check').prop('checked', false);
+            });
+            
+            // Toggle password field in edit doctor modal
+            $('#update_password_check').change(function() {
+                if(this.checked) {
+                    $('#password_field').show();
+                    $('#edit_dpassword').prop('required', true);
+                } else {
+                    $('#password_field').hide();
+                    $('#edit_dpassword').prop('required', false);
+                    $('#edit_dpassword').val('');
+                }
+            });
+            
+            // Toggle password field in edit staff modal
+            $('#update_staff_password_check').change(function() {
+                if(this.checked) {
+                    $('#staff_password_field').show();
+                    $('#edit_spassword').prop('required', true);
+                } else {
+                    $('#staff_password_field').hide();
+                    $('#edit_spassword').prop('required', false);
+                    $('#edit_spassword').val('');
+                }
             });
             
             // Auto-hide alerts after 5 seconds
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
+            
+            // Check URL hash on load
+            if(window.location.hash) {
+                const tabId = window.location.hash.substring(1);
+                showTab(tabId);
+                
+                // Update sidebar active state
+                $('.sidebar ul li').removeClass('active');
+                $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
+            }
         });
         
         // Function to show tab
@@ -2472,11 +2637,27 @@ if(isset($_SESSION['success'])){
             }
         }
         
+        // Function to update staff name and role based on selected ID
+        function updateStaffName() {
+            const select = document.getElementById('staff_id');
+            const selectedOption = select.options[select.selectedIndex];
+            const staffName = selectedOption.getAttribute('data-name');
+            const staffRole = selectedOption.getAttribute('data-type');
+            
+            document.getElementById('staff_name').value = staffName;
+            document.getElementById('staff_role').value = staffRole;
+        }
+        
         // Function to confirm appointment cancellation
         function confirmCancelAppointment() {
             if(!currentAppointmentIdToCancel) return;
             
             const reason = $('#cancellationReason').val();
+            
+            if(!reason.trim()) {
+                alert('Please provide a reason for cancellation.');
+                return;
+            }
             
             // Submit form
             const form = $('<form>').attr({
@@ -2562,7 +2743,7 @@ if(isset($_SESSION['success'])){
         
         // Function to delete doctor
         function deleteDoctor(doctorId, doctorName) {
-            if(confirm(`Are you sure you want to delete ${doctorName}?`)) {
+            if(confirm(`Are you sure you want to delete ${doctorName}? This action cannot be undone.`)) {
                 const form = $('<form>').attr({
                     method: 'POST',
                     style: 'display: none;'
@@ -2587,7 +2768,7 @@ if(isset($_SESSION['success'])){
         
         // Function to delete staff
         function deleteStaff(staffId, staffName) {
-            if(confirm(`Are you sure you want to delete ${staffName}?`)) {
+            if(confirm(`Are you sure you want to delete ${staffName}? This action cannot be undone.`)) {
                 const form = $('<form>').attr({
                     method: 'POST',
                     style: 'display: none;'
@@ -2635,6 +2816,31 @@ if(isset($_SESSION['success'])){
             }
         }
         
+        // Function to send prescription to patient contact
+        function sendToPatientContact(prescriptionId) {
+            if(confirm('Send this prescription to patient via SMS?')) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'prescription_id',
+                    value: prescriptionId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'send_to_patient',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
         // Function to delete schedule
         function deleteSchedule(scheduleId) {
             if(confirm('Are you sure you want to delete this schedule?')) {
@@ -2660,16 +2866,40 @@ if(isset($_SESSION['success'])){
             }
         }
         
-        // Check URL hash on page load
-        $(window).on('load', function() {
-            if(window.location.hash) {
-                const tabId = window.location.hash.substring(1);
-                showTab(tabId);
+        // Form validation for add patient
+        $(document).ready(function() {
+            $('#add-patient-form').submit(function(e) {
+                const password = $('input[name="password"]').val();
+                const cpassword = $('input[name="cpassword"]').val();
                 
-                // Update sidebar active state
-                $('.sidebar ul li').removeClass('active');
-                $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
-            }
+                if(password !== cpassword) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return false;
+                }
+                
+                if(password.length < 6) {
+                    e.preventDefault();
+                    alert('Password must be at least 6 characters long!');
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            // Validate doctor form
+            $('#add-doctor-form').submit(function(e) {
+                const password = $('input[name="dpassword"]').val();
+                const cpassword = $('input[name="confirm_dpassword"]').val();
+                
+                if(password !== cpassword) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return false;
+                }
+                
+                return true;
+            });
         });
     </script>
 </body>
