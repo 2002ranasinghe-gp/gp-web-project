@@ -66,7 +66,7 @@ body { background: #e9f4ff; }
 
 <!-- HOME -->
 <div id="homeSection">
-    <h3 class="text-center mb-4 fw-bold">Choose Your Room Type</h3>
+    <h3 class="text-center mb-4 fw-bold">Choose Your Room</h3>
     <div class="row justify-content-center">
         <div class="col-md-4 mt-3">
             <div class="card card-box p-4 text-center" onclick="showSection('normal')">
