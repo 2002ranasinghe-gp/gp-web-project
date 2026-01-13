@@ -23,6 +23,8 @@ $payment_msg = "";
 $appointment_msg = "";
 $prescription_msg = "";
 $schedule_msg = "";
+$edit_doctor_msg = "";
+$edit_staff_msg = "";
 
 // ===========================
 // ADD PATIENT (NO PASSWORD ENCRYPTION)
@@ -105,6 +107,53 @@ if(isset($_POST['add_doctor'])){
 }
 
 // ===========================
+// EDIT DOCTOR
+// ===========================
+if(isset($_POST['edit_doctor'])){
+    $doctorId = mysqli_real_escape_string($con, $_POST['edit_doctorId']);
+    $doctor = mysqli_real_escape_string($con, $_POST['edit_doctor']);
+    $special = mysqli_real_escape_string($con, $_POST['edit_special']);
+    $demail = mysqli_real_escape_string($con, $_POST['edit_demail']);
+    $docFees = mysqli_real_escape_string($con, $_POST['edit_docFees']);
+    $doctorContact = mysqli_real_escape_string($con, $_POST['edit_doctorContact']);
+    $update_password = isset($_POST['update_password']) && $_POST['update_password'] == '1';
+    $dpassword = mysqli_real_escape_string($con, $_POST['edit_dpassword']);
+    
+    // Check if doctor exists
+    $check = mysqli_query($con, "SELECT * FROM doctb WHERE id='$doctorId'");
+    if(mysqli_num_rows($check) == 0){
+        $edit_doctor_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
+    } else {
+        // Build update query
+        if($update_password && !empty($dpassword)){
+            $query = "UPDATE doctb SET 
+                      username='$doctor', 
+                      spec='$special', 
+                      email='$demail', 
+                      password='$dpassword', 
+                      docFees='$docFees', 
+                      contact='$doctorContact' 
+                      WHERE id='$doctorId'";
+        } else {
+            $query = "UPDATE doctb SET 
+                      username='$doctor', 
+                      spec='$special', 
+                      email='$demail', 
+                      docFees='$docFees', 
+                      contact='$doctorContact' 
+                      WHERE id='$doctorId'";
+        }
+        
+        if(mysqli_query($con, $query)){
+            $edit_doctor_msg = "<div class='alert alert-success'>✅ Doctor updated successfully!</div>";
+            $_SESSION['success'] = "Doctor updated successfully!";
+        } else {
+            $edit_doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
 // DELETE DOCTOR
 // ===========================
 if(isset($_POST['delete_doctor'])){
@@ -115,12 +164,18 @@ if(isset($_POST['delete_doctor'])){
     if(mysqli_num_rows($check) == 0){
         $doctor_msg = "<div class='alert alert-danger'>❌ No doctor found with this ID!</div>";
     } else {
-        $delete = mysqli_query($con, "DELETE FROM doctb WHERE id='$doctorId'");
-        if($delete){
-            $doctor_msg = "<div class='alert alert-success'>✅ Doctor deleted successfully!</div>";
-            $_SESSION['success'] = "Doctor deleted successfully!";
+        // Check if doctor has appointments
+        $check_appointments = mysqli_query($con, "SELECT * FROM appointmenttb WHERE doctor=(SELECT username FROM doctb WHERE id='$doctorId')");
+        if(mysqli_num_rows($check_appointments) > 0){
+            $doctor_msg = "<div class='alert alert-warning'>⚠️ Cannot delete doctor. There are appointments associated with this doctor.</div>";
         } else {
-            $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+            $delete = mysqli_query($con, "DELETE FROM doctb WHERE id='$doctorId'");
+            if($delete){
+                $doctor_msg = "<div class='alert alert-success'>✅ Doctor deleted successfully!</div>";
+                $_SESSION['success'] = "Doctor deleted successfully!";
+            } else {
+                $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+            }
         }
     }
 }
@@ -148,6 +203,71 @@ if(isset($_POST['add_staff'])){
         if(mysqli_query($con, $query)){
             $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
             $_SESSION['success'] = "Staff added successfully!";
+        } else {
+            $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// EDIT STAFF
+// ===========================
+if(isset($_POST['edit_staff'])){
+    $staffId = mysqli_real_escape_string($con, $_POST['edit_staffId']);
+    $staff = mysqli_real_escape_string($con, $_POST['edit_staff']);
+    $role = mysqli_real_escape_string($con, $_POST['edit_role']);
+    $semail = mysqli_real_escape_string($con, $_POST['edit_semail']);
+    $scontact = mysqli_real_escape_string($con, $_POST['edit_scontact']);
+    $update_password = isset($_POST['update_staff_password']) && $_POST['update_staff_password'] == '1';
+    $spassword = mysqli_real_escape_string($con, $_POST['edit_spassword']);
+    
+    // Check if staff exists
+    $check = mysqli_query($con, "SELECT * FROM stafftb WHERE id='$staffId'");
+    if(mysqli_num_rows($check) == 0){
+        $edit_staff_msg = "<div class='alert alert-danger'>❌ Staff not found!</div>";
+    } else {
+        // Build update query
+        if($update_password && !empty($spassword)){
+            $query = "UPDATE stafftb SET 
+                      name='$staff', 
+                      role='$role', 
+                      email='$semail', 
+                      contact='$scontact', 
+                      password='$spassword' 
+                      WHERE id='$staffId'";
+        } else {
+            $query = "UPDATE stafftb SET 
+                      name='$staff', 
+                      role='$role', 
+                      email='$semail', 
+                      contact='$scontact' 
+                      WHERE id='$staffId'";
+        }
+        
+        if(mysqli_query($con, $query)){
+            $edit_staff_msg = "<div class='alert alert-success'>✅ Staff member updated successfully!</div>";
+            $_SESSION['success'] = "Staff updated successfully!";
+        } else {
+            $edit_staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// DELETE STAFF
+// ===========================
+if(isset($_POST['delete_staff'])){
+    $staffId = mysqli_real_escape_string($con, $_POST['staffId']);
+    
+    // Check if staff exists
+    $check = mysqli_query($con, "SELECT * FROM stafftb WHERE id='$staffId'");
+    if(mysqli_num_rows($check) == 0){
+        $staff_msg = "<div class='alert alert-danger'>❌ No staff found with this ID!</div>";
+    } else {
+        $delete = mysqli_query($con, "DELETE FROM stafftb WHERE id='$staffId'");
+        if($delete){
+            $staff_msg = "<div class='alert alert-success'>✅ Staff member deleted successfully!</div>";
+            $_SESSION['success'] = "Staff deleted successfully!";
         } else {
             $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
@@ -205,7 +325,7 @@ if(isset($_POST['update_payment'])){
 }
 
 // ===========================
-// ADD APPOINTMENT (NEW FUNCTIONALITY)
+// ADD APPOINTMENT
 // ===========================
 if(isset($_POST['add_appointment'])){
     $patient_id = mysqli_real_escape_string($con, $_POST['patient_id']);
@@ -253,7 +373,7 @@ if(isset($_POST['add_appointment'])){
 }
 
 // ===========================
-// ADD SCHEDULE (NEW FUNCTIONALITY)
+// ADD SCHEDULE
 // ===========================
 if(isset($_POST['add_schedule'])){
     $staff_name = mysqli_real_escape_string($con, $_POST['staff_name']);
@@ -273,7 +393,7 @@ if(isset($_POST['add_schedule'])){
 }
 
 // ===========================
-// DELETE SCHEDULE (NEW FUNCTIONALITY)
+// DELETE SCHEDULE
 // ===========================
 if(isset($_POST['delete_schedule'])){
     $schedule_id = mysqli_real_escape_string($con, $_POST['schedule_id']);
@@ -289,7 +409,7 @@ if(isset($_POST['delete_schedule'])){
 }
 
 // ===========================
-// ADD ROOM (NEW FUNCTIONALITY)
+// ADD ROOM
 // ===========================
 if(isset($_POST['add_room'])){
     $room_no = mysqli_real_escape_string($con, $_POST['room_no']);
@@ -603,12 +723,6 @@ if(isset($_SESSION['success'])){
     unset($_SESSION['success']);
 } else {
     $success_msg = "";
-}
-
-// Debug: Check if form is being submitted
-if(isset($_POST['add_patient'])) {
-    error_log("Add patient form submitted at: " . date('Y-m-d H:i:s'));
-    error_log("Form data: " . print_r($_POST, true));
 }
 ?>
 <html lang="en">
@@ -983,6 +1097,36 @@ if(isset($_POST['add_patient'])) {
             font-size: 12px;
         }
         
+        .edit-btn {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        
+        .edit-btn:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+        }
+        
+        .staff-management-tabs .nav-link {
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        
+        .staff-management-tabs .nav-link.active {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .staff-management-content {
+            border: 1px solid #dee2e6;
+            border-radius: 0 5px 5px 5px;
+            padding: 20px;
+            background-color: white;
+        }
+        
         @media (max-width: 768px) {
             .quick-action-btn {
                 width: 48%;
@@ -991,6 +1135,11 @@ if(isset($_POST['add_patient'])) {
             
             .search-options {
                 flex-direction: column;
+            }
+            
+            .staff-management-tabs .nav-link {
+                font-size: 14px;
+                padding: 8px 12px;
             }
         }
     </style>
@@ -1003,6 +1152,8 @@ if(isset($_POST['add_patient'])) {
         let currentPaymentSearchMode = 'patientId';
         let currentSendOption = '';
         let currentScheduleIdToDelete = null;
+        let currentDoctorIdToEdit = null;
+        let currentStaffIdToEdit = null;
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1033,6 +1184,9 @@ if(isset($_POST['add_patient'])) {
             
             // Setup staff search functionality
             setupStaffSearch();
+            
+            // Initialize staff management tabs
+            initializeStaffTabs();
         });
         
         // Function to update dashboard counts
@@ -1089,6 +1243,52 @@ if(isset($_POST['add_patient'])) {
             } else {
                 message.style.color = '#dc3545';
                 message.innerText = 'Passwords do not match ✗';
+            }
+        }
+        
+        // Function to check edit doctor password
+        function checkEditDoctorPassword() {
+            let pass = document.getElementById('edit_dpassword').value;
+            let cpass = document.getElementById('edit_cdpassword').value;
+            const message = document.getElementById('edit-message');
+            
+            if(pass || cpass) {
+                if (pass === cpass) {
+                    message.style.color = '#28a745';
+                    message.innerText = 'Passwords match ✓';
+                    document.getElementById('update_password').value = '1';
+                } else {
+                    message.style.color = '#dc3545';
+                    message.innerText = 'Passwords do not match ✗';
+                    document.getElementById('update_password').value = '0';
+                }
+            } else {
+                message.style.color = '#6c757d';
+                message.innerText = 'Leave blank to keep current password';
+                document.getElementById('update_password').value = '0';
+            }
+        }
+        
+        // Function to check edit staff password
+        function checkEditStaffPassword() {
+            let pass = document.getElementById('edit_spassword').value;
+            let cpass = document.getElementById('edit_cspassword').value;
+            const message = document.getElementById('edit-staff-message');
+            
+            if(pass || cpass) {
+                if (pass === cpass) {
+                    message.style.color = '#28a745';
+                    message.innerText = 'Passwords match ✓';
+                    document.getElementById('update_staff_password').value = '1';
+                } else {
+                    message.style.color = '#dc3545';
+                    message.innerText = 'Passwords do not match ✗';
+                    document.getElementById('update_staff_password').value = '0';
+                }
+            } else {
+                message.style.color = '#6c757d';
+                message.innerText = 'Leave blank to keep current password';
+                document.getElementById('update_staff_password').value = '0';
             }
         }
         
@@ -1186,6 +1386,58 @@ if(isset($_POST['add_patient'])) {
                 const button = $(event.relatedTarget);
                 const scheduleId = button.data('schedule-id');
                 currentScheduleIdToDelete = scheduleId;
+            });
+            
+            // Edit doctor modal
+            $('#editDoctorModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const doctorId = button.data('doctor-id');
+                const doctorName = button.data('doctor-name');
+                const doctorSpec = button.data('doctor-spec');
+                const doctorEmail = button.data('doctor-email');
+                const doctorFees = button.data('doctor-fees');
+                const doctorContact = button.data('doctor-contact');
+                
+                currentDoctorIdToEdit = doctorId;
+                
+                // Populate form fields
+                document.getElementById('edit_doctorId').value = doctorId;
+                document.getElementById('edit_doctor').value = doctorName;
+                document.getElementById('edit_special').value = doctorSpec;
+                document.getElementById('edit_demail').value = doctorEmail;
+                document.getElementById('edit_docFees').value = doctorFees;
+                document.getElementById('edit_doctorContact').value = doctorContact;
+                
+                // Reset password fields
+                document.getElementById('edit_dpassword').value = '';
+                document.getElementById('edit_cdpassword').value = '';
+                document.getElementById('edit-message').innerText = 'Leave blank to keep current password';
+                document.getElementById('edit-message').style.color = '#6c757d';
+            });
+            
+            // Edit staff modal
+            $('#editStaffModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const staffId = button.data('staff-id');
+                const staffName = button.data('staff-name');
+                const staffRole = button.data('staff-role');
+                const staffEmail = button.data('staff-email');
+                const staffContact = button.data('staff-contact');
+                
+                currentStaffIdToEdit = staffId;
+                
+                // Populate form fields
+                document.getElementById('edit_staffId').value = staffId;
+                document.getElementById('edit_staff').value = staffName;
+                document.getElementById('edit_role').value = staffRole;
+                document.getElementById('edit_semail').value = staffEmail;
+                document.getElementById('edit_scontact').value = staffContact;
+                
+                // Reset password fields
+                document.getElementById('edit_spassword').value = '';
+                document.getElementById('edit_cspassword').value = '';
+                document.getElementById('edit-staff-message').innerText = 'Leave blank to keep current password';
+                document.getElementById('edit-staff-message').style.color = '#6c757d';
             });
             
             // Payment status change listener
@@ -1857,6 +2109,73 @@ if(isset($_POST['add_patient'])) {
                 form.submit();
             }
         }
+        
+        // Function to delete doctor
+        function deleteDoctor(doctorId, doctorName) {
+            if(confirm(`Are you sure you want to delete doctor ${doctorName}?`)) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const doctorIdInput = document.createElement('input');
+                doctorIdInput.type = 'hidden';
+                doctorIdInput.name = 'doctorId';
+                doctorIdInput.value = doctorId;
+                form.appendChild(doctorIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'delete_doctor';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Function to delete staff
+        function deleteStaff(staffId, staffName) {
+            if(confirm(`Are you sure you want to delete staff member ${staffName}?`)) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const staffIdInput = document.createElement('input');
+                staffIdInput.type = 'hidden';
+                staffIdInput.name = 'staffId';
+                staffIdInput.value = staffId;
+                form.appendChild(staffIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'delete_staff';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Function to initialize staff management tabs
+        function initializeStaffTabs() {
+            // Switch to doctors tab if there's a doctor message
+            <?php if(!empty($doctor_msg) || !empty($edit_doctor_msg)): ?>
+                setTimeout(function() {
+                    document.querySelector('a[href="#doctors-tab"]').click();
+                }, 500);
+            <?php endif; ?>
+            
+            // Switch to staff tab if there's a staff message
+            <?php if(!empty($staff_msg) || !empty($edit_staff_msg)): ?>
+                setTimeout(function() {
+                    document.querySelector('a[href="#staff-tab"]').click();
+                }, 500);
+            <?php endif; ?>
+        }
     </script>
 </head>
 <body>
@@ -1896,8 +2215,8 @@ if(isset($_POST['add_patient'])) {
                     <a class="list-group-item list-group-item-action active" data-toggle="list" href="#dash-tab">
                         <i class="fa fa-tachometer mr-2"></i>Dashboard
                     </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#doc-tab">
-                        <i class="fa fa-user-md mr-2"></i>Doctors
+                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#staff-management-tab">
+                        <i class="fa fa-id-badge mr-2"></i>Staff Management
                     </a>
                     <a class="list-group-item list-group-item-action" data-toggle="list" href="#pat-tab">
                         <i class="fa fa-users mr-2"></i>Patients
@@ -1917,9 +2236,6 @@ if(isset($_POST['add_patient'])) {
                     <a class="list-group-item list-group-item-action" data-toggle="list" href="#room-tab">
                         <i class="fa fa-bed mr-2"></i>Rooms/Beds
                     </a>
-                    <a class="list-group-item list-group-item-action" data-toggle="list" href="#staff-tab">
-                        <i class="fa fa-id-badge mr-2"></i>Staff Management
-                    </a>
                 </div>
             </div>
 
@@ -1934,11 +2250,11 @@ if(isset($_POST['add_patient'])) {
                             
                             <!-- Quick Actions -->
                             <div class="quick-actions">
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
+                                <a class="quick-action-btn" data-toggle="list" href="#staff-management-tab">
                                     <i class="fa fa-user-md fa-2x mb-2"></i>
-                                    <div>Add Doctor</div>
+                                    <div>Manage Doctors</div>
                                 </a>
-                                <a class="quick-action-btn" data-toggle="list" href="#staff-tab">
+                                <a class="quick-action-btn" data-toggle="list" href="#staff-management-tab">
                                     <i class="fa fa-id-badge fa-2x mb-2"></i>
                                     <div>Manage Staff</div>
                                 </a>
@@ -2093,61 +2409,334 @@ if(isset($_POST['add_patient'])) {
                         </div>
                     </div>
 
-                    <!-- Doctors Tab -->
-                    <div class="tab-pane fade" id="doc-tab">
-                        <h4>Doctors List</h4>
-                        <?php if($doctor_msg): echo $doctor_msg; endif; ?>
-                        <div class="search-container">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="search-bar">
-                                        <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name or ID..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
-                                        <i class="fa fa-search search-icon"></i>
+                    <!-- Staff Management Tab -->
+                    <div class="tab-pane fade" id="staff-management-tab">
+                        <h4>Staff & Doctor Management</h4>
+                        
+                        <!-- Tab Navigation -->
+                        <ul class="nav nav-tabs staff-management-tabs" id="staffManagementTabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="doctors-tab" data-toggle="tab" href="#doctors-content" role="tab">
+                                    <i class="fa fa-user-md mr-2"></i>Doctors
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="staff-tab" data-toggle="tab" href="#staff-content" role="tab">
+                                    <i class="fa fa-id-badge mr-2"></i>Staff Members
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="add-doctor-tab" data-toggle="tab" href="#add-doctor-content" role="tab">
+                                    <i class="fa fa-plus-circle mr-2"></i>Add Doctor
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="add-staff-tab" data-toggle="tab" href="#add-staff-content" role="tab">
+                                    <i class="fa fa-plus mr-2"></i>Add Staff
+                                </a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Tab Content -->
+                        <div class="tab-content staff-management-content" id="staffManagementContent">
+                            <!-- Doctors Content -->
+                            <div class="tab-pane fade show active" id="doctors-content" role="tabpanel">
+                                <?php if($doctor_msg): echo $doctor_msg; endif; ?>
+                                <?php if($edit_doctor_msg): echo $edit_doctor_msg; endif; ?>
+                                
+                                <div class="search-container mb-3">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="search-bar">
+                                                <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name, ID, or specialization..." onkeyup="filterTable('doctor-search', 'doctors-table-body')">
+                                                <i class="fa fa-search search-icon"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-primary w-100" onclick="exportTable('doctors-table-body', 'doctors')">
+                                                <i class="fa fa-download mr-2"></i>Export Doctors
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary w-100" onclick="exportTable('doctors-table-body', 'doctors')">
-                                        <i class="fa fa-download mr-2"></i>Export Doctors
-                                    </button>
+                                
+                                <table class="table table-hover table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Doctor ID</th>
+                                            <th>Name</th>
+                                            <th>Specialization</th>
+                                            <th>Email</th>
+                                            <th>Contact Number</th>
+                                            <th>Fees (Rs.)</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="doctors-table-body">
+                                        <?php if(count($doctors) > 0): ?>
+                                            <?php foreach($doctors as $doctor): ?>
+                                            <tr>
+                                                <td><strong><?php echo $doctor['id']; ?></strong></td>
+                                                <td><?php echo $doctor['username']; ?></td>
+                                                <td><?php echo $doctor['spec']; ?></td>
+                                                <td><?php echo $doctor['email']; ?></td>
+                                                <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
+                                                <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nContact: <?php echo $doctor['contact']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
+                                                        <i class="fa fa-eye"></i> View
+                                                    </button>
+                                                    <button class="btn btn-sm btn-warning action-btn edit-btn" data-toggle="modal" data-target="#editDoctorModal"
+                                                            data-doctor-id="<?php echo $doctor['id']; ?>"
+                                                            data-doctor-name="<?php echo $doctor['username']; ?>"
+                                                            data-doctor-spec="<?php echo $doctor['spec']; ?>"
+                                                            data-doctor-email="<?php echo $doctor['email']; ?>"
+                                                            data-doctor-fees="<?php echo $doctor['docFees']; ?>"
+                                                            data-doctor-contact="<?php echo $doctor['contact']; ?>">
+                                                        <i class="fa fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger action-btn" onclick="deleteDoctor('<?php echo $doctor['id']; ?>', '<?php echo $doctor['username']; ?>')">
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="7" class="text-center">No doctors found</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Staff Content -->
+                            <div class="tab-pane fade" id="staff-content" role="tabpanel">
+                                <?php if($staff_msg): echo $staff_msg; endif; ?>
+                                <?php if($edit_staff_msg): echo $edit_staff_msg; endif; ?>
+                                
+                                <div class="search-container mb-3">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="search-bar">
+                                                <input type="text" class="form-control" id="staff-search" placeholder="Search staff by name, ID, or role..." onkeyup="filterTable('staff-search', 'staff-table-body')">
+                                                <i class="fa fa-search search-icon"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button class="btn btn-primary w-100" onclick="exportTable('staff-table-body', 'staff')">
+                                                <i class="fa fa-download mr-2"></i>Export Staff
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <table class="table table-hover table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Staff ID</th>
+                                            <th>Name</th>
+                                            <th>Role</th>
+                                            <th>Email</th>
+                                            <th>Contact Number</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="staff-table-body">
+                                        <?php if(count($staff) > 0): ?>
+                                            <?php foreach($staff as $staff_member): ?>
+                                            <tr>
+                                                <td><strong><?php echo $staff_member['id']; ?></strong></td>
+                                                <td><?php echo $staff_member['name']; ?></td>
+                                                <td><?php echo $staff_member['role']; ?></td>
+                                                <td><?php echo $staff_member['email']; ?></td>
+                                                <td><?php echo $staff_member['contact']; ?></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>\\nContact: <?php echo $staff_member['contact']; ?>')">
+                                                        <i class="fa fa-eye"></i> View
+                                                    </button>
+                                                    <button class="btn btn-sm btn-warning action-btn edit-btn" data-toggle="modal" data-target="#editStaffModal"
+                                                            data-staff-id="<?php echo $staff_member['id']; ?>"
+                                                            data-staff-name="<?php echo $staff_member['name']; ?>"
+                                                            data-staff-role="<?php echo $staff_member['role']; ?>"
+                                                            data-staff-email="<?php echo $staff_member['email']; ?>"
+                                                            data-staff-contact="<?php echo $staff_member['contact']; ?>">
+                                                        <i class="fa fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger action-btn" onclick="deleteStaff('<?php echo $staff_member['id']; ?>', '<?php echo $staff_member['name']; ?>')">
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="6" class="text-center">No staff members found</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Add Doctor Content -->
+                            <div class="tab-pane fade" id="add-doctor-content" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <i class="fa fa-user-md mr-2"></i>Add New Doctor
+                                    </div>
+                                    <div class="card-body">
+                                        <form method="POST" id="add-doctor-form">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Doctor ID *</label>
+                                                        <input type="text" name="doctorId" class="form-control" required>
+                                                        <small class="text-muted">Unique identifier for the doctor</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Name *</label>
+                                                        <input type="text" name="doctor" class="form-control" onkeydown="return alphaOnly(event)" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Contact Number *</label>
+                                                        <input type="tel" name="doctorContact" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Specialization *</label>
+                                                        <select name="special" class="form-control" required>
+                                                            <option value="">Select Specialization</option>
+                                                            <option value="General">General Physician</option>
+                                                            <option value="Cardiologist">Cardiologist</option>
+                                                            <option value="Pediatrician">Pediatrician</option>
+                                                            <option value="Neurologist">Neurologist</option>
+                                                            <option value="Dermatologist">Dermatologist</option>
+                                                            <option value="Orthopedic">Orthopedic</option>
+                                                            <option value="Gynecologist">Gynecologist</option>
+                                                            <option value="ENT">ENT Specialist</option>
+                                                            <option value="Psychiatrist">Psychiatrist</option>
+                                                            <option value="Surgeon">Surgeon</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Email *</label>
+                                                        <input type="email" name="demail" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Fees (Rs.) *</label>
+                                                        <input type="number" name="docFees" class="form-control" required step="0.01">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Password *</label>
+                                                        <input type="password" id="dpassword" name="dpassword" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Confirm Password *</label>
+                                                        <input type="password" id="cdpassword" class="form-control" onkeyup="checkDoctorPassword()" required>
+                                                        <small id="message"></small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <button type="submit" name="add_doctor" class="btn btn-success btn-block">Add Doctor</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Add Staff Content -->
+                            <div class="tab-pane fade" id="add-staff-content" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fa fa-id-badge mr-2"></i>Add New Staff Member
+                                    </div>
+                                    <div class="card-body">
+                                        <form method="POST" id="add-staff-form">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Staff ID *</label>
+                                                        <input type="text" name="staffId" class="form-control" required>
+                                                        <small class="text-muted">Unique identifier for the staff member</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Name *</label>
+                                                        <input type="text" name="staff" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Role *</label>
+                                                        <select name="role" class="form-control" required>
+                                                            <option value="">Select Role</option>
+                                                            <option value="Nurse">Nurse</option>
+                                                            <option value="Receptionist">Receptionist</option>
+                                                            <option value="Admin">Admin</option>
+                                                            <option value="Lab Technician">Lab Technician</option>
+                                                            <option value="Pharmacist">Pharmacist</option>
+                                                            <option value="Cleaner">Cleaner</option>
+                                                            <option value="Security">Security</option>
+                                                            <option value="Accountant">Accountant</option>
+                                                            <option value="HR Manager">HR Manager</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Contact *</label>
+                                                        <input type="text" name="scontact" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Email *</label>
+                                                        <input type="email" name="semail" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Password *</label>
+                                                        <input type="password" name="spassword" class="form-control" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <button type="submit" name="add_staff" class="btn btn-primary btn-block">Add Staff Member</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <table class="table table-hover table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Doctor ID</th>
-                                    <th>Name</th>
-                                    <th>Specialization</th>
-                                    <th>Email</th>
-                                    <th>Fees (Rs.)</th>
-                                    <th>Contact Number</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="doctors-table-body">
-                                <?php if(count($doctors) > 0): ?>
-                                    <?php foreach($doctors as $doctor): ?>
-                                    <tr>
-                                        <td><?php echo $doctor['id']; ?></td>
-                                        <td><?php echo $doctor['username']; ?></td>
-                                        <td><?php echo $doctor['spec']; ?></td>
-                                        <td><?php echo $doctor['email']; ?></td>
-                                        <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
-                                        <td><?php echo $doctor['contact'] ? $doctor['contact'] : 'N/A'; ?></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>\\nFees: Rs. <?php echo number_format($doctor['docFees'], 2); ?>')">
-                                                <i class="fa fa-eye"></i> View
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center">No doctors found</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
                     </div>
 
                     <!-- Patients Tab -->
@@ -2855,171 +3444,6 @@ if(isset($_POST['add_patient'])) {
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- Staff Management Tab -->
-                    <div class="tab-pane fade" id="staff-tab">
-                        <h4>Staff & Doctor Management</h4>
-                        
-                        <?php if($staff_msg): echo $staff_msg; endif; ?>
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header bg-success text-white">
-                                        <i class="fa fa-user-md mr-2"></i>Add New Doctor
-                                    </div>
-                                    <div class="card-body">
-                                        <form method="POST" id="add-doctor-form">
-                                            <div class="form-group">
-                                                <label>Doctor ID *</label>
-                                                <input type="text" name="doctorId" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Name *</label>
-                                                <input type="text" name="doctor" class="form-control" onkeydown="return alphaOnly(event)" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Contact Number *</label>
-                                                <input type="tel" name="doctorContact" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Specialization *</label>
-                                                <select name="special" class="form-control" required>
-                                                    <option value="">Select Specialization</option>
-                                                    <option value="General">General Physician</option>
-                                                    <option value="Cardiologist">Cardiologist</option>
-                                                    <option value="Pediatrician">Pediatrician</option>
-                                                    <option value="Neurologist">Neurologist</option>
-                                                    <option value="Dermatologist">Dermatologist</option>
-                                                    <option value="Orthopedic">Orthopedic</option>
-                                                    <option value="Gynecologist">Gynecologist</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Email *</label>
-                                                <input type="email" name="demail" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Password *</label>
-                                                <input type="password" id="dpassword" name="dpassword" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Confirm Password *</label>
-                                                <input type="password" id="cdpassword" class="form-control" onkeyup="checkDoctorPassword()" required>
-                                                <small id="message"></small>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Fees (Rs.) *</label>
-                                                <input type="number" name="docFees" class="form-control" required>
-                                            </div>
-                                            <button type="submit" name="add_doctor" class="btn btn-success btn-block">Add Doctor</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header bg-primary text-white">
-                                        <i class="fa fa-plus-circle mr-2"></i>Add New Staff Member
-                                    </div>
-                                    <div class="card-body">
-                                        <form method="POST" id="add-staff-form">
-                                            <div class="form-group">
-                                                <label>Staff ID</label>
-                                                <input type="text" name="staffId" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Name</label>
-                                                <input type="text" name="staff" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Role</label>
-                                                <select name="role" class="form-control" required>
-                                                    <option value="">Select Role</option>
-                                                    <option value="Nurse">Nurse</option>
-                                                    <option value="Receptionist">Receptionist</option>
-                                                    <option value="Admin">Admin</option>
-                                                    <option value="Lab Technician">Lab Technician</option>
-                                                    <option value="Pharmacist">Pharmacist</option>
-                                                    <option value="Cleaner">Cleaner</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Email</label>
-                                                <input type="email" name="semail" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Contact</label>
-                                                <input type="text" name="scontact" class="form-control" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Password</label>
-                                                <input type="password" name="spassword" class="form-control" required>
-                                            </div>
-                                            <button type="submit" name="add_staff" class="btn btn-primary btn-block">Add Staff Member</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <h5>Doctors & Staff List</h5>
-                        <div class="d-flex justify-content-between mb-3">
-                            <input type="text" class="form-control w-25" id="staff-search" placeholder="Search by ID or Name..." onkeyup="filterTable('staff-search', 'staff-table-body')">
-                            <button class="btn btn-primary" onclick="exportTable('staff-table-body', 'staff')">Export</button>
-                        </div>
-                        <table class="table table-hover table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Role/Type</th>
-                                    <th>Email</th>
-                                    <th>Contact/Fees</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="staff-table-body">
-                                <!-- Doctors -->
-                                <?php foreach($doctors as $doctor): ?>
-                                <tr>
-                                    <td><?php echo $doctor['id']; ?></td>
-                                    <td><?php echo $doctor['username']; ?></td>
-                                    <td><span class="badge badge-primary">Doctor (<?php echo $doctor['spec']; ?>)</span></td>
-                                    <td><?php echo $doctor['email']; ?></td>
-                                    <td>Rs. <?php echo number_format($doctor['docFees'], 2); ?></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Doctor Details:\\nID: <?php echo $doctor['id']; ?>\\nName: <?php echo $doctor['username']; ?>\\nSpecialization: <?php echo $doctor['spec']; ?>\\nEmail: <?php echo $doctor['email']; ?>')">
-                                            <i class="fa fa-eye"></i> View
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                
-                                <!-- Staff -->
-                                <?php foreach($staff as $staff_member): ?>
-                                <tr>
-                                    <td><?php echo $staff_member['id']; ?></td>
-                                    <td><?php echo $staff_member['name']; ?></td>
-                                    <td><span class="badge badge-secondary"><?php echo $staff_member['role']; ?></span></td>
-                                    <td><?php echo $staff_member['email']; ?></td>
-                                    <td><?php echo $staff_member['contact']; ?></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-info action-btn" onclick="alert('Staff Details:\\nID: <?php echo $staff_member['id']; ?>\\nName: <?php echo $staff_member['name']; ?>\\nRole: <?php echo $staff_member['role']; ?>\\nEmail: <?php echo $staff_member['email']; ?>')">
-                                            <i class="fa fa-eye"></i> View
-                                        </button>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                
-                                <?php if(count($doctors) == 0 && count($staff) == 0): ?>
-                                <tr>
-                                    <td colspan="6" class="text-center">No doctors or staff members found</td>
-                                </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </div>
@@ -3241,6 +3665,156 @@ if(isset($_POST['add_patient'])) {
         </div>
     </div>
 
+    <!-- Edit Doctor Modal -->
+    <div class="modal fade" id="editDoctorModal" tabindex="-1" role="dialog" aria-labelledby="editDoctorModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="editDoctorModalLabel"><i class="fa fa-edit mr-2"></i>Edit Doctor Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="edit-doctor-form">
+                        <input type="hidden" name="update_password" id="update_password" value="0">
+                        
+                        <div class="form-group">
+                            <label>Doctor ID</label>
+                            <input type="text" id="edit_doctorId" name="edit_doctorId" class="form-control" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" id="edit_doctor" name="edit_doctor" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Contact Number *</label>
+                            <input type="tel" id="edit_doctorContact" name="edit_doctorContact" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Specialization *</label>
+                            <select id="edit_special" name="edit_special" class="form-control" required>
+                                <option value="">Select Specialization</option>
+                                <option value="General">General Physician</option>
+                                <option value="Cardiologist">Cardiologist</option>
+                                <option value="Pediatrician">Pediatrician</option>
+                                <option value="Neurologist">Neurologist</option>
+                                <option value="Dermatologist">Dermatologist</option>
+                                <option value="Orthopedic">Orthopedic</option>
+                                <option value="Gynecologist">Gynecologist</option>
+                                <option value="ENT">ENT Specialist</option>
+                                <option value="Psychiatrist">Psychiatrist</option>
+                                <option value="Surgeon">Surgeon</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="edit_demail" name="edit_demail" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Fees (Rs.) *</label>
+                            <input type="number" id="edit_docFees" name="edit_docFees" class="form-control" required step="0.01">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>New Password (Leave blank to keep current)</label>
+                            <input type="password" id="edit_dpassword" name="edit_dpassword" class="form-control" onkeyup="checkEditDoctorPassword()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="edit_cdpassword" class="form-control" onkeyup="checkEditDoctorPassword()">
+                            <small id="edit-message" class="form-text">Leave blank to keep current password</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="document.getElementById('edit-doctor-form').submit();">
+                        <i class="fa fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Staff Modal -->
+    <div class="modal fade" id="editStaffModal" tabindex="-1" role="dialog" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="editStaffModalLabel"><i class="fa fa-edit mr-2"></i>Edit Staff Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="edit-staff-form">
+                        <input type="hidden" name="update_staff_password" id="update_staff_password" value="0">
+                        
+                        <div class="form-group">
+                            <label>Staff ID</label>
+                            <input type="text" id="edit_staffId" name="edit_staffId" class="form-control" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" id="edit_staff" name="edit_staff" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Role *</label>
+                            <select id="edit_role" name="edit_role" class="form-control" required>
+                                <option value="">Select Role</option>
+                                <option value="Nurse">Nurse</option>
+                                <option value="Receptionist">Receptionist</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Lab Technician">Lab Technician</option>
+                                <option value="Pharmacist">Pharmacist</option>
+                                <option value="Cleaner">Cleaner</option>
+                                <option value="Security">Security</option>
+                                <option value="Accountant">Accountant</option>
+                                <option value="HR Manager">HR Manager</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="edit_semail" name="edit_semail" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Contact *</label>
+                            <input type="text" id="edit_scontact" name="edit_scontact" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>New Password (Leave blank to keep current)</label>
+                            <input type="password" id="edit_spassword" name="edit_spassword" class="form-control" onkeyup="checkEditStaffPassword()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="edit_cspassword" class="form-control" onkeyup="checkEditStaffPassword()">
+                            <small id="edit-staff-message" class="form-text">Leave blank to keep current password</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="document.getElementById('edit-staff-form').submit();">
+                        <i class="fa fa-save mr-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
@@ -3263,6 +3837,55 @@ if(isset($_POST['add_patient'])) {
                     }
                 });
             }, 5000);
+            
+            // Add form submission for edit forms
+            const editDoctorForm = document.getElementById('edit-doctor-form');
+            if(editDoctorForm) {
+                editDoctorForm.addEventListener('submit', function(e) {
+                    const password = document.getElementById('edit_dpassword').value;
+                    const confirmPassword = document.getElementById('edit_cdpassword').value;
+                    const updatePassword = document.getElementById('update_password').value;
+                    
+                    if(updatePassword === '1' && password !== confirmPassword) {
+                        e.preventDefault();
+                        alert('Passwords do not match! Please check and try again.');
+                        return false;
+                    }
+                    
+                    // Create hidden input for edit_doctor action
+                    const actionInput = document.createElement('input');
+                    actionInput.type = 'hidden';
+                    actionInput.name = 'edit_doctor';
+                    actionInput.value = '1';
+                    this.appendChild(actionInput);
+                    
+                    return true;
+                });
+            }
+            
+            const editStaffForm = document.getElementById('edit-staff-form');
+            if(editStaffForm) {
+                editStaffForm.addEventListener('submit', function(e) {
+                    const password = document.getElementById('edit_spassword').value;
+                    const confirmPassword = document.getElementById('edit_cspassword').value;
+                    const updatePassword = document.getElementById('update_staff_password').value;
+                    
+                    if(updatePassword === '1' && password !== confirmPassword) {
+                        e.preventDefault();
+                        alert('Passwords do not match! Please check and try again.');
+                        return false;
+                    }
+                    
+                    // Create hidden input for edit_staff action
+                    const actionInput = document.createElement('input');
+                    actionInput.type = 'hidden';
+                    actionInput.name = 'edit_staff';
+                    actionInput.value = '1';
+                    this.appendChild(actionInput);
+                    
+                    return true;
+                });
+            }
         });
     </script>
 </body>
