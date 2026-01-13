@@ -262,7 +262,7 @@ h2 {
     </a>
     <div class="welcome">
         <i class="fas fa-user-circle mr-2"></i>Welcome  to, <?php echo $_SESSION['reception']; ?> 
-        | <a href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Logou</a>
+        | <a href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
     </div>
 </nav>
 
@@ -270,7 +270,7 @@ h2 {
     <ul>
         <li class="<?php if($page=='dashboard') echo 'active'; ?>">
             <a href="reception_dashboard.php?page=dashboard">
-                <i class="fas fa-tachometer-alt"></i><span> Dashboard</span>
+                <i class="fas fa-tachometer-alt"></i><span> Dashboar</span>
             </a>
         </li>
         <li class="<?php if($page=='patients') echo 'active'; ?>">
