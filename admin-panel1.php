@@ -22,6 +22,7 @@ $staff_msg = "";
 $payment_msg = "";
 $appointment_msg = "";
 $prescription_msg = "";
+$schedule_msg = "";
 
 // ===========================
 // ADD PATIENT (NO PASSWORD ENCRYPTION)
@@ -264,9 +265,26 @@ if(isset($_POST['add_schedule'])){
               VALUES ('$staff_name', '$role', '$day', '$shift')";
     
     if(mysqli_query($con, $query)){
+        $schedule_msg = "<div class='alert alert-success'>✅ Schedule added successfully!</div>";
         $_SESSION['success'] = "Schedule added successfully!";
-        header("Location: " . $_SERVER['PHP_SELF'] . "#sched-tab");
-        exit();
+    } else {
+        $schedule_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// DELETE SCHEDULE (NEW FUNCTIONALITY)
+// ===========================
+if(isset($_POST['delete_schedule'])){
+    $schedule_id = mysqli_real_escape_string($con, $_POST['schedule_id']);
+    
+    $query = "DELETE FROM scheduletb WHERE id='$schedule_id'";
+    
+    if(mysqli_query($con, $query)){
+        $schedule_msg = "<div class='alert alert-success'>✅ Schedule deleted successfully!</div>";
+        $_SESSION['success'] = "Schedule deleted successfully!";
+    } else {
+        $schedule_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
     }
 }
 
@@ -431,6 +449,27 @@ foreach($appointments as $app){
 }
 
 // ===========================
+// GET ALL STAFF NAMES FOR SCHEDULE DATALIST
+// ===========================
+$all_staff_names = [];
+// Get doctor names
+foreach($doctors as $doctor){
+    $all_staff_names[] = [
+        'name' => $doctor['username'],
+        'id' => $doctor['id'],
+        'type' => 'Doctor'
+    ];
+}
+// Get staff names
+foreach($staff as $staff_member){
+    $all_staff_names[] = [
+        'name' => $staff_member['name'],
+        'id' => $staff_member['id'],
+        'type' => $staff_member['role']
+    ];
+}
+
+// ===========================
 // FUNCTION TO CHECK/CREATE TABLES
 // ===========================
 function checkAndCreateTables($con){
@@ -581,9 +620,6 @@ if(isset($_POST['add_patient'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* CSS styles remain the same as in your original code */
-        /* I'm keeping the CSS as is to save space */
-        
         :root {
             --primary: #342ac1;
             --primary-gradient: linear-gradient(to right, #3931af, #00c6ff);
@@ -603,8 +639,360 @@ if(isset($_POST['add_patient'])) {
             font-size: 16px;
         }
         
-        /* ... rest of your CSS styles ... */
+        .navbar {
+            background: var(--primary-gradient) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
         
+        .list-group-item.active {
+            background: var(--primary-gradient) !important;
+            border-color: var(--primary);
+        }
+        
+        .dashboard-bg {
+            background: linear-gradient(rgba(52, 42, 193, 0.9), rgba(0, 198, 255, 0.9)), url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            height: 200px;
+            border-radius: 10px;
+            margin-bottom: -50px;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .dashboard-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dash-card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dash-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .dash-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 40px;
+            opacity: 0.3;
+        }
+        
+        .card-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .quick-actions {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            width: 18%;
+            margin-bottom: 10px;
+            color: var(--dark);
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .quick-action-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            text-decoration: none;
+            transform: translateY(-3px);
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .recent-activity {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        
+        .patient-registration-card {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .generated-nic {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-bar {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        
+        .table th {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .table td {
+            vertical-align: middle;
+        }
+        
+        .action-btn {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-available {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-occupied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-not-sent {
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .status-hospital-pharmacy {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-patient-sms {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .prescription-action-btn {
+            margin: 2px;
+            padding: 5px 8px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        
+        .search-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-option-btn {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .search-option-btn:hover,
+        .search-option-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .send-option-card {
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            height: 100%;
+        }
+        
+        .send-option-card:hover,
+        .send-option-card.selected {
+            border-color: var(--primary);
+            background: rgba(52, 42, 193, 0.05);
+        }
+        
+        .send-option-icon {
+            font-size: 40px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .send-option-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .send-option-desc {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .prescription-modal .modal-content {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .staff-search-container {
+            position: relative;
+        }
+        
+        .staff-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .staff-suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .staff-suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .staff-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .staff-id-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+        
+        .badge-doctor {
+            background: #007bff;
+            color: white;
+        }
+        
+        .badge-staff {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .schedule-delete-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .quick-action-btn {
+                width: 48%;
+                margin-bottom: 10px;
+            }
+            
+            .search-options {
+                flex-direction: column;
+            }
+        }
     </style>
     <script>
         // Global variables
@@ -614,6 +1002,7 @@ if(isset($_POST['add_patient'])) {
         let currentAppointmentIdToCancel = null;
         let currentPaymentSearchMode = 'patientId';
         let currentSendOption = '';
+        let currentScheduleIdToDelete = null;
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -641,6 +1030,9 @@ if(isset($_POST['add_patient'])) {
                     document.querySelector('a[href="#pat-tab"]').click();
                 }, 500);
             <?php endif; ?>
+            
+            // Setup staff search functionality
+            setupStaffSearch();
         });
         
         // Function to update dashboard counts
@@ -787,6 +1179,13 @@ if(isset($_POST['add_patient'])) {
                 
                 // Load prescription details
                 loadPrescriptionDetails(prescriptionId);
+            });
+            
+            // Delete schedule modal
+            $('#deleteScheduleModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                const scheduleId = button.data('schedule-id');
+                currentScheduleIdToDelete = scheduleId;
             });
             
             // Payment status change listener
@@ -1342,6 +1741,115 @@ if(isset($_POST['add_patient'])) {
                 const actionInput = document.createElement('input');
                 actionInput.type = 'hidden';
                 actionInput.name = 'send_to_patient';
+                actionInput.value = '1';
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Function to setup staff search functionality
+        function setupStaffSearch() {
+            const staffNameInput = document.getElementById('staff_name');
+            const suggestionsContainer = document.getElementById('staff-suggestions');
+            
+            if(!staffNameInput || !suggestionsContainer) return;
+            
+            staffNameInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                suggestionsContainer.innerHTML = '';
+                
+                if (searchTerm.length < 2) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                
+                // Get staff data from PHP (embedded in the page)
+                const staffData = <?php echo json_encode($all_staff_names); ?>;
+                
+                // Filter matching staff
+                const matches = staffData.filter(staff => 
+                    staff.name.toLowerCase().includes(searchTerm) || 
+                    staff.id.toLowerCase().includes(searchTerm)
+                ).slice(0, 10); // Limit to 10 results
+                
+                if (matches.length > 0) {
+                    matches.forEach(staff => {
+                        const div = document.createElement('div');
+                        div.className = 'staff-suggestion-item';
+                        div.innerHTML = `
+                            <strong>${staff.name}</strong>
+                            <span class="staff-id-badge badge-${staff.type.toLowerCase()}">${staff.type}: ${staff.id}</span>
+                        `;
+                        div.addEventListener('click', function() {
+                            staffNameInput.value = staff.name;
+                            suggestionsContainer.style.display = 'none';
+                            
+                            // Auto-fill role if it's a doctor
+                            const roleInput = document.getElementById('role');
+                            if (staff.type === 'Doctor' && roleInput) {
+                                roleInput.value = 'Doctor';
+                            }
+                        });
+                        suggestionsContainer.appendChild(div);
+                    });
+                    suggestionsContainer.style.display = 'block';
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!staffNameInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+        
+        // Function to confirm schedule deletion
+        function confirmDeleteSchedule() {
+            if(!currentScheduleIdToDelete) return;
+            
+            // Submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            const scheduleIdInput = document.createElement('input');
+            scheduleIdInput.type = 'hidden';
+            scheduleIdInput.name = 'schedule_id';
+            scheduleIdInput.value = currentScheduleIdToDelete;
+            form.appendChild(scheduleIdInput);
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'delete_schedule';
+            actionInput.value = '1';
+            form.appendChild(actionInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Function to directly delete schedule
+        function deleteSchedule(scheduleId) {
+            if(confirm('Are you sure you want to delete this schedule?')) {
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const scheduleIdInput = document.createElement('input');
+                scheduleIdInput.type = 'hidden';
+                scheduleIdInput.name = 'schedule_id';
+                scheduleIdInput.value = scheduleId;
+                form.appendChild(scheduleIdInput);
+                
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'delete_schedule';
                 actionInput.value = '1';
                 form.appendChild(actionInput);
                 
@@ -2139,6 +2647,8 @@ if(isset($_POST['add_patient'])) {
                     <div class="tab-pane fade" id="sched-tab">
                         <h4>Staff Schedules</h4>
                         
+                        <?php if($schedule_msg): echo $schedule_msg; endif; ?>
+                        
                         <!-- Add Schedule Form -->
                         <div class="card mb-4">
                             <div class="card-header bg-info text-white">
@@ -2150,13 +2660,27 @@ if(isset($_POST['add_patient'])) {
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="staff_name">Staff Name *</label>
-                                                <input type="text" class="form-control" id="staff_name" name="staff_name" required>
+                                                <div class="staff-search-container">
+                                                    <input type="text" class="form-control" id="staff_name" name="staff_name" required placeholder="Type to search staff/doctors...">
+                                                    <div class="staff-suggestions" id="staff-suggestions"></div>
+                                                </div>
+                                                <small class="text-muted">Start typing to see suggestions from doctors and staff</small>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="role">Role *</label>
-                                                <input type="text" class="form-control" id="role" name="role" required>
+                                                <select class="form-control" id="role" name="role" required>
+                                                    <option value="">Select Role</option>
+                                                    <option value="Doctor">Doctor</option>
+                                                    <option value="Nurse">Nurse</option>
+                                                    <option value="Receptionist">Receptionist</option>
+                                                    <option value="Admin">Admin</option>
+                                                    <option value="Lab Technician">Lab Technician</option>
+                                                    <option value="Pharmacist">Pharmacist</option>
+                                                    <option value="Cleaner">Cleaner</option>
+                                                    <option value="Security">Security</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
@@ -2208,6 +2732,7 @@ if(isset($_POST['add_patient'])) {
                                     <th>Role</th>
                                     <th>Day</th>
                                     <th>Shift</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="schedules-table-body">
@@ -2219,11 +2744,16 @@ if(isset($_POST['add_patient'])) {
                                         <td><?php echo $schedule['role']; ?></td>
                                         <td><?php echo $schedule['day']; ?></td>
                                         <td><?php echo $schedule['shift']; ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger schedule-delete-btn" onclick="deleteSchedule(<?php echo $schedule['id']; ?>)">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="5" class="text-center">No schedules found</td>
+                                        <td colspan="6" class="text-center">No schedules found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -2684,6 +3214,28 @@ if(isset($_POST['add_patient'])) {
                     <button type="button" class="btn btn-success" id="confirm-send-btn" onclick="confirmSendPrescription()" disabled>
                         <i class="fa fa-send mr-1"></i> Send Prescription
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Schedule Modal -->
+    <div class="modal fade" id="deleteScheduleModal" tabindex="-1" role="dialog" aria-labelledby="deleteScheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteScheduleModalLabel">Delete Schedule</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true" style="color: white;">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this schedule?</p>
+                    <p>This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteSchedule()">Delete Schedule</button>
                 </div>
             </div>
         </div>
