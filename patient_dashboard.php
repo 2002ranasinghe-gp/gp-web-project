@@ -1769,7 +1769,7 @@ if($settings_result){
             });
         });
         
-        // Quick action button
+        // Quick action buttons
         function showTab(tabId) {
             $('.tab-pane').removeClass('show active');
             $('#' + tabId).addClass('show active');
