@@ -1,4 +1,4 @@
-?php
+<?php
 include('func1.php');
 
 // Fetch counts
