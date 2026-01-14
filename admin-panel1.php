@@ -26,6 +26,7 @@ $edit_doctor_msg = "";
 $edit_staff_msg = "";
 $settings_msg = "";
 $room_msg = "";
+$feedback_msg = "";
 
 // ===========================
 // GET ADMIN INFO
@@ -54,6 +55,10 @@ $today_appointments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointm
 $pending_payments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM paymenttb WHERE pay_status = 'Pending'"));
 $available_rooms = mysqli_num_rows(mysqli_query($con, "SELECT * FROM roomtb WHERE status = 'Available'"));
 $active_prescriptions = mysqli_num_rows(mysqli_query($con, "SELECT * FROM prestb WHERE emailStatus = 'Not Sent'"));
+$total_feedback = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback"));
+$today_feedback = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE DATE(feedback_date) = CURDATE()"));
+$positive_feedback = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating >= 4"));
+$average_rating = mysqli_fetch_array(mysqli_query($con, "SELECT AVG(rating) as avg_rating FROM patient_feedback"))['avg_rating'] ?? 0;
 
 // ===========================
 // ADD PATIENT (WITH PASSWORD VALIDATION FIXED)
@@ -841,6 +846,53 @@ if(isset($_POST['backup_database'])){
 }
 
 // ===========================
+// PATIENT FEEDBACK MANAGEMENT
+// ===========================
+if(isset($_POST['delete_feedback'])){
+    $feedback_id = mysqli_real_escape_string($con, $_POST['feedback_id']);
+    
+    $query = "DELETE FROM patient_feedback WHERE id='$feedback_id'";
+    
+    if(mysqli_query($con, $query)){
+        $feedback_msg = "<div class='alert alert-success'>✅ Feedback deleted successfully!</div>";
+        $_SESSION['success'] = "Feedback deleted!";
+    } else {
+        $feedback_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+if(isset($_POST['reply_to_feedback'])){
+    $feedback_id = mysqli_real_escape_string($con, $_POST['feedback_id']);
+    $reply_message = mysqli_real_escape_string($con, $_POST['reply_message']);
+    
+    $query = "UPDATE patient_feedback SET 
+              admin_reply='$reply_message',
+              reply_date=NOW(),
+              status='Replied'
+              WHERE id='$feedback_id'";
+    
+    if(mysqli_query($con, $query)){
+        $feedback_msg = "<div class='alert alert-success'>✅ Reply sent successfully!</div>";
+        $_SESSION['success'] = "Reply sent!";
+    } else {
+        $feedback_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+if(isset($_POST['mark_feedback_read'])){
+    $feedback_id = mysqli_real_escape_string($con, $_POST['feedback_id']);
+    
+    $query = "UPDATE patient_feedback SET status='Read' WHERE id='$feedback_id'";
+    
+    if(mysqli_query($con, $query)){
+        $feedback_msg = "<div class='alert alert-success'>✅ Feedback marked as read!</div>";
+        $_SESSION['success'] = "Feedback marked as read!";
+    } else {
+        $feedback_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
 // GET DATA FROM DATABASE
 // ===========================
 $patients = [];
@@ -852,6 +904,7 @@ $staff = [];
 $schedules = [];
 $rooms = [];
 $hospital_settings = [];
+$feedback = [];
 
 // Get patients
 $patient_result = mysqli_query($con, "SELECT pid, fname, lname, gender, email, contact, dob, national_id FROM patreg ORDER BY pid DESC");
@@ -922,6 +975,17 @@ $settings_result = mysqli_query($con, "SELECT * FROM hospital_settings");
 if($settings_result){
     while($row = mysqli_fetch_assoc($settings_result)){
         $hospital_settings[$row['setting_key']] = $row['setting_value'];
+    }
+}
+
+// Get patient feedback
+$feedback_result = mysqli_query($con, "SELECT pf.*, p.fname, p.lname, p.email as patient_email, p.contact as patient_contact 
+                                      FROM patient_feedback pf 
+                                      LEFT JOIN patreg p ON pf.patient_id = p.pid 
+                                      ORDER BY pf.feedback_date DESC");
+if($feedback_result){
+    while($row = mysqli_fetch_assoc($feedback_result)){
+        $feedback[] = $row;
     }
 }
 
@@ -1078,6 +1142,22 @@ function checkAndCreateTables($con){
             role VARCHAR(20) DEFAULT 'admin',
             created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )",
+        
+        'patient_feedback' => "CREATE TABLE IF NOT EXISTS patient_feedback (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            patient_id INT NOT NULL,
+            patient_name VARCHAR(100) NOT NULL,
+            patient_email VARCHAR(100) NOT NULL,
+            department VARCHAR(50),
+            doctor_name VARCHAR(100),
+            rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            comments TEXT,
+            admin_reply TEXT,
+            status VARCHAR(20) DEFAULT 'Unread',
+            feedback_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            reply_date TIMESTAMP NULL,
+            FOREIGN KEY (patient_id) REFERENCES patreg(pid) ON DELETE CASCADE
         )"
     ];
     
@@ -1110,6 +1190,44 @@ function checkAndCreateTables($con){
                 $check_column = mysqli_query($con, "SHOW COLUMNS FROM admintb LIKE 'profile_pic'");
                 if(mysqli_num_rows($check_column) == 0){
                     $alter_query = "ALTER TABLE admintb ADD COLUMN profile_pic VARCHAR(255) DEFAULT 'default-avatar.jpg'";
+                    mysqli_query($con, $alter_query);
+                }
+            }
+            
+            // For patient_feedback table, check and add columns if missing
+            if($table_name == 'patient_feedback'){
+                // Check if department column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'department'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN department VARCHAR(50)";
+                    mysqli_query($con, $alter_query);
+                }
+                
+                // Check if doctor_name column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'doctor_name'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN doctor_name VARCHAR(100)";
+                    mysqli_query($con, $alter_query);
+                }
+                
+                // Check if admin_reply column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'admin_reply'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN admin_reply TEXT";
+                    mysqli_query($con, $alter_query);
+                }
+                
+                // Check if status column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'status'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN status VARCHAR(20) DEFAULT 'Unread'";
+                    mysqli_query($con, $alter_query);
+                }
+                
+                // Check if reply_date column exists
+                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'reply_date'");
+                if(mysqli_num_rows($check_column) == 0){
+                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN reply_date TIMESTAMP NULL";
                     mysqli_query($con, $alter_query);
                 }
             }
@@ -1409,6 +1527,18 @@ if(isset($_SESSION['error'])){
             background: #f8d7da;
             color: #721c24;
         }
+        .status-unread {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status-read {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-replied {
+            background: #cce5ff;
+            color: #004085;
+        }
 
         /* Charts Container */
         .chart-container {
@@ -1473,6 +1603,46 @@ if(isset($_SESSION['error'])){
         .backup-item:hover {
             background: #f8f9fa;
             transform: translateX(5px);
+        }
+
+        /* Feedback Page Styles */
+        .feedback-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-left: 4px solid #0077b6;
+            transition: all 0.3s;
+        }
+        .feedback-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .feedback-rating {
+            font-size: 18px;
+            color: #ffc107;
+        }
+        .feedback-content {
+            margin-bottom: 15px;
+        }
+        .feedback-reply {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 3px solid #28a745;
+        }
+        .star-rating {
+            color: #ffc107;
         }
 
         /* Responsive */
@@ -1679,6 +1849,38 @@ if(isset($_SESSION['error'])){
         .custom-file-label::after {
             content: "Browse";
         }
+
+        /* Feedback Filter */
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-btn {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid #0077b6;
+            background: white;
+            color: #0077b6;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: #0077b6;
+            color: white;
+        }
+        
+        /* Star Rating */
+        .rating-stars {
+            font-size: 18px;
+            color: #ffc107;
+        }
+        
+        .empty-star {
+            color: #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -1712,6 +1914,9 @@ if(isset($_SESSION['error'])){
             <li data-target="room-tab">
                 <i class="fas fa-bed"></i> <span>Rooms/Beds</span>
             </li>
+            <li data-target="feedback-tab">
+                <i class="fas fa-comments"></i> <span>Patient Feedback</span>
+            </li>
             <li data-target="settings-tab">
                 <i class="fas fa-cog"></i> <span>Settings</span>
             </li>
@@ -1727,7 +1932,7 @@ if(isset($_SESSION['error'])){
     <div class="main-content">
         <!-- Topbar -->
         <div class="topbar">
-            <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?> Helthcare Hospital</div>
+            <div class="brand">🏥 <?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?></div>
             <div class="user-info">
                 <div class="profile-pic-container">
                     <?php if($admin_profile_pic && file_exists('uploads/profile_pictures/' . $admin_profile_pic)): ?>
@@ -1845,14 +2050,15 @@ if(isset($_SESSION['error'])){
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
                                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                            Pending Payments
+                                            Patient Feedback
                                         </div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            <?php echo $pending_payments; ?>
+                                            <?php echo $total_feedback; ?>
                                         </div>
+                                        <div class="small text-muted">Avg Rating: <?php echo number_format($average_rating, 1); ?>/5</div>
                                     </div>
                                     <div class="col-auto">
-                                        <i class="fas fa-money-bill-wave stats-icon text-warning"></i>
+                                        <i class="fas fa-comments stats-icon text-warning"></i>
                                     </div>
                                 </div>
                             </div>
@@ -1887,10 +2093,10 @@ if(isset($_SESSION['error'])){
                         </div>
                     </div>
                     <div class="col-lg-3 col-md-6 mb-4">
-                        <div class="quick-action-card" onclick="showTab('room-tab')">
-                            <i class="fas fa-bed"></i>
-                            <h5>Manage Rooms</h5>
-                            <p>Add or manage rooms/beds</p>
+                        <div class="quick-action-card" onclick="showTab('feedback-tab')">
+                            <i class="fas fa-comments"></i>
+                            <h5>View Feedback</h5>
+                            <p>Check patient feedback</p>
                         </div>
                     </div>
                 </div>
@@ -1905,8 +2111,8 @@ if(isset($_SESSION['error'])){
                     </div>
                     <div class="col-md-6">
                         <div class="chart-container">
-                            <h5>Department Distribution</h5>
-                            <canvas id="departmentChart" height="200"></canvas>
+                            <h5>Patient Feedback Rating</h5>
+                            <canvas id="feedbackChart" height="200"></canvas>
                         </div>
                     </div>
                 </div>
@@ -1937,12 +2143,12 @@ if(isset($_SESSION['error'])){
                                             <td><span class="badge badge-success">Active</span></td>
                                         </tr>
                                         <?php endif; ?>
-                                        <?php if($total_doctors > 0): ?>
+                                        <?php if($total_feedback > 0): ?>
                                         <tr>
                                             <td>Just now</td>
-                                            <td>Doctors Available</td>
-                                            <td>Total <?php echo $total_doctors; ?> doctors</td>
-                                            <td><span class="badge badge-success">Active</span></td>
+                                            <td>Patient Feedback</td>
+                                            <td><?php echo $total_feedback; ?> feedback received</td>
+                                            <td><span class="badge badge-info">Average: <?php echo number_format($average_rating, 1); ?>/5</span></td>
                                         </tr>
                                         <?php endif; ?>
                                         <?php if($today_appointments > 0): ?>
@@ -1951,6 +2157,14 @@ if(isset($_SESSION['error'])){
                                             <td>Today's Appointments</td>
                                             <td><?php echo $today_appointments; ?> appointments</td>
                                             <td><span class="badge badge-info">Scheduled</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <?php if($today_feedback > 0): ?>
+                                        <tr>
+                                            <td>Today</td>
+                                            <td>Today's Feedback</td>
+                                            <td><?php echo $today_feedback; ?> new feedback</td>
+                                            <td><span class="badge badge-warning">New</span></td>
                                         </tr>
                                         <?php endif; ?>
                                     </tbody>
@@ -2909,6 +3123,300 @@ if(isset($_SESSION['error'])){
                 </div>
             </div>
 
+            <!-- Patient Feedback Tab -->
+            <div class="tab-pane fade" id="feedback-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-comments mr-2"></i>Patient Feedback Management</h3>
+                    <div>
+                        <span class="badge badge-primary">Total: <?php echo $total_feedback; ?></span>
+                        <span class="badge badge-success ml-2">Avg Rating: <?php echo number_format($average_rating, 1); ?>/5</span>
+                        <span class="badge badge-warning ml-2">Today: <?php echo $today_feedback; ?></span>
+                    </div>
+                </div>
+                
+                <?php if($feedback_msg): echo $feedback_msg; endif; ?>
+                
+                <!-- Feedback Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total Feedback
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $total_feedback; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-comments stats-icon text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stats-card card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Average Rating
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo number_format($average_rating, 1); ?>/5
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="rating-stars">
+                                            <?php
+                                            $fullStars = floor($average_rating);
+                                            $hasHalfStar = ($average_rating - $fullStars) >= 0.5;
+                                            
+                                            for($i = 1; $i <= 5; $i++):
+                                                if($i <= $fullStars): ?>
+                                                    <i class="fas fa-star"></i>
+                                                <?php elseif($i == $fullStars + 1 && $hasHalfStar): ?>
+                                                    <i class="fas fa-star-half-alt"></i>
+                                                <?php else: ?>
+                                                    <i class="far fa-star empty-star"></i>
+                                                <?php endif;
+                                            endfor;
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stats-card card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Positive Feedback (4-5)
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $positive_feedback; ?>
+                                        </div>
+                                        <div class="small text-muted">
+                                            <?php echo $total_feedback > 0 ? round(($positive_feedback/$total_feedback)*100, 1) : 0; ?>%
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-thumbs-up stats-icon text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stats-card card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Today's Feedback
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $today_feedback; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-calendar-day stats-icon text-info"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filter Buttons -->
+                <div class="filter-buttons mb-4">
+                    <button class="filter-btn active" onclick="filterFeedback('all')">All Feedback</button>
+                    <button class="filter-btn" onclick="filterFeedback('unread')">Unread</button>
+                    <button class="filter-btn" onclick="filterFeedback('read')">Read</button>
+                    <button class="filter-btn" onclick="filterFeedback('replied')">Replied</button>
+                    <button class="filter-btn" onclick="filterFeedback('rating-5')">5 Stars</button>
+                    <button class="filter-btn" onclick="filterFeedback('rating-4')">4 Stars</button>
+                    <button class="filter-btn" onclick="filterFeedback('rating-1-3')">1-3 Stars</button>
+                </div>
+                
+                <!-- Search -->
+                <div class="search-container mb-4">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="feedback-search" placeholder="Search feedback by patient name, email, department, or comments..." onkeyup="filterFeedbackBySearch()">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <!-- Feedback List -->
+                <div id="feedback-list">
+                    <?php if(count($feedback) > 0): ?>
+                        <?php foreach($feedback as $fb): ?>
+                        <div class="feedback-card" data-rating="<?php echo $fb['rating']; ?>" data-status="<?php echo strtolower($fb['status']); ?>">
+                            <div class="feedback-header">
+                                <div>
+                                    <h5 class="mb-1">
+                                        <strong><?php echo $fb['patient_name']; ?></strong>
+                                        <?php if($fb['fname']): ?>
+                                            <small class="text-muted">(<?php echo $fb['fname'] . ' ' . $fb['lname']; ?>)</small>
+                                        <?php endif; ?>
+                                    </h5>
+                                    <div class="d-flex align-items-center">
+                                        <div class="feedback-rating mr-3">
+                                            <?php for($i = 1; $i <= 5; $i++): ?>
+                                                <?php if($i <= $fb['rating']): ?>
+                                                    <i class="fas fa-star text-warning"></i>
+                                                <?php else: ?>
+                                                    <i class="far fa-star text-muted"></i>
+                                                <?php endif; ?>
+                                            <?php endfor; ?>
+                                            <span class="ml-2"><?php echo $fb['rating']; ?>/5</span>
+                                        </div>
+                                        <span class="badge badge-light">
+                                            <i class="far fa-clock mr-1"></i>
+                                            <?php echo date('M d, Y h:i A', strtotime($fb['feedback_date'])); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="status-badge status-<?php echo strtolower($fb['status']); ?>">
+                                        <?php echo $fb['status']; ?>
+                                    </span>
+                                    <?php if($fb['department']): ?>
+                                        <span class="badge badge-info ml-2"><?php echo $fb['department']; ?></span>
+                                    <?php endif; ?>
+                                    <?php if($fb['doctor_name']): ?>
+                                        <span class="badge badge-secondary ml-2">Dr. <?php echo $fb['doctor_name']; ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            
+                            <div class="feedback-content">
+                                <p class="mb-2"><?php echo nl2br(htmlspecialchars($fb['comments'])); ?></p>
+                                <?php if($fb['patient_email']): ?>
+                                    <small class="text-muted">
+                                        <i class="fas fa-envelope mr-1"></i> <?php echo $fb['patient_email']; ?>
+                                        <?php if($fb['patient_contact']): ?>
+                                            <i class="fas fa-phone ml-3 mr-1"></i> <?php echo $fb['patient_contact']; ?>
+                                        <?php endif; ?>
+                                    </small>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <?php if($fb['admin_reply']): ?>
+                                <div class="feedback-reply">
+                                    <h6><i class="fas fa-reply mr-2"></i>Admin Reply</h6>
+                                    <p class="mb-1"><?php echo nl2br(htmlspecialchars($fb['admin_reply'])); ?></p>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock mr-1"></i>
+                                        Replied on: <?php echo date('M d, Y h:i A', strtotime($fb['reply_date'])); ?>
+                                    </small>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="mt-3">
+                                <?php if($fb['status'] != 'Replied'): ?>
+                                    <button class="btn btn-sm btn-success action-btn" data-toggle="modal" data-target="#replyFeedbackModal" 
+                                            data-feedback-id="<?php echo $fb['id']; ?>"
+                                            data-patient-name="<?php echo $fb['patient_name']; ?>">
+                                        <i class="fas fa-reply mr-1"></i> Reply
+                                    </button>
+                                <?php endif; ?>
+                                
+                                <?php if($fb['status'] == 'Unread'): ?>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="feedback_id" value="<?php echo $fb['id']; ?>">
+                                        <button type="submit" name="mark_feedback_read" class="btn btn-sm btn-info action-btn">
+                                            <i class="fas fa-check mr-1"></i> Mark as Read
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                                
+                                <button class="btn btn-sm btn-danger action-btn" onclick="deleteFeedback(<?php echo $fb['id']; ?>, '<?php echo $fb['patient_name']; ?>')">
+                                    <i class="fas fa-trash mr-1"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle mr-2"></i>No Feedback Yet</h5>
+                            <p class="mb-0">No patient feedback has been submitted yet. Check back later.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Feedback Summary Table -->
+                <div class="data-table mt-5">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar mr-2"></i>Feedback Summary</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rating</th>
+                                    <th>Count</th>
+                                    <th>Percentage</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $rating_counts = [];
+                                for($i = 1; $i <= 5; $i++){
+                                    $count_query = mysqli_query($con, "SELECT COUNT(*) as count FROM patient_feedback WHERE rating = $i");
+                                    $count_data = mysqli_fetch_assoc($count_query);
+                                    $rating_counts[$i] = $count_data['count'];
+                                }
+                                
+                                for($i = 5; $i >= 1; $i--):
+                                    $count = $rating_counts[$i];
+                                    $percentage = $total_feedback > 0 ? ($count / $total_feedback) * 100 : 0;
+                                ?>
+                                <tr>
+                                    <td>
+                                        <div class="rating-stars">
+                                            <?php for($j = 1; $j <= 5; $j++): ?>
+                                                <?php if($j <= $i): ?>
+                                                    <i class="fas fa-star text-warning"></i>
+                                                <?php else: ?>
+                                                    <i class="far fa-star text-muted"></i>
+                                                <?php endif; ?>
+                                            <?php endfor; ?>
+                                            <span class="ml-2">(<?php echo $i; ?> stars)</span>
+                                        </div>
+                                    </td>
+                                    <td><strong><?php echo $count; ?></strong></td>
+                                    <td><?php echo number_format($percentage, 1); ?>%</td>
+                                    <td>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar 
+                                                <?php if($i >= 4): ?>bg-success
+                                                <?php elseif($i == 3): ?>bg-warning
+                                                <?php else: ?>bg-danger
+                                                <?php endif; ?>" 
+                                                style="width: <?php echo $percentage; ?>%" 
+                                                role="progressbar">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endfor; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Settings Tab -->
             <div class="tab-pane fade" id="settings-tab">
                 <h3 class="mb-4"><i class="fas fa-cog mr-2"></i>System Settings</h3>
@@ -3498,6 +4006,37 @@ if(isset($_SESSION['error'])){
             </div>
         </div>
     </div>
+    
+    <!-- Reply to Feedback Modal -->
+    <div class="modal fade" id="replyFeedbackModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reply to Patient Feedback</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="reply-feedback-form">
+                        <input type="hidden" name="feedback_id" id="reply_feedback_id">
+                        <div class="form-group">
+                            <label>Patient</label>
+                            <input type="text" class="form-control" id="reply_patient_name" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Your Reply *</label>
+                            <textarea class="form-control" name="reply_message" rows="5" required placeholder="Type your reply to the patient..."></textarea>
+                            <small class="text-muted">This reply will be sent to the patient and marked as 'Replied'.</small>
+                        </div>
+                        <button type="submit" name="reply_to_feedback" class="btn btn-success btn-block">
+                            <i class="fas fa-paper-plane mr-1"></i> Send Reply
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -3505,6 +4044,7 @@ if(isset($_SESSION['error'])){
         // Global variables
         let currentPaymentId = null;
         let currentAppointmentIdToCancel = null;
+        let currentFeedbackId = null;
         
         // Initialize on page load
         $(document).ready(function() {
@@ -3564,6 +4104,13 @@ if(isset($_SESSION['error'])){
                 $('#edit_bed_no').val(button.data('bed-no'));
                 $('#edit_room_type').val(button.data('type'));
                 $('#edit_room_status').val(button.data('status'));
+            });
+            
+            // Reply Feedback Modal
+            $('#replyFeedbackModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                $('#reply_feedback_id').val(button.data('feedback-id'));
+                $('#reply_patient_name').val(button.data('patient-name'));
             });
             
             // Toggle password field in edit doctor modal
@@ -3669,24 +4216,50 @@ if(isset($_SESSION['error'])){
                 });
             }
             
-            // Department Chart
-            const departmentCtx = document.getElementById('departmentChart');
-            if(departmentCtx) {
-                const departmentChart = new Chart(departmentCtx, {
-                    type: 'pie',
+            // Feedback Chart
+            const feedbackCtx = document.getElementById('feedbackChart');
+            if(feedbackCtx) {
+                const ratingData = {
+                    5: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 5")); ?>,
+                    4: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 4")); ?>,
+                    3: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 3")); ?>,
+                    2: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 2")); ?>,
+                    1: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 1")); ?>
+                };
+                
+                const feedbackChart = new Chart(feedbackCtx, {
+                    type: 'bar',
                     data: {
-                        labels: ['General', 'Cardiology', 'Pediatrics', 'Neurology', 'Dermatology', 'Orthopedics'],
+                        labels: ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
                         datasets: [{
-                            data: [5, 3, 4, 2, 3, 2],
+                            label: 'Number of Ratings',
+                            data: [ratingData[5], ratingData[4], ratingData[3], ratingData[2], ratingData[1]],
                             backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)',
-                                'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 206, 86, 0.8)',
-                                'rgba(75, 192, 192, 0.8)',
-                                'rgba(153, 102, 255, 0.8)',
-                                'rgba(255, 159, 64, 0.8)'
-                            ]
+                                'rgba(40, 167, 69, 0.8)',
+                                'rgba(40, 167, 69, 0.6)',
+                                'rgba(255, 193, 7, 0.8)',
+                                'rgba(255, 99, 132, 0.6)',
+                                'rgba(255, 99, 132, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(255, 193, 7, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1
                         }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
                     }
                 });
             }
@@ -3871,6 +4444,31 @@ if(isset($_SESSION['error'])){
             }
         }
         
+        // Function to delete feedback
+        function deleteFeedback(feedbackId, patientName) {
+            if(confirm(`Are you sure you want to delete feedback from ${patientName}? This action cannot be undone.`)) {
+                const form = $('<form>').attr({
+                    method: 'POST',
+                    style: 'display: none;'
+                });
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'feedback_id',
+                    value: feedbackId
+                }));
+                
+                form.append($('<input>').attr({
+                    type: 'hidden',
+                    name: 'delete_feedback',
+                    value: '1'
+                }));
+                
+                $('body').append(form);
+                form.submit();
+            }
+        }
+        
         // Function to send prescription to hospital pharmacy
         function sendToHospitalPharmacy(prescriptionId) {
             if(confirm('Send this prescription to Hospital Pharmacy?')) {
@@ -3971,6 +4569,74 @@ if(isset($_SESSION['error'])){
             }
         }
         
+        // Function to filter feedback
+        function filterFeedback(filterType) {
+            $('.filter-btn').removeClass('active');
+            event.target.classList.add('active');
+            
+            $('.feedback-card').show();
+            
+            switch(filterType) {
+                case 'unread':
+                    $('.feedback-card').each(function() {
+                        if($(this).data('status') !== 'unread') {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                case 'read':
+                    $('.feedback-card').each(function() {
+                        if($(this).data('status') !== 'read') {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                case 'replied':
+                    $('.feedback-card').each(function() {
+                        if($(this).data('status') !== 'replied') {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                case 'rating-5':
+                    $('.feedback-card').each(function() {
+                        if($(this).data('rating') !== 5) {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                case 'rating-4':
+                    $('.feedback-card').each(function() {
+                        if($(this).data('rating') !== 4) {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                case 'rating-1-3':
+                    $('.feedback-card').each(function() {
+                        const rating = $(this).data('rating');
+                        if(rating >= 4) {
+                            $(this).hide();
+                        }
+                    });
+                    break;
+                // 'all' shows everything
+            }
+        }
+        
+        // Function to filter feedback by search
+        function filterFeedbackBySearch() {
+            const input = $('#feedback-search').val().toLowerCase();
+            $('.feedback-card').each(function() {
+                const text = $(this).text().toLowerCase();
+                if(text.indexOf(input) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+        
         // Form validation for add patient
         $(document).ready(function() {
             $('#add-patient-form').submit(function(e) {
@@ -4027,4 +4693,4 @@ if(isset($_SESSION['error'])){
         });
     </script>
 </body>
-</html>
+</html> 
