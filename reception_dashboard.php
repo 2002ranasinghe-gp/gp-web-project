@@ -109,6 +109,7 @@ if(isset($_POST['add_appointment_by_nic'])){
     $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
     $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
     $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    $appointment_reason = isset($_POST['appointment_reason']) ? mysqli_real_escape_string($con, $_POST['appointment_reason']) : '';
     
     // Get patient details by NIC
     $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$patient_nic'");
@@ -122,10 +123,10 @@ if(isset($_POST['add_appointment_by_nic'])){
             $docFees = $doctor_data['docFees'];
             
             // Insert appointment
-            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime, appointment_reason) 
                       VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
                               '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
-                              '$doctor', '$docFees', '$appdate', '$apptime')";
+                              '$doctor', '$docFees', '$appdate', '$apptime', '$appointment_reason')";
             
             if(mysqli_query($con, $query)){
                 $appointment_id = mysqli_insert_id($con);
@@ -159,6 +160,7 @@ if(isset($_POST['add_appointment'])){
     $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
     $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
     $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    $appointment_reason = isset($_POST['appointment_reason']) ? mysqli_real_escape_string($con, $_POST['appointment_reason']) : '';
     
     // Get patient details
     $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE pid='$patient_id'");
@@ -172,10 +174,10 @@ if(isset($_POST['add_appointment'])){
             $docFees = $doctor_data['docFees'];
             
             // Insert appointment
-            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime, appointment_reason) 
                       VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
                               '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
-                              '$doctor', '$docFees', '$appdate', '$apptime')";
+                              '$doctor', '$docFees', '$appdate', '$apptime', '$appointment_reason')";
             
             if(mysqli_query($con, $query)){
                 $appointment_id = mysqli_insert_id($con);
@@ -320,7 +322,7 @@ if(isset($_GET['search']) && !empty($_GET['search_term'])){
 }
 
 // ===========================
-// GET DATA FROM DATABASE
+// GET DATA FROM DATABASE (WITH CORRECT TABLE STRUCTURES)
 // ===========================
 $patients = [];
 $doctors = [];
@@ -369,8 +371,8 @@ if($staff_result){
     }
 }
 
-// Get schedules
-$schedule_result = mysqli_query($con, "SELECT * FROM schedule_tb ORDER BY day, shift");
+// Get schedules - CORRECTED to match your table structure
+$schedule_result = mysqli_query($con, "SELECT id, staff_name, staff_id, role, day, shift, staff_type FROM scheduletb ORDER BY day, shift");
 if($schedule_result){
     while($row = mysqli_fetch_assoc($schedule_result)){
         $schedules[] = $row;
@@ -1113,6 +1115,8 @@ $page = $_GET['page'] ?? 'dashboard';
                                 <th>Time</th>
                                 <th>Fees (Rs.)</th>
                                 <th>Status</th>
+                                <th>User Status</th>
+                                <th>Doctor Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1132,6 +1136,20 @@ $page = $_GET['page'] ?? 'dashboard';
                                             <span class="badge badge-success">Active</span>
                                         <?php else: ?>
                                             <span class="badge badge-danger">Cancelled</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if($app['userStatus'] == 1): ?>
+                                            <span class="badge badge-success">Confirmed</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-warning">Pending</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if($app['doctorStatus'] == 1): ?>
+                                            <span class="badge badge-success">Approved</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-warning">Pending</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -1162,6 +1180,20 @@ $page = $_GET['page'] ?? 'dashboard';
                                         <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if($app['userStatus'] == 1): ?>
+                                            <span class="badge badge-success">Confirmed</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-warning">Pending</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if($app['doctorStatus'] == 1): ?>
+                                            <span class="badge badge-success">Approved</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-warning">Pending</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <?php if($app['appointmentStatus'] == 'active'): ?>
                                             <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#cancelAppointmentModal" 
                                                     data-appointment-id="<?php echo $app['ID']; ?>">
@@ -1173,7 +1205,7 @@ $page = $_GET['page'] ?? 'dashboard';
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="9" class="text-center">No appointments found</td>
+                                    <td colspan="11" class="text-center">No appointments found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -1183,7 +1215,7 @@ $page = $_GET['page'] ?? 'dashboard';
             
             <!-- Add Appointment Modal -->
             <div class="modal fade" id="addAppointmentModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog" role="document">
+                <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"><i class="fas fa-calendar-plus mr-2"></i>Create New Appointment</h5>
@@ -1193,20 +1225,26 @@ $page = $_GET['page'] ?? 'dashboard';
                         </div>
                         <div class="modal-body">
                             <form method="POST" id="add-appointment-form">
-                                <div class="form-group">
-                                    <label>Patient ID *</label>
-                                    <input type="number" class="form-control" name="patient_id" placeholder="Enter patient ID" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Doctor *</label>
-                                    <select class="form-control" name="doctor" required>
-                                        <option value="">Select Doctor</option>
-                                        <?php foreach($doctors as $doctor): ?>
-                                        <option value="<?php echo $doctor['username']; ?>">
-                                            <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
-                                        </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Patient ID *</label>
+                                            <input type="number" class="form-control" name="patient_id" placeholder="Enter patient ID" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Doctor *</label>
+                                            <select class="form-control" name="doctor" required>
+                                                <option value="">Select Doctor</option>
+                                                <?php foreach($doctors as $doctor): ?>
+                                                <option value="<?php echo $doctor['username']; ?>">
+                                                    <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -1222,6 +1260,10 @@ $page = $_GET['page'] ?? 'dashboard';
                                         </div>
                                     </div>
                                 </div>
+                                <div class="form-group">
+                                    <label>Appointment Reason (Optional)</label>
+                                    <textarea class="form-control" name="appointment_reason" rows="2" placeholder="Reason for appointment..."></textarea>
+                                </div>
                             </form>
                         </div>
                         <div class="modal-footer">
@@ -1236,7 +1278,7 @@ $page = $_GET['page'] ?? 'dashboard';
             
             <!-- Add Appointment by NIC Modal -->
             <div class="modal fade" id="addAppointmentByNICModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog" role="document">
+                <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"><i class="fas fa-id-card mr-2"></i>Create Appointment by NIC</h5>
@@ -1275,6 +1317,10 @@ $page = $_GET['page'] ?? 'dashboard';
                                             <input type="time" class="form-control" name="apptime" required>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Appointment Reason (Optional)</label>
+                                    <textarea class="form-control" name="appointment_reason" rows="2" placeholder="Reason for appointment..."></textarea>
                                 </div>
                             </form>
                         </div>
@@ -1533,12 +1579,11 @@ $page = $_GET['page'] ?? 'dashboard';
                             <tr>
                                 <th>Schedule ID</th>
                                 <th>Staff ID</th>
-                                <th>Name</th>
+                                <th>Staff Name</th>
                                 <th>Role</th>
                                 <th>Day</th>
                                 <th>Shift</th>
-                                <th>Start Time</th>
-                                <th>End Time</th>
+                                <th>Staff Type</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1546,7 +1591,7 @@ $page = $_GET['page'] ?? 'dashboard';
                                 <?php foreach($schedules as $schedule): ?>
                                 <tr>
                                     <td><?php echo $schedule['id']; ?></td>
-                                    <td><strong><?php echo $schedule['staff_id']; ?></strong></td>
+                                    <td><code><?php echo $schedule['staff_id']; ?></code></td>
                                     <td><?php echo $schedule['staff_name']; ?></td>
                                     <td><span class="badge badge-primary"><?php echo $schedule['role']; ?></span></td>
                                     <td><strong><?php echo $schedule['day']; ?></strong></td>
@@ -1559,13 +1604,20 @@ $page = $_GET['page'] ?? 'dashboard';
                                             <span class="badge badge-info"><?php echo $schedule['shift']; ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?php echo $schedule['start_time'] ?: '08:00'; ?></td>
-                                    <td><?php echo $schedule['end_time'] ?: '16:00'; ?></td>
+                                    <td>
+                                        <?php if($schedule['staff_type'] == 'doctor'): ?>
+                                            <span class="badge badge-primary">Doctor</span>
+                                        <?php elseif($schedule['staff_type'] == 'nurse'): ?>
+                                            <span class="badge badge-success">Nurse</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-secondary"><?php echo $schedule['staff_type']; ?></span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center">No schedules found</td>
+                                    <td colspan="7" class="text-center">No schedules found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -1596,8 +1648,6 @@ $page = $_GET['page'] ?? 'dashboard';
                                 <th>Role</th>
                                 <th>Email</th>
                                 <th>Contact</th>
-                                <th>Department</th>
-                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1619,22 +1669,11 @@ $page = $_GET['page'] ?? 'dashboard';
                                     </td>
                                     <td><?php echo $staff_member['email']; ?></td>
                                     <td><?php echo $staff_member['contact']; ?></td>
-                                    <td>
-                                        <?php 
-                                            $dept = '';
-                                            if($staff_member['role'] == 'Doctor') $dept = 'Medical';
-                                            elseif($staff_member['role'] == 'Nurse') $dept = 'Nursing';
-                                            elseif($staff_member['role'] == 'Receptionist') $dept = 'Administration';
-                                            else $dept = 'General';
-                                            echo $dept;
-                                        ?>
-                                    </td>
-                                    <td><span class="badge badge-success">Active</span></td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7" class="text-center">No staff members found</td>
+                                    <td colspan="5" class="text-center">No staff members found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
