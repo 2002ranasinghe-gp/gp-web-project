@@ -1388,7 +1388,7 @@ if(isset($_GET['search']) && !empty($_GET['search'])) {
       opacity: 1;
     }
     
-    /* Print styles */
+    /* Print styles *
     @media print {
       .sidebar, .top-header, .action-buttons, .filter-buttons, .logout-btn {
         display: none !important;
