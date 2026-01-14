@@ -1,8 +1,23 @@
 <?php
 // ===========================
-// DATABASE CONNECTION
+// DATABASE CONNECTION & SESSION START
 // ===========================
 session_start();
+
+// Security headers
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+
+// Check if admin is logged in
+if(!isset($_SESSION['admin_id']) && !isset($_SESSION['admin_name'])){
+    $_SESSION['error'] = "Please login to access admin panel";
+    header("Location: ../index.php");
+    exit();
+}
+
 $con = mysqli_connect("localhost", "root", "", "myhmsdb");
 
 if(!$con){
@@ -61,7 +76,7 @@ $positive_feedback = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_f
 $average_rating = mysqli_fetch_array(mysqli_query($con, "SELECT AVG(rating) as avg_rating FROM patient_feedback"))['avg_rating'] ?? 0;
 
 // ===========================
-// ADD PATIENT (WITH PASSWORD VALIDATION FIXED)
+// ADD PATIENT
 // ===========================
 if(isset($_POST['add_patient'])){
     $fname = mysqli_real_escape_string($con, $_POST['fname']);
@@ -76,25 +91,20 @@ if(isset($_POST['add_patient'])){
     $password = mysqli_real_escape_string($con, $_POST['password']);
     $cpassword = isset($_POST['cpassword']) ? mysqli_real_escape_string($con, $_POST['cpassword']) : '';
     
-    // Check if passwords match
     if($password !== $cpassword) {
         $patient_msg = "<div class='alert alert-danger'>❌ Passwords do not match!</div>";
     } else {
-        // Format NIC
         $nicNumbers = preg_replace('/[^0-9]/', '', $nic_input);
         $national_id = 'NIC' . $nicNumbers;
         
-        // Check if email exists
         $check_email = mysqli_query($con, "SELECT * FROM patreg WHERE email='$email'");
         if(mysqli_num_rows($check_email) > 0){
             $patient_msg = "<div class='alert alert-danger'>❌ Patient with this email already exists!</div>";
         } else {
-            // Check if NIC exists
             $check_nic = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$national_id'");
             if(mysqli_num_rows($check_nic) > 0){
                 $patient_msg = "<div class='alert alert-danger'>❌ Patient with this NIC already exists!</div>";
             } else {
-                // Insert patient with plain text password
                 $query = "INSERT INTO patreg (fname, lname, gender, dob, email, contact, address, emergencyContact, national_id, password) 
                           VALUES ('$fname', '$lname', '$gender', '$dob', '$email', '$contact', '$address', '$emergencyContact', '$national_id', '$password')";
                 
@@ -102,7 +112,6 @@ if(isset($_POST['add_patient'])){
                     $new_patient_id = mysqli_insert_id($con);
                     $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
                     $_SESSION['success'] = "Patient added successfully!";
-                    // Clear form fields
                     echo "<script>document.getElementById('add-patient-form').reset();</script>";
                 } else {
                     $patient_msg = "<div class='alert alert-danger'>❌ Database Error: " . mysqli_error($con) . "</div>";
@@ -113,7 +122,7 @@ if(isset($_POST['add_patient'])){
 }
 
 // ===========================
-// ADD APPOINTMENT BY NIC (NEW FEATURE)
+// ADD APPOINTMENT BY NIC
 // ===========================
 if(isset($_POST['add_appointment_by_nic'])){
     $patient_nic = mysqli_real_escape_string($con, $_POST['patient_nic']);
@@ -121,18 +130,15 @@ if(isset($_POST['add_appointment_by_nic'])){
     $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
     $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
     
-    // Get patient details by NIC
     $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$patient_nic'");
     if(mysqli_num_rows($patient_query) > 0){
         $patient = mysqli_fetch_assoc($patient_query);
         
-        // Get doctor fees
         $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
         if(mysqli_num_rows($doctor_query) > 0){
             $doctor_data = mysqli_fetch_assoc($doctor_query);
             $docFees = $doctor_data['docFees'];
             
-            // Insert appointment
             $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
                       VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
                               '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
@@ -141,7 +147,6 @@ if(isset($_POST['add_appointment_by_nic'])){
             if(mysqli_query($con, $query)){
                 $appointment_id = mysqli_insert_id($con);
                 
-                // Create corresponding payment record
                 $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
                                   VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
                                           '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
@@ -175,12 +180,10 @@ if(isset($_POST['add_doctor'])){
     $docFees = mysqli_real_escape_string($con, $_POST['docFees']);
     $doctorContact = mysqli_real_escape_string($con, $_POST['doctorContact']);
     
-    // Check if doctor exists
     $check = mysqli_query($con, "SELECT * FROM doctb WHERE email='$demail' OR id='$doctorId'");
     if(mysqli_num_rows($check) > 0){
         $doctor_msg = "<div class='alert alert-danger'>❌ Doctor with this email or ID already exists!</div>";
     } else {
-        // Insert doctor with plain text password
         $query = "INSERT INTO doctb (id, username, spec, email, password, docFees, contact) 
                   VALUES ('$doctorId', '$doctor', '$special', '$demail', '$dpassword', '$docFees', '$doctorContact')";
         
@@ -207,12 +210,10 @@ if(isset($_POST['edit_doctor'])){
     $update_password = isset($_POST['update_password']) && $_POST['update_password'] == '1';
     $dpassword = mysqli_real_escape_string($con, $_POST['edit_dpassword']);
     
-    // Check if doctor exists
     $check = mysqli_query($con, "SELECT * FROM doctb WHERE id='$doctorId'");
     if(mysqli_num_rows($check) == 0){
         $edit_doctor_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
     } else {
-        // Build update query
         if($update_password && !empty($dpassword)){
             $query = "UPDATE doctb SET 
                       username='$doctor', 
@@ -247,12 +248,10 @@ if(isset($_POST['edit_doctor'])){
 if(isset($_POST['delete_doctor'])){
     $doctorId = mysqli_real_escape_string($con, $_POST['doctorId']);
     
-    // Check if doctor exists
     $check = mysqli_query($con, "SELECT * FROM doctb WHERE id='$doctorId'");
     if(mysqli_num_rows($check) == 0){
         $doctor_msg = "<div class='alert alert-danger'>❌ No doctor found with this ID!</div>";
     } else {
-        // Check if doctor has appointments
         $check_appointments = mysqli_query($con, "SELECT * FROM appointmenttb WHERE doctor=(SELECT username FROM doctb WHERE id='$doctorId')");
         if(mysqli_num_rows($check_appointments) > 0){
             $doctor_msg = "<div class='alert alert-warning'>⚠️ Cannot delete doctor. There are appointments associated with this doctor.</div>";
@@ -279,12 +278,10 @@ if(isset($_POST['add_staff'])){
     $scontact = mysqli_real_escape_string($con, $_POST['scontact']);
     $spassword = mysqli_real_escape_string($con, $_POST['spassword']);
     
-    // Check if staff exists
     $check = mysqli_query($con, "SELECT * FROM stafftb WHERE email='$semail' OR id='$staffId'");
     if(mysqli_num_rows($check) > 0){
         $staff_msg = "<div class='alert alert-danger'>❌ Staff member with this email or ID already exists!</div>";
     } else {
-        // Insert staff with plain text password
         $query = "INSERT INTO stafftb (id, name, role, email, contact, password) 
                   VALUES ('$staffId', '$staff', '$role', '$semail', '$scontact', '$spassword')";
         
@@ -310,12 +307,10 @@ if(isset($_POST['edit_staff'])){
     $update_password = isset($_POST['update_staff_password']) && $_POST['update_staff_password'] == '1';
     $spassword = mysqli_real_escape_string($con, $_POST['edit_spassword']);
     
-    // Check if staff exists
     $check = mysqli_query($con, "SELECT * FROM stafftb WHERE id='$staffId'");
     if(mysqli_num_rows($check) == 0){
         $edit_staff_msg = "<div class='alert alert-danger'>❌ Staff not found!</div>";
     } else {
-        // Build update query
         if($update_password && !empty($spassword)){
             $query = "UPDATE stafftb SET 
                       name='$staff', 
@@ -348,7 +343,6 @@ if(isset($_POST['edit_staff'])){
 if(isset($_POST['delete_staff'])){
     $staffId = mysqli_real_escape_string($con, $_POST['staffId']);
     
-    // Check if staff exists
     $check = mysqli_query($con, "SELECT * FROM stafftb WHERE id='$staffId'");
     if(mysqli_num_rows($check) == 0){
         $staff_msg = "<div class='alert alert-danger'>❌ No staff found with this ID!</div>";
@@ -422,18 +416,15 @@ if(isset($_POST['add_appointment'])){
     $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
     $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
     
-    // Get patient details
     $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE pid='$patient_id'");
     if(mysqli_num_rows($patient_query) > 0){
         $patient = mysqli_fetch_assoc($patient_query);
         
-        // Get doctor fees
         $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
         if(mysqli_num_rows($doctor_query) > 0){
             $doctor_data = mysqli_fetch_assoc($doctor_query);
             $docFees = $doctor_data['docFees'];
             
-            // Insert appointment
             $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
                       VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
                               '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
@@ -442,7 +433,6 @@ if(isset($_POST['add_appointment'])){
             if(mysqli_query($con, $query)){
                 $appointment_id = mysqli_insert_id($con);
                 
-                // Create corresponding payment record
                 $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
                                   VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
                                           '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
@@ -462,7 +452,7 @@ if(isset($_POST['add_appointment'])){
 }
 
 // ===========================
-// ADD SCHEDULE (WITH STAFF/DOCTOR ID FIXED)
+// ADD SCHEDULE
 // ===========================
 if(isset($_POST['add_schedule'])){
     $staff_id = mysqli_real_escape_string($con, $_POST['staff_id']);
@@ -499,7 +489,7 @@ if(isset($_POST['delete_schedule'])){
 }
 
 // ===========================
-// ADD ROOM (FIXED TO SAVE TO DATABASE)
+// ADD ROOM
 // ===========================
 if(isset($_POST['add_room'])){
     $room_no = mysqli_real_escape_string($con, $_POST['room_no']);
@@ -507,7 +497,6 @@ if(isset($_POST['add_room'])){
     $type = mysqli_real_escape_string($con, $_POST['type']);
     $status = mysqli_real_escape_string($con, $_POST['status']);
     
-    // Check if room/bed already exists
     $check_query = "SELECT * FROM roomtb WHERE room_no='$room_no' AND bed_no='$bed_no'";
     $check_result = mysqli_query($con, $check_query);
     
@@ -589,7 +578,6 @@ if(isset($_POST['send_to_hospital'])){
 if(isset($_POST['send_to_patient'])){
     $prescription_id = mysqli_real_escape_string($con, $_POST['prescription_id']);
     
-    // Get patient contact from prescription
     $get_contact_query = mysqli_query($con, "SELECT p.contact, ps.fname, ps.lname, ps.prescription 
                                             FROM prestb ps 
                                             JOIN patreg p ON ps.pid = p.pid 
@@ -601,7 +589,6 @@ if(isset($_POST['send_to_patient'])){
         $patient_name = $patient_data['fname'] . ' ' . $patient_data['lname'];
         $prescription_text = $patient_data['prescription'];
         
-        // Update the status
         $query = "UPDATE prestb SET emailStatus='Sent to Patient Contact (SMS)' WHERE id='$prescription_id'";
         
         if(mysqli_query($con, $query)){
@@ -633,10 +620,8 @@ if(isset($_POST['update_settings'])){
     $sms_notifications = isset($_POST['sms_notifications']) ? 1 : 0;
     $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
     
-    // Check if settings table exists
     $check_table = mysqli_query($con, "SHOW TABLES LIKE 'hospital_settings'");
     if(mysqli_num_rows($check_table) == 0){
-        // Create settings table
         $create_table = "CREATE TABLE IF NOT EXISTS hospital_settings (
             id INT PRIMARY KEY AUTO_INCREMENT,
             setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -647,7 +632,6 @@ if(isset($_POST['update_settings'])){
         mysqli_query($con, $create_table);
     }
     
-    // Insert or update settings
     $settings = [
         'hospital_name' => $hospital_name,
         'hospital_address' => $hospital_address,
@@ -691,10 +675,8 @@ if(isset($_POST['change_admin_password'])){
     $new_password = mysqli_real_escape_string($con, $_POST['new_password']);
     $confirm_password = mysqli_real_escape_string($con, $_POST['confirm_password']);
     
-    // Check if admin table exists
     $check_table = mysqli_query($con, "SHOW TABLES LIKE 'admintb'");
     if(mysqli_num_rows($check_table) == 0){
-        // Create admin table with default admin
         $create_table = "CREATE TABLE IF NOT EXISTS admintb (
             id INT PRIMARY KEY AUTO_INCREMENT,
             username VARCHAR(50) UNIQUE NOT NULL,
@@ -708,7 +690,6 @@ if(isset($_POST['change_admin_password'])){
         )";
         mysqli_query($con, $create_table);
         
-        // Insert default admin if not exists
         $default_password = 'admin123';
         $check_admin = mysqli_query($con, "SELECT * FROM admintb WHERE username='admin'");
         if(mysqli_num_rows($check_admin) == 0){
@@ -718,10 +699,8 @@ if(isset($_POST['change_admin_password'])){
         }
     }
     
-    // Verify current password (using plain text for now)
     $check_password = mysqli_query($con, "SELECT * FROM admintb WHERE username='$admin_name' AND password='$current_password'");
     if(mysqli_num_rows($check_password) == 0){
-        // Generate new random password
         $generated_password = generateRandomPassword(8);
         $query = "UPDATE admintb SET password='$generated_password', updated_date=NOW() WHERE username='$admin_name'";
         if(mysqli_query($con, $query)){
@@ -736,7 +715,6 @@ if(isset($_POST['change_admin_password'])){
     } elseif(strlen($new_password) < 6){
         $settings_msg = "<div class='alert alert-danger'>❌ New password must be at least 6 characters!</div>";
     } else {
-        // Update password
         $query = "UPDATE admintb SET password='$new_password', updated_date=NOW() WHERE username='$admin_name'";
         if(mysqli_query($con, $query)){
             $settings_msg = "<div class='alert alert-success'>✅ Admin password changed successfully!</div>";
@@ -761,13 +739,11 @@ if(isset($_POST['update_profile_pic'])){
                 mkdir($upload_dir, 0777, true);
             }
             
-            // Generate unique filename
             $file_extension = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
             $new_filename = 'admin_' . $admin_name . '_' . time() . '.' . $file_extension;
             $upload_path = $upload_dir . $new_filename;
             
             if(move_uploaded_file($_FILES['profile_pic']['tmp_name'], $upload_path)){
-                // Update database with new profile picture path
                 $query = "UPDATE admintb SET profile_pic='$new_filename', updated_date=NOW() WHERE username='$admin_name'";
                 if(mysqli_query($con, $query)){
                     $admin_profile_pic = $new_filename;
@@ -792,12 +768,10 @@ if(isset($_POST['backup_database'])){
     $backup_name = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
     $backup_file = 'backups/' . $backup_name;
     
-    // Create backups directory if not exists
     if(!file_exists('backups')){
         mkdir('backups', 0777, true);
     }
     
-    // Get all tables
     $tables = [];
     $result = mysqli_query($con, 'SHOW TABLES');
     while($row = mysqli_fetch_row($result)){
@@ -834,7 +808,6 @@ if(isset($_POST['backup_database'])){
         $return .= "\n\n\n";
     }
     
-    // Save file
     if(file_put_contents($backup_file, $return)){
         $settings_msg = "<div class='alert alert-success'>✅ Database backup created successfully!<br>
                         File: $backup_name<br>
@@ -991,7 +964,6 @@ if($feedback_result){
 
 // Get all staff names for schedule datalist with ID
 $all_staff_with_id = [];
-// Get doctor names with ID
 foreach($doctors as $doctor){
     $all_staff_with_id[] = [
         'id' => $doctor['id'],
@@ -999,7 +971,6 @@ foreach($doctors as $doctor){
         'type' => 'Doctor'
     ];
 }
-// Get staff names with ID
 foreach($staff as $staff_member){
     $all_staff_with_id[] = [
         'id' => $staff_member['id'],
@@ -1009,7 +980,7 @@ foreach($staff as $staff_member){
 }
 
 // ===========================
-// FUNCTION TO CHECK/CREATE TABLES (FIXED)
+// FUNCTION TO CHECK/CREATE TABLES
 // ===========================
 function checkAndCreateTables($con){
     $tables = [
@@ -1167,70 +1138,6 @@ function checkAndCreateTables($con){
             if(!mysqli_query($con, $create_sql)){
                 echo "<div class='alert alert-danger'>❌ Error creating table $table_name: " . mysqli_error($con) . "</div>";
             }
-        } else {
-            // Check for specific columns and add them if missing
-            if($table_name == 'scheduletb'){
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM scheduletb LIKE 'staff_id'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE scheduletb ADD COLUMN staff_id VARCHAR(20)";
-                    mysqli_query($con, $alter_query);
-                }
-            }
-            
-            // For admintb table, check and add columns if missing
-            if($table_name == 'admintb'){
-                // Check if full_name column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM admintb LIKE 'full_name'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE admintb ADD COLUMN full_name VARCHAR(100)";
-                    mysqli_query($con, $alter_query);
-                }
-                
-                // Check if profile_pic column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM admintb LIKE 'profile_pic'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE admintb ADD COLUMN profile_pic VARCHAR(255) DEFAULT 'default-avatar.jpg'";
-                    mysqli_query($con, $alter_query);
-                }
-            }
-            
-            // For patient_feedback table, check and add columns if missing
-            if($table_name == 'patient_feedback'){
-                // Check if department column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'department'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN department VARCHAR(50)";
-                    mysqli_query($con, $alter_query);
-                }
-                
-                // Check if doctor_name column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'doctor_name'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN doctor_name VARCHAR(100)";
-                    mysqli_query($con, $alter_query);
-                }
-                
-                // Check if admin_reply column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'admin_reply'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN admin_reply TEXT";
-                    mysqli_query($con, $alter_query);
-                }
-                
-                // Check if status column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'status'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN status VARCHAR(20) DEFAULT 'Unread'";
-                    mysqli_query($con, $alter_query);
-                }
-                
-                // Check if reply_date column exists
-                $check_column = mysqli_query($con, "SHOW COLUMNS FROM patient_feedback LIKE 'reply_date'");
-                if(mysqli_num_rows($check_column) == 0){
-                    $alter_query = "ALTER TABLE patient_feedback ADD COLUMN reply_date TIMESTAMP NULL";
-                    mysqli_query($con, $alter_query);
-                }
-            }
         }
     }
     
@@ -1265,7 +1172,6 @@ function checkAndCreateTables($con){
         }
     }
     
-    // Create uploads directories if they don't exist
     if(!file_exists('uploads')){
         mkdir('uploads', 0777, true);
     }
@@ -1312,6 +1218,9 @@ if(isset($_SESSION['error'])){
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Healthcare Hospital</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1323,7 +1232,6 @@ if(isset($_SESSION['error'])){
             padding: 0;
         }
 
-        /* Sidebar */
         .sidebar {
             width: 250px;
             background: linear-gradient(180deg, #0077b6 0%, #0096c7 100%);
@@ -1375,8 +1283,6 @@ if(isset($_SESSION['error'])){
             text-align: center;
             margin-right: 10px;
         }
-
-        /* Main content */
         .main-content { 
             margin-left: 250px; 
             width: calc(100% - 250px); 
@@ -1417,7 +1323,6 @@ if(isset($_SESSION['error'])){
             font-size: 18px;
         }
 
-        /* Dashboard Cards */
         .stats-card {
             border-radius: 15px;
             border: none;
@@ -1434,7 +1339,6 @@ if(isset($_SESSION['error'])){
             opacity: 0.8;
         }
         
-        /* Quick Actions */
         .quick-action-card {
             background: white;
             border-radius: 12px;
@@ -1457,7 +1361,6 @@ if(isset($_SESSION['error'])){
             color: #0077b6;
         }
 
-        /* Tables */
         .data-table {
             background: white;
             border-radius: 10px;
@@ -1471,7 +1374,6 @@ if(isset($_SESSION['error'])){
             border-radius: 10px 10px 0 0;
         }
 
-        /* Tabs Content */
         .tab-content {
             padding: 30px;
             animation: fadeIn 0.5s;
@@ -1481,7 +1383,6 @@ if(isset($_SESSION['error'])){
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Search and Filter */
         .search-container {
             background: white;
             padding: 20px;
@@ -1500,7 +1401,6 @@ if(isset($_SESSION['error'])){
             color: #6c757d;
         }
 
-        /* Status Badges */
         .status-badge {
             padding: 5px 10px;
             border-radius: 20px;
@@ -1540,7 +1440,6 @@ if(isset($_SESSION['error'])){
             color: #004085;
         }
 
-        /* Charts Container */
         .chart-container {
             background: white;
             border-radius: 10px;
@@ -1549,7 +1448,6 @@ if(isset($_SESSION['error'])){
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
 
-        /* Form Cards */
         .form-card {
             background: white;
             border-radius: 10px;
@@ -1565,7 +1463,6 @@ if(isset($_SESSION['error'])){
             margin: -25px -25px 20px -25px;
         }
 
-        /* Settings Page Styles */
         .settings-card {
             background: white;
             border-radius: 10px;
@@ -1605,7 +1502,6 @@ if(isset($_SESSION['error'])){
             transform: translateX(5px);
         }
 
-        /* Feedback Page Styles */
         .feedback-card {
             background: white;
             border-radius: 10px;
@@ -1645,7 +1541,6 @@ if(isset($_SESSION['error'])){
             color: #ffc107;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 width: 70px;
@@ -1663,7 +1558,6 @@ if(isset($_SESSION['error'])){
             }
         }
 
-        /* Additional Admin Styles */
         .alert {
             border-radius: 10px;
             border: none;
@@ -1729,7 +1623,6 @@ if(isset($_SESSION['error'])){
             border-radius: 5px;
         }
         
-        /* Switch Toggle */
         .switch {
             position: relative;
             display: inline-block;
@@ -1785,7 +1678,6 @@ if(isset($_SESSION['error'])){
             border-radius: 50%;
         }
         
-        /* Profile Picture Styles */
         .profile-pic-container {
             position: relative;
             display: inline-block;
@@ -1828,7 +1720,6 @@ if(isset($_SESSION['error'])){
             border: 2px solid white;
         }
         
-        /* Room/Bed Edit Button */
         .room-action-btn {
             margin: 2px;
             padding: 5px 10px;
@@ -1836,7 +1727,6 @@ if(isset($_SESSION['error'])){
             border-radius: 5px;
         }
         
-        /* Password Generator Info */
         .password-info {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -1845,12 +1735,10 @@ if(isset($_SESSION['error'])){
             margin-top: 10px;
         }
         
-        /* Custom File Input */
         .custom-file-label::after {
             content: "Browse";
         }
 
-        /* Feedback Filter */
         .filter-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -1872,7 +1760,6 @@ if(isset($_SESSION['error'])){
             color: white;
         }
         
-        /* Star Rating */
         .rating-stars {
             font-size: 18px;
             color: #ffc107;
@@ -1881,13 +1768,43 @@ if(isset($_SESSION['error'])){
         .empty-star {
             color: #dee2e6;
         }
+        
+        /* Logout Button Style */
+        .logout-btn-item {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+        }
+        
+        .logout-btn-item:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-left: 4px solid #ff4444 !important;
+        }
+        
+        /* Confirm Logout Modal */
+        .logout-modal .modal-header {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+        
+        .logout-confirm-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            border: none;
+            color: white;
+        }
+        
+        .logout-confirm-btn:hover {
+            background: linear-gradient(135deg, #c82333, #dc3545);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
     </style>
 </head>
 <body>
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <img class="logo" src="images/medical-logo.jpg" alt="Hospital Logo">
+        <img class="logo" src="images/medical-logo.jpg" alt="Hospital Logo" onerror="this.src='https://via.placeholder.com/80?text=Hospital'">
         <h4>Admin Portal</h4>
         <ul>
             <li data-target="dash-tab" class="active">
@@ -1920,8 +1837,9 @@ if(isset($_SESSION['error'])){
             <li data-target="settings-tab">
                 <i class="fas fa-cog"></i> <span>Settings</span>
             </li>
-            <li>
-                <a href="logout1.php" style="color: white; text-decoration: none; display: block;">
+            <!-- Logout Button with Confirmation -->
+            <li class="logout-btn-item">
+                <a href="javascript:void(0)" onclick="confirmLogout()" style="color: white; text-decoration: none; display: block;" class="logout-btn-item">
                     <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
                 </a>
             </li>
@@ -1947,6 +1865,9 @@ if(isset($_SESSION['error'])){
                     <strong><?php echo htmlspecialchars($admin_name); ?></strong><br>
                     <small>Administrator</small>
                 </div>
+                <button class="btn btn-sm btn-outline-light ml-3" onclick="confirmLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
 
@@ -2097,22 +2018,6 @@ if(isset($_SESSION['error'])){
                             <i class="fas fa-comments"></i>
                             <h5>View Feedback</h5>
                             <p>Check patient feedback</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Section -->
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="chart-container">
-                            <h5>Appointments Overview</h5>
-                            <canvas id="appointmentsChart" height="200"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="chart-container">
-                            <h5>Patient Feedback Rating</h5>
-                            <canvas id="feedbackChart" height="200"></canvas>
                         </div>
                     </div>
                 </div>
@@ -2621,7 +2526,7 @@ if(isset($_SESSION['error'])){
                                         <td colspan="8" class="text-center">No patients found</td>
                                     </tr>
                                 <?php endif; ?>
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
@@ -3024,1673 +2929,4 @@ if(isset($_SESSION['error'])){
                                         <td>
                                             <button class="btn btn-sm btn-danger action-btn" onclick="deleteSchedule(<?php echo $schedule['id']; ?>)">
                                                 <i class="fas fa-trash"></i> Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center">No schedules found</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rooms/Beds Tab -->
-            <div class="tab-pane fade" id="room-tab">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3><i class="fas fa-bed mr-2"></i>Rooms & Beds Management</h3>
-                    <button class="btn btn-primary" data-toggle="modal" data-target="#addRoomModal">
-                        <i class="fas fa-plus mr-2"></i>Add New Room/Bed
-                    </button>
-                </div>
-                
-                <?php if($room_msg): echo $room_msg; endif; ?>
-                <?php if($success_msg): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <?php echo $success_msg; ?>
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                <?php endif; ?>
-                
-                <div class="search-container">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="room-search" placeholder="Search rooms by number, type, or status..." onkeyup="filterTable('room-search', 'rooms-table-body')">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
-                <div class="data-table">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Room No</th>
-                                    <th>Bed No</th>
-                                    <th>Type</th>
-                                    <th>Status</th>
-                                    <th>Added Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rooms-table-body">
-                                <?php if(count($rooms) > 0): ?>
-                                    <?php foreach($rooms as $room): ?>
-                                    <tr>
-                                        <td><?php echo $room['id']; ?></td>
-                                        <td><?php echo $room['room_no']; ?></td>
-                                        <td><?php echo $room['bed_no']; ?></td>
-                                        <td><?php echo $room['type']; ?></td>
-                                        <td>
-                                            <?php if($room['status'] == 'Available'): ?>
-                                                <span class="status-badge status-available">Available</span>
-                                            <?php elseif($room['status'] == 'Occupied'): ?>
-                                                <span class="status-badge status-occupied">Occupied</span>
-                                            <?php else: ?>
-                                                <span class="status-badge status-cancelled"><?php echo $room['status']; ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?php echo date('Y-m-d', strtotime($room['created_date'])); ?></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-warning room-action-btn" data-toggle="modal" data-target="#editRoomModal"
-                                                    data-room-id="<?php echo $room['id']; ?>"
-                                                    data-room-no="<?php echo $room['room_no']; ?>"
-                                                    data-bed-no="<?php echo $room['bed_no']; ?>"
-                                                    data-type="<?php echo $room['type']; ?>"
-                                                    data-status="<?php echo $room['status']; ?>">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                            <button class="btn btn-sm btn-danger room-action-btn" onclick="deleteRoom(<?php echo $room['id']; ?>)">
-                                                <i class="fas fa-trash"></i> Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center">No rooms found. Add your first room/bed above.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Patient Feedback Tab -->
-            <div class="tab-pane fade" id="feedback-tab">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3><i class="fas fa-comments mr-2"></i>Patient Feedback Management</h3>
-                    <div>
-                        <span class="badge badge-primary">Total: <?php echo $total_feedback; ?></span>
-                        <span class="badge badge-success ml-2">Avg Rating: <?php echo number_format($average_rating, 1); ?>/5</span>
-                        <span class="badge badge-warning ml-2">Today: <?php echo $today_feedback; ?></span>
-                    </div>
-                </div>
-                
-                <?php if($feedback_msg): echo $feedback_msg; endif; ?>
-                
-                <!-- Feedback Statistics -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="stats-card card border-left-primary shadow h-100 py-2">
-                            <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                            Total Feedback
-                                        </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            <?php echo $total_feedback; ?>
-                                        </div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-comments stats-icon text-primary"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="stats-card card border-left-success shadow h-100 py-2">
-                            <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                            Average Rating
-                                        </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            <?php echo number_format($average_rating, 1); ?>/5
-                                        </div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <div class="rating-stars">
-                                            <?php
-                                            $fullStars = floor($average_rating);
-                                            $hasHalfStar = ($average_rating - $fullStars) >= 0.5;
-                                            
-                                            for($i = 1; $i <= 5; $i++):
-                                                if($i <= $fullStars): ?>
-                                                    <i class="fas fa-star"></i>
-                                                <?php elseif($i == $fullStars + 1 && $hasHalfStar): ?>
-                                                    <i class="fas fa-star-half-alt"></i>
-                                                <?php else: ?>
-                                                    <i class="far fa-star empty-star"></i>
-                                                <?php endif;
-                                            endfor;
-                                            ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="stats-card card border-left-warning shadow h-100 py-2">
-                            <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                            Positive Feedback (4-5)
-                                        </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            <?php echo $positive_feedback; ?>
-                                        </div>
-                                        <div class="small text-muted">
-                                            <?php echo $total_feedback > 0 ? round(($positive_feedback/$total_feedback)*100, 1) : 0; ?>%
-                                        </div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-thumbs-up stats-icon text-warning"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="stats-card card border-left-info shadow h-100 py-2">
-                            <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                            Today's Feedback
-                                        </div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                            <?php echo $today_feedback; ?>
-                                        </div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <i class="fas fa-calendar-day stats-icon text-info"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filter Buttons -->
-                <div class="filter-buttons mb-4">
-                    <button class="filter-btn active" onclick="filterFeedback('all')">All Feedback</button>
-                    <button class="filter-btn" onclick="filterFeedback('unread')">Unread</button>
-                    <button class="filter-btn" onclick="filterFeedback('read')">Read</button>
-                    <button class="filter-btn" onclick="filterFeedback('replied')">Replied</button>
-                    <button class="filter-btn" onclick="filterFeedback('rating-5')">5 Stars</button>
-                    <button class="filter-btn" onclick="filterFeedback('rating-4')">4 Stars</button>
-                    <button class="filter-btn" onclick="filterFeedback('rating-1-3')">1-3 Stars</button>
-                </div>
-                
-                <!-- Search -->
-                <div class="search-container mb-4">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="feedback-search" placeholder="Search feedback by patient name, email, department, or comments..." onkeyup="filterFeedbackBySearch()">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
-                <!-- Feedback List -->
-                <div id="feedback-list">
-                    <?php if(count($feedback) > 0): ?>
-                        <?php foreach($feedback as $fb): ?>
-                        <div class="feedback-card" data-rating="<?php echo $fb['rating']; ?>" data-status="<?php echo strtolower($fb['status']); ?>">
-                            <div class="feedback-header">
-                                <div>
-                                    <h5 class="mb-1">
-                                        <strong><?php echo $fb['patient_name']; ?></strong>
-                                        <?php if($fb['fname']): ?>
-                                            <small class="text-muted">(<?php echo $fb['fname'] . ' ' . $fb['lname']; ?>)</small>
-                                        <?php endif; ?>
-                                    </h5>
-                                    <div class="d-flex align-items-center">
-                                        <div class="feedback-rating mr-3">
-                                            <?php for($i = 1; $i <= 5; $i++): ?>
-                                                <?php if($i <= $fb['rating']): ?>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                <?php else: ?>
-                                                    <i class="far fa-star text-muted"></i>
-                                                <?php endif; ?>
-                                            <?php endfor; ?>
-                                            <span class="ml-2"><?php echo $fb['rating']; ?>/5</span>
-                                        </div>
-                                        <span class="badge badge-light">
-                                            <i class="far fa-clock mr-1"></i>
-                                            <?php echo date('M d, Y h:i A', strtotime($fb['feedback_date'])); ?>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <span class="status-badge status-<?php echo strtolower($fb['status']); ?>">
-                                        <?php echo $fb['status']; ?>
-                                    </span>
-                                    <?php if($fb['department']): ?>
-                                        <span class="badge badge-info ml-2"><?php echo $fb['department']; ?></span>
-                                    <?php endif; ?>
-                                    <?php if($fb['doctor_name']): ?>
-                                        <span class="badge badge-secondary ml-2">Dr. <?php echo $fb['doctor_name']; ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            
-                            <div class="feedback-content">
-                                <p class="mb-2"><?php echo nl2br(htmlspecialchars($fb['comments'])); ?></p>
-                                <?php if($fb['patient_email']): ?>
-                                    <small class="text-muted">
-                                        <i class="fas fa-envelope mr-1"></i> <?php echo $fb['patient_email']; ?>
-                                        <?php if($fb['patient_contact']): ?>
-                                            <i class="fas fa-phone ml-3 mr-1"></i> <?php echo $fb['patient_contact']; ?>
-                                        <?php endif; ?>
-                                    </small>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <?php if($fb['admin_reply']): ?>
-                                <div class="feedback-reply">
-                                    <h6><i class="fas fa-reply mr-2"></i>Admin Reply</h6>
-                                    <p class="mb-1"><?php echo nl2br(htmlspecialchars($fb['admin_reply'])); ?></p>
-                                    <small class="text-muted">
-                                        <i class="far fa-clock mr-1"></i>
-                                        Replied on: <?php echo date('M d, Y h:i A', strtotime($fb['reply_date'])); ?>
-                                    </small>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <div class="mt-3">
-                                <?php if($fb['status'] != 'Replied'): ?>
-                                    <button class="btn btn-sm btn-success action-btn" data-toggle="modal" data-target="#replyFeedbackModal" 
-                                            data-feedback-id="<?php echo $fb['id']; ?>"
-                                            data-patient-name="<?php echo $fb['patient_name']; ?>">
-                                        <i class="fas fa-reply mr-1"></i> Reply
-                                    </button>
-                                <?php endif; ?>
-                                
-                                <?php if($fb['status'] == 'Unread'): ?>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="feedback_id" value="<?php echo $fb['id']; ?>">
-                                        <button type="submit" name="mark_feedback_read" class="btn btn-sm btn-info action-btn">
-                                            <i class="fas fa-check mr-1"></i> Mark as Read
-                                        </button>
-                                    </form>
-                                <?php endif; ?>
-                                
-                                <button class="btn btn-sm btn-danger action-btn" onclick="deleteFeedback(<?php echo $fb['id']; ?>, '<?php echo $fb['patient_name']; ?>')">
-                                    <i class="fas fa-trash mr-1"></i> Delete
-                                </button>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="alert alert-info">
-                            <h5><i class="fas fa-info-circle mr-2"></i>No Feedback Yet</h5>
-                            <p class="mb-0">No patient feedback has been submitted yet. Check back later.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                
-                <!-- Feedback Summary Table -->
-                <div class="data-table mt-5">
-                    <div class="table-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar mr-2"></i>Feedback Summary</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Rating</th>
-                                    <th>Count</th>
-                                    <th>Percentage</th>
-                                    <th>Progress</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                $rating_counts = [];
-                                for($i = 1; $i <= 5; $i++){
-                                    $count_query = mysqli_query($con, "SELECT COUNT(*) as count FROM patient_feedback WHERE rating = $i");
-                                    $count_data = mysqli_fetch_assoc($count_query);
-                                    $rating_counts[$i] = $count_data['count'];
-                                }
-                                
-                                for($i = 5; $i >= 1; $i--):
-                                    $count = $rating_counts[$i];
-                                    $percentage = $total_feedback > 0 ? ($count / $total_feedback) * 100 : 0;
-                                ?>
-                                <tr>
-                                    <td>
-                                        <div class="rating-stars">
-                                            <?php for($j = 1; $j <= 5; $j++): ?>
-                                                <?php if($j <= $i): ?>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                <?php else: ?>
-                                                    <i class="far fa-star text-muted"></i>
-                                                <?php endif; ?>
-                                            <?php endfor; ?>
-                                            <span class="ml-2">(<?php echo $i; ?> stars)</span>
-                                        </div>
-                                    </td>
-                                    <td><strong><?php echo $count; ?></strong></td>
-                                    <td><?php echo number_format($percentage, 1); ?>%</td>
-                                    <td>
-                                        <div class="progress" style="height: 10px;">
-                                            <div class="progress-bar 
-                                                <?php if($i >= 4): ?>bg-success
-                                                <?php elseif($i == 3): ?>bg-warning
-                                                <?php else: ?>bg-danger
-                                                <?php endif; ?>" 
-                                                style="width: <?php echo $percentage; ?>%" 
-                                                role="progressbar">
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endfor; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Settings Tab -->
-            <div class="tab-pane fade" id="settings-tab">
-                <h3 class="mb-4"><i class="fas fa-cog mr-2"></i>System Settings</h3>
-                
-                <?php if($settings_msg): echo $settings_msg; endif; ?>
-                
-                <!-- Admin Profile Picture -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <h4>Admin Profile</h4>
-                    <div class="row">
-                        <div class="col-md-4 text-center">
-                            <div class="profile-pic-container mb-3">
-                                <?php if($admin_profile_pic && file_exists('uploads/profile_pictures/' . $admin_profile_pic)): ?>
-                                    <img src="uploads/profile_pictures/<?php echo $admin_profile_pic; ?>" class="profile-pic" alt="Profile">
-                                <?php else: ?>
-                                    <div class="profile-pic" style="background: #0077b6; color: white; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold;">
-                                        <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
-                                    </div>
-                                <?php endif; ?>
-                                <label class="profile-pic-upload">
-                                    <i class="fas fa-camera"></i>
-                                    <input type="file" id="profile-pic-input" accept="image/*" onchange="previewProfilePic(this)">
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <form method="POST" enctype="multipart/form-data" id="profile-pic-form">
-                                <div class="form-group">
-                                    <label>Upload New Profile Picture</label>
-                                    <div class="custom-file">
-                                        <input type="file" class="custom-file-input" id="profile_pic" name="profile_pic" accept="image/*">
-                                        <label class="custom-file-label" for="profile_pic">Choose file</label>
-                                    </div>
-                                    <small class="text-muted">Max size: 2MB, Formats: JPG, PNG, GIF</small>
-                                </div>
-                                <button type="submit" name="update_profile_pic" class="btn btn-primary">
-                                    <i class="fas fa-upload mr-1"></i> Upload Profile Picture
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Hospital Information Settings -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-hospital"></i>
-                    </div>
-                    <h4>Hospital Information</h4>
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Hospital Name *</label>
-                                    <input type="text" class="form-control" name="hospital_name" value="<?php echo isset($hospital_settings['hospital_name']) ? $hospital_settings['hospital_name'] : 'Healthcare Hospital'; ?>" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Hospital Phone *</label>
-                                    <input type="text" class="form-control" name="hospital_phone" value="<?php echo isset($hospital_settings['hospital_phone']) ? $hospital_settings['hospital_phone'] : '+94 11 234 5678'; ?>" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Hospital Email *</label>
-                                    <input type="email" class="form-control" name="hospital_email" value="<?php echo isset($hospital_settings['hospital_email']) ? $hospital_settings['hospital_email'] : 'info@healthcarehospital.com'; ?>" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Appointment Duration (minutes) *</label>
-                                    <input type="number" class="form-control" name="appointment_duration" value="<?php echo isset($hospital_settings['appointment_duration']) ? $hospital_settings['appointment_duration'] : '30'; ?>" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Hospital Address *</label>
-                            <textarea class="form-control" name="hospital_address" rows="2" required><?php echo isset($hospital_settings['hospital_address']) ? $hospital_settings['hospital_address'] : '123 Medical Street, City, Country'; ?></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Working Hours Start *</label>
-                                    <input type="time" class="form-control" name="working_hours_start" value="<?php echo isset($hospital_settings['working_hours_start']) ? $hospital_settings['working_hours_start'] : '08:00'; ?>" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Working Hours End *</label>
-                                    <input type="time" class="form-control" name="working_hours_end" value="<?php echo isset($hospital_settings['working_hours_end']) ? $hospital_settings['working_hours_end'] : '18:00'; ?>" required>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="update_settings" class="btn btn-primary">
-                            <i class="fas fa-save mr-1"></i> Save Hospital Settings
-                        </button>
-                    </form>
-                </div>
-                
-                <!-- System Settings -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-sliders-h"></i>
-                    </div>
-                    <h4>System Configuration</h4>
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Enable Online Payments</label><br>
-                                    <label class="switch">
-                                        <input type="checkbox" name="enable_online_payment" value="1" <?php echo (isset($hospital_settings['enable_online_payment']) && $hospital_settings['enable_online_payment'] == '1') ? 'checked' : ''; ?>>
-                                        <span class="slider round"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>SMS Notifications</label><br>
-                                    <label class="switch">
-                                        <input type="checkbox" name="sms_notifications" value="1" <?php echo (isset($hospital_settings['sms_notifications']) && $hospital_settings['sms_notifications'] == '1') ? 'checked' : ''; ?>>
-                                        <span class="slider round"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Email Notifications</label><br>
-                                    <label class="switch">
-                                        <input type="checkbox" name="email_notifications" value="1" <?php echo (isset($hospital_settings['email_notifications']) && $hospital_settings['email_notifications'] == '1') ? 'checked' : ''; ?>>
-                                        <span class="slider round"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="update_settings" class="btn btn-primary">
-                            <i class="fas fa-save mr-1"></i> Save System Settings
-                        </button>
-                    </form>
-                </div>
-                
-                <!-- Change Admin Password with Generator -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-key"></i>
-                    </div>
-                    <h4>Change Admin Password</h4>
-                    <div class="password-info">
-                        <small><i class="fas fa-info-circle"></i> If you forget your current password, enter any wrong password and a new random password will be generated for you.</small>
-                    </div>
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Current Password *</label>
-                                    <input type="password" class="form-control" name="current_password" required>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>New Password *</label>
-                                    <input type="password" class="form-control" name="new_password" required>
-                                    <small class="text-muted">Min. 6 characters</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Confirm New Password *</label>
-                                    <input type="password" class="form-control" name="confirm_password" required>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="change_admin_password" class="btn btn-warning">
-                            <i class="fas fa-key mr-1"></i> Change Password
-                        </button>
-                        <button type="button" class="btn btn-info ml-2" onclick="generatePassword()">
-                            <i class="fas fa-random mr-1"></i> Generate Strong Password
-                        </button>
-                    </form>
-                </div>
-                
-                <!-- Database Backup -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-database"></i>
-                    </div>
-                    <h4>Database Management</h4>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <h5>Create Database Backup</h5>
-                                <p class="text-muted">Create a backup of the entire database</p>
-                                <form method="POST">
-                                    <button type="submit" name="backup_database" class="btn btn-success">
-                                        <i class="fas fa-download mr-1"></i> Create Backup Now
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <h5>Backup History</h5>
-                                <div class="backup-list">
-                                    <?php
-                                    $backup_dir = 'backups/';
-                                    if(file_exists($backup_dir)){
-                                        $backups = glob($backup_dir . '*.sql');
-                                        rsort($backups);
-                                        if(count($backups) > 0){
-                                            foreach($backups as $backup){
-                                                $filename = basename($backup);
-                                                $filesize = filesize($backup);
-                                                $filetime = filemtime($backup);
-                                                echo '<div class="backup-item">
-                                                    <div>
-                                                        <strong>' . $filename . '</strong><br>
-                                                        <small>' . date('Y-m-d H:i:s', $filetime) . ' | ' . round($filesize/1024, 2) . ' KB</small>
-                                                    </div>
-                                                    <a href="' . $backup . '" class="btn btn-sm btn-info" download>
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                </div>';
-                                            }
-                                        } else {
-                                            echo '<p class="text-muted">No backups found</p>';
-                                        }
-                                    } else {
-                                        echo '<p class="text-muted">Backup directory not found</p>';
-                                    }
-                                    ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- System Information -->
-                <div class="settings-card">
-                    <div class="settings-icon">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <h4>System Information</h4>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th>PHP Version</th>
-                                    <td><?php echo phpversion(); ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Database Server</th>
-                                    <td><?php echo mysqli_get_server_info($con); ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Total Tables</th>
-                                    <td>
-                                        <?php
-                                        $result = mysqli_query($con, "SHOW TABLES");
-                                        echo mysqli_num_rows($result);
-                                        ?>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th>Application Version</th>
-                                    <td>1.0.0</td>
-                                </tr>
-                                <tr>
-                                    <th>Last Updated</th>
-                                    <td><?php echo date('Y-m-d H:i:s'); ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Server Time</th>
-                                    <td id="server-time">Loading...</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modals -->
-    <!-- Cancel Appointment Modal -->
-    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Cancel Appointment</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="cancel-appointment-form">
-                        <div class="form-group">
-                            <label>Reason for Cancellation</label>
-                            <textarea class="form-control" id="cancellationReason" rows="3" required></textarea>
-                        </div>
-                        <input type="hidden" id="appointmentToCancelId">
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" onclick="confirmCancelAppointment()">Cancel Appointment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Payment Modal -->
-    <div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Payment Status</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="edit-payment-form">
-                        <input type="hidden" id="edit-payment-id">
-                        <div class="form-group">
-                            <label>Payment Status</label>
-                            <select class="form-control" id="edit-payment-status">
-                                <option value="Pending">Pending</option>
-                                <option value="Paid">Paid</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Payment Method</label>
-                            <select class="form-control" id="edit-payment-method">
-                                <option value="">Select Method</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Debit Card">Debit Card</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Online">Online Payment</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Receipt Number</label>
-                            <input type="text" class="form-control" id="edit-receipt-number" placeholder="Auto-generated if empty">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-warning" onclick="updatePaymentStatus()">Update Payment</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Doctor Modal -->
-    <div class="modal fade" id="editDoctorModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Doctor Details</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" id="edit-doctor-form">
-                        <input type="hidden" name="edit_doctorId" id="edit_doctorId">
-                        <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" class="form-control" name="edit_doctor" id="edit_doctor" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Specialization</label>
-                            <select class="form-control" name="edit_special" id="edit_special" required>
-                                <option value="General">General Physician</option>
-                                <option value="Cardiologist">Cardiologist</option>
-                                <option value="Pediatrician">Pediatrician</option>
-                                <option value="Neurologist">Neurologist</option>
-                                <option value="Dermatologist">Dermatologist</option>
-                                <option value="Orthopedic">Orthopedic</option>
-                                <option value="Gynecologist">Gynecologist</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" class="form-control" name="edit_demail" id="edit_demail" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Fees (Rs.)</label>
-                            <input type="number" class="form-control" name="edit_docFees" id="edit_docFees" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact</label>
-                            <input type="text" class="form-control" name="edit_doctorContact" id="edit_doctorContact" required>
-                        </div>
-                        <div class="form-group form-check">
-                            <input type="checkbox" class="form-check-input" id="update_password_check" name="update_password" value="1">
-                            <label class="form-check-label" for="update_password_check">Update Password</label>
-                        </div>
-                        <div class="form-group" id="password_field" style="display: none;">
-                            <label>New Password</label>
-                            <input type="password" class="form-control" name="edit_dpassword" id="edit_dpassword">
-                        </div>
-                        <button type="submit" name="edit_doctor" class="btn btn-warning btn-block">Update Doctor</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Staff Modal -->
-    <div class="modal fade" id="editStaffModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Staff Details</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" id="edit-staff-form">
-                        <input type="hidden" name="edit_staffId" id="edit_staffId">
-                        <div class="form-group">
-                            <label>Name</label>
-                            <input type="text" class="form-control" name="edit_staff" id="edit_staff" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Role</label>
-                            <select class="form-control" name="edit_role" id="edit_role" required>
-                                <option value="Nurse">Nurse</option>
-                                <option value="Receptionist">Receptionist</option>
-                                <option value="Admin">Admin</option>
-                                <option value="Lab Technician">Lab Technician</option>
-                                <option value="Pharmacist">Pharmacist</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" class="form-control" name="edit_semail" id="edit_semail" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact</label>
-                            <input type="text" class="form-control" name="edit_scontact" id="edit_scontact" required>
-                        </div>
-                        <div class="form-group form-check">
-                            <input type="checkbox" class="form-check-input" id="update_staff_password_check" name="update_staff_password" value="1">
-                            <label class="form-check-label" for="update_staff_password_check">Update Password</label>
-                        </div>
-                        <div class="form-group" id="staff_password_field" style="display: none;">
-                            <label>New Password</label>
-                            <input type="password" class="form-control" name="edit_spassword" id="edit_spassword">
-                        </div>
-                        <button type="submit" name="edit_staff" class="btn btn-warning btn-block">Update Staff</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Room Modal -->
-    <div class="modal fade" id="addRoomModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Room/Bed</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Room Number *</label>
-                                    <input type="text" class="form-control" name="room_no" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Bed Number *</label>
-                                    <input type="text" class="form-control" name="bed_no" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Type *</label>
-                                    <select class="form-control" name="type" required>
-                                        <option value="">Select Type</option>
-                                        <option value="General">General</option>
-                                        <option value="ICU">ICU</option>
-                                        <option value="Private">Private</option>
-                                        <option value="Emergency">Emergency</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Status *</label>
-                                    <select class="form-control" name="status" required>
-                                        <option value="Available">Available</option>
-                                        <option value="Occupied">Occupied</option>
-                                        <option value="Maintenance">Under Maintenance</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="add_room" class="btn btn-success btn-block">
-                            <i class="fas fa-plus mr-1"></i> Add Room/Bed
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Edit Room Modal -->
-    <div class="modal fade" id="editRoomModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Room/Bed Details</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" id="edit-room-form">
-                        <input type="hidden" name="room_id" id="edit_room_id">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Room Number *</label>
-                                    <input type="text" class="form-control" name="room_no" id="edit_room_no" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Bed Number *</label>
-                                    <input type="text" class="form-control" name="bed_no" id="edit_bed_no" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Type *</label>
-                                    <select class="form-control" name="type" id="edit_room_type" required>
-                                        <option value="General">General</option>
-                                        <option value="ICU">ICU</option>
-                                        <option value="Private">Private</option>
-                                        <option value="Emergency">Emergency</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Status *</label>
-                                    <select class="form-control" name="status" id="edit_room_status" required>
-                                        <option value="Available">Available</option>
-                                        <option value="Occupied">Occupied</option>
-                                        <option value="Maintenance">Under Maintenance</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" name="edit_room" class="btn btn-warning btn-block">
-                            <i class="fas fa-save mr-1"></i> Update Room/Bed
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Reply to Feedback Modal -->
-    <div class="modal fade" id="replyFeedbackModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Reply to Patient Feedback</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" id="reply-feedback-form">
-                        <input type="hidden" name="feedback_id" id="reply_feedback_id">
-                        <div class="form-group">
-                            <label>Patient</label>
-                            <input type="text" class="form-control" id="reply_patient_name" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Your Reply *</label>
-                            <textarea class="form-control" name="reply_message" rows="5" required placeholder="Type your reply to the patient..."></textarea>
-                            <small class="text-muted">This reply will be sent to the patient and marked as 'Replied'.</small>
-                        </div>
-                        <button type="submit" name="reply_to_feedback" class="btn btn-success btn-block">
-                            <i class="fas fa-paper-plane mr-1"></i> Send Reply
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Global variables
-        let currentPaymentId = null;
-        let currentAppointmentIdToCancel = null;
-        let currentFeedbackId = null;
-        
-        // Initialize on page load
-        $(document).ready(function() {
-            // Initialize charts
-            initializeCharts();
-            
-            // Set up sidebar navigation
-            $('.sidebar ul li[data-target]').click(function() {
-                const target = $(this).data('target');
-                showTab(target);
-                
-                // Update active state
-                $('.sidebar ul li').removeClass('active');
-                $(this).addClass('active');
-            });
-            
-            // Set up modal functionality
-            $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                currentAppointmentIdToCancel = button.data('appointment-id');
-                $('#cancellationReason').val('');
-            });
-            
-            $('#editPaymentModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                currentPaymentId = button.data('payment-id');
-            });
-            
-            $('#editDoctorModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                $('#edit_doctorId').val(button.data('doctor-id'));
-                $('#edit_doctor').val(button.data('doctor-name'));
-                $('#edit_special').val(button.data('doctor-spec'));
-                $('#edit_demail').val(button.data('doctor-email'));
-                $('#edit_docFees').val(button.data('doctor-fees'));
-                $('#edit_doctorContact').val(button.data('doctor-contact'));
-                $('#password_field').hide();
-                $('#update_password_check').prop('checked', false);
-            });
-            
-            $('#editStaffModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                $('#edit_staffId').val(button.data('staff-id'));
-                $('#edit_staff').val(button.data('staff-name'));
-                $('#edit_role').val(button.data('staff-role'));
-                $('#edit_semail').val(button.data('staff-email'));
-                $('#edit_scontact').val(button.data('staff-contact'));
-                $('#staff_password_field').hide();
-                $('#update_staff_password_check').prop('checked', false);
-            });
-            
-            // Edit Room Modal
-            $('#editRoomModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                $('#edit_room_id').val(button.data('room-id'));
-                $('#edit_room_no').val(button.data('room-no'));
-                $('#edit_bed_no').val(button.data('bed-no'));
-                $('#edit_room_type').val(button.data('type'));
-                $('#edit_room_status').val(button.data('status'));
-            });
-            
-            // Reply Feedback Modal
-            $('#replyFeedbackModal').on('show.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                $('#reply_feedback_id').val(button.data('feedback-id'));
-                $('#reply_patient_name').val(button.data('patient-name'));
-            });
-            
-            // Toggle password field in edit doctor modal
-            $('#update_password_check').change(function() {
-                if(this.checked) {
-                    $('#password_field').show();
-                    $('#edit_dpassword').prop('required', true);
-                } else {
-                    $('#password_field').hide();
-                    $('#edit_dpassword').prop('required', false);
-                    $('#edit_dpassword').val('');
-                }
-            });
-            
-            // Toggle password field in edit staff modal
-            $('#update_staff_password_check').change(function() {
-                if(this.checked) {
-                    $('#staff_password_field').show();
-                    $('#edit_spassword').prop('required', true);
-                } else {
-                    $('#staff_password_field').hide();
-                    $('#edit_spassword').prop('required', false);
-                    $('#edit_spassword').val('');
-                }
-            });
-            
-            // File input label update
-            $('.custom-file-input').on('change', function() {
-                let fileName = $(this).val().split('\\').pop();
-                $(this).next('.custom-file-label').addClass("selected").html(fileName);
-            });
-            
-            // Auto-hide alerts after 5 seconds
-            setTimeout(function() {
-                $('.alert').fadeOut('slow');
-            }, 5000);
-            
-            // Check URL hash on load
-            if(window.location.hash) {
-                const tabId = window.location.hash.substring(1);
-                showTab(tabId);
-                
-                // Update sidebar active state
-                $('.sidebar ul li').removeClass('active');
-                $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
-            }
-            
-            // Update server time every second
-            setInterval(function() {
-                const now = new Date();
-                document.getElementById('server-time').textContent = now.toLocaleTimeString();
-            }, 1000);
-            
-            // Set appointment date to today by default
-            $('input[name="appdate"]').val(new Date().toISOString().split('T')[0]);
-            
-            // Set appointment time to next hour by default
-            const nextHour = new Date();
-            nextHour.setHours(nextHour.getHours() + 1);
-            nextHour.setMinutes(0);
-            nextHour.setSeconds(0);
-            $('input[name="apptime"]').val(nextHour.toTimeString().slice(0,5));
-        });
-        
-        // Function to show tab
-        function showTab(tabId) {
-            // Hide all tab panes
-            $('.tab-pane').removeClass('show active');
-            
-            // Show selected tab
-            $('#' + tabId).addClass('show active');
-            
-            // Update URL hash
-            window.location.hash = tabId;
-        }
-        
-        // Function to filter table rows
-        function filterTable(searchInputId, tableBodyId) {
-            const input = $('#' + searchInputId).val().toLowerCase();
-            $('#' + tableBodyId + ' tr').filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(input) > -1);
-            });
-        }
-        
-        // Function to initialize charts
-        function initializeCharts() {
-            // Appointments Chart
-            const appointmentsCtx = document.getElementById('appointmentsChart');
-            if(appointmentsCtx) {
-                const appointmentsChart = new Chart(appointmentsCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Active', 'Cancelled'],
-                        datasets: [{
-                            data: [<?php echo $total_appointments - count(array_filter($appointments, function($app) { return $app['appointmentStatus'] == 'cancelled'; })); ?>, 
-                                   <?php echo count(array_filter($appointments, function($app) { return $app['appointmentStatus'] == 'cancelled'; })); ?>],
-                            backgroundColor: [
-                                'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 99, 132, 0.8)'
-                            ]
-                        }]
-                    }
-                });
-            }
-            
-            // Feedback Chart
-            const feedbackCtx = document.getElementById('feedbackChart');
-            if(feedbackCtx) {
-                const ratingData = {
-                    5: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 5")); ?>,
-                    4: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 4")); ?>,
-                    3: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 3")); ?>,
-                    2: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 2")); ?>,
-                    1: <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM patient_feedback WHERE rating = 1")); ?>
-                };
-                
-                const feedbackChart = new Chart(feedbackCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
-                        datasets: [{
-                            label: 'Number of Ratings',
-                            data: [ratingData[5], ratingData[4], ratingData[3], ratingData[2], ratingData[1]],
-                            backgroundColor: [
-                                'rgba(40, 167, 69, 0.8)',
-                                'rgba(40, 167, 69, 0.6)',
-                                'rgba(255, 193, 7, 0.8)',
-                                'rgba(255, 99, 132, 0.6)',
-                                'rgba(255, 99, 132, 0.8)'
-                            ],
-                            borderColor: [
-                                'rgba(40, 167, 69, 1)',
-                                'rgba(40, 167, 69, 1)',
-                                'rgba(255, 193, 7, 1)',
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(255, 99, 132, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-        
-        // Function to update staff name and role based on selected ID
-        function updateStaffName() {
-            const select = document.getElementById('staff_id');
-            const selectedOption = select.options[select.selectedIndex];
-            const staffName = selectedOption.getAttribute('data-name');
-            const staffRole = selectedOption.getAttribute('data-type');
-            
-            document.getElementById('staff_name').value = staffName;
-            document.getElementById('staff_role').value = staffRole;
-        }
-        
-        // Function to confirm appointment cancellation
-        function confirmCancelAppointment() {
-            if(!currentAppointmentIdToCancel) return;
-            
-            const reason = $('#cancellationReason').val();
-            
-            if(!reason.trim()) {
-                alert('Please provide a reason for cancellation.');
-                return;
-            }
-            
-            // Submit form
-            const form = $('<form>').attr({
-                method: 'POST',
-                style: 'display: none;'
-            });
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'appointmentId',
-                value: currentAppointmentIdToCancel
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'reason',
-                value: reason
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'cancelledBy',
-                value: 'admin'
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'cancel_appointment',
-                value: '1'
-            }));
-            
-            $('body').append(form);
-            form.submit();
-        }
-        
-        // Function to update payment status
-        function updatePaymentStatus() {
-            if(!currentPaymentId) return;
-            
-            const status = $('#edit-payment-status').val();
-            const method = $('#edit-payment-method').val();
-            const receipt = $('#edit-receipt-number').val();
-            
-            // Submit form
-            const form = $('<form>').attr({
-                method: 'POST',
-                style: 'display: none;'
-            });
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'paymentId',
-                value: currentPaymentId
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'status',
-                value: status
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'method',
-                value: method
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'receipt',
-                value: receipt
-            }));
-            
-            form.append($('<input>').attr({
-                type: 'hidden',
-                name: 'update_payment',
-                value: '1'
-            }));
-            
-            $('body').append(form);
-            form.submit();
-        }
-        
-        // Function to delete doctor
-        function deleteDoctor(doctorId, doctorName) {
-            if(confirm(`Are you sure you want to delete ${doctorName}? This action cannot be undone.`)) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'doctorId',
-                    value: doctorId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'delete_doctor',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete staff
-        function deleteStaff(staffId, staffName) {
-            if(confirm(`Are you sure you want to delete ${staffName}? This action cannot be undone.`)) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'staffId',
-                    value: staffId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'delete_staff',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete room
-        function deleteRoom(roomId) {
-            if(confirm('Are you sure you want to delete this room/bed? This action cannot be undone.')) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'room_id',
-                    value: roomId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'delete_room',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete feedback
-        function deleteFeedback(feedbackId, patientName) {
-            if(confirm(`Are you sure you want to delete feedback from ${patientName}? This action cannot be undone.`)) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'feedback_id',
-                    value: feedbackId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'delete_feedback',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to send prescription to hospital pharmacy
-        function sendToHospitalPharmacy(prescriptionId) {
-            if(confirm('Send this prescription to Hospital Pharmacy?')) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'prescription_id',
-                    value: prescriptionId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'send_to_hospital',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to send prescription to patient contact
-        function sendToPatientContact(prescriptionId) {
-            if(confirm('Send this prescription to patient via SMS?')) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'prescription_id',
-                    value: prescriptionId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'send_to_patient',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to delete schedule
-        function deleteSchedule(scheduleId) {
-            if(confirm('Are you sure you want to delete this schedule?')) {
-                const form = $('<form>').attr({
-                    method: 'POST',
-                    style: 'display: none;'
-                });
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'schedule_id',
-                    value: scheduleId
-                }));
-                
-                form.append($('<input>').attr({
-                    type: 'hidden',
-                    name: 'delete_schedule',
-                    value: '1'
-                }));
-                
-                $('body').append(form);
-                form.submit();
-            }
-        }
-        
-        // Function to generate random password
-        function generatePassword() {
-            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-            let password = '';
-            for (let i = 0; i < 10; i++) {
-                password += chars[Math.floor(Math.random() * chars.length)];
-            }
-            
-            $('input[name="new_password"]').val(password);
-            $('input[name="confirm_password"]').val(password);
-            
-            alert('Strong password generated! Make sure to save it somewhere safe.');
-        }
-        
-        // Function to preview profile picture
-        function previewProfilePic(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    $('.profile-pic').attr('src', e.target.result);
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-        
-        // Function to filter feedback
-        function filterFeedback(filterType) {
-            $('.filter-btn').removeClass('active');
-            event.target.classList.add('active');
-            
-            $('.feedback-card').show();
-            
-            switch(filterType) {
-                case 'unread':
-                    $('.feedback-card').each(function() {
-                        if($(this).data('status') !== 'unread') {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                case 'read':
-                    $('.feedback-card').each(function() {
-                        if($(this).data('status') !== 'read') {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                case 'replied':
-                    $('.feedback-card').each(function() {
-                        if($(this).data('status') !== 'replied') {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                case 'rating-5':
-                    $('.feedback-card').each(function() {
-                        if($(this).data('rating') !== 5) {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                case 'rating-4':
-                    $('.feedback-card').each(function() {
-                        if($(this).data('rating') !== 4) {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                case 'rating-1-3':
-                    $('.feedback-card').each(function() {
-                        const rating = $(this).data('rating');
-                        if(rating >= 4) {
-                            $(this).hide();
-                        }
-                    });
-                    break;
-                // 'all' shows everything
-            }
-        }
-        
-        // Function to filter feedback by search
-        function filterFeedbackBySearch() {
-            const input = $('#feedback-search').val().toLowerCase();
-            $('.feedback-card').each(function() {
-                const text = $(this).text().toLowerCase();
-                if(text.indexOf(input) > -1) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-        
-        // Form validation for add patient
-        $(document).ready(function() {
-            $('#add-patient-form').submit(function(e) {
-                const password = $('input[name="password"]').val();
-                const cpassword = $('input[name="cpassword"]').val();
-                
-                if(password !== cpassword) {
-                    e.preventDefault();
-                    alert('Passwords do not match!');
-                    return false;
-                }
-                
-                if(password.length < 6) {
-                    e.preventDefault();
-                    alert('Password must be at least 6 characters long!');
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // Validate doctor form
-            $('#add-doctor-form').submit(function(e) {
-                const password = $('input[name="dpassword"]').val();
-                const cpassword = $('input[name="confirm_dpassword"]').val();
-                
-                if(password !== cpassword) {
-                    e.preventDefault();
-                    alert('Passwords do not match!');
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // Format NIC input for appointment
-            $('input[name="patient_nic"]').on('input', function() {
-                let value = $(this).val().replace(/[^0-9]/g, '');
-                if(value) {
-                    $(this).val('NIC' + value);
-                }
-            });
-            
-            // Validate profile picture size
-            $('#profile_pic').on('change', function() {
-                const file = this.files[0];
-                if(file) {
-                    if(file.size > 2 * 1024 * 1024) {
-                        alert('File size must be less than 2MB');
-                        $(this).val('');
-                    }
-                }
-            });
-        });
-    </script>
-</body>
-</html> 
+                                           
