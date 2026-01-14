@@ -1562,7 +1562,7 @@ if($settings_result){
                                 <option value="Pending">Pending</option>
                                 <option value="Paid">Paid</option>
                                 <option value="Cancelled">Cancelled</option>
-                            </select>
+                                </select>
                         </div>
                         <div class="form-group">
                             <label>Payment Method</label>
