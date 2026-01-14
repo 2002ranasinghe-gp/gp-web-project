@@ -1595,7 +1595,7 @@ if($settings_result){
         let currentPaymentId = null;
         let currentAppointmentIdToCancel = null;
         
-        // Initialize on page load
+        // Initialize on page loa
         $(document).ready(function() {
             // Set up sidebar navigation
             $('.sidebar ul li[data-target]').click(function() {
