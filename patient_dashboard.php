@@ -1,20 +1,51 @@
 <?php
+// patient-dashboard.php
 // ===========================
-// SESSION START & DATABASE CONNECTION
+// SECURITY HEADERS & CACHE CONTROL
 // ===========================
+ob_start(); // Start output buffering
 session_start();
+
+// Prevent caching of secure pages
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+
+// ===========================
+// DATABASE CONNECTION
+// ===========================
 $con = mysqli_connect("localhost", "root", "", "myhmsdb");
 
 if(!$con){
     die("Database connection failed: " . mysqli_connect_error());
 }
 
-// Check if patient is logged in
+// ===========================
+// SESSION VALIDATION
+// ===========================
 if(!isset($_SESSION['patient'])){
+    $_SESSION['error'] = "Session expired. Please login again.";
     header("Location: ../index.php");
     exit();
 }
 
+// Validate session timeout (30 minutes)
+if(isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
+    session_unset();
+    session_destroy();
+    $_SESSION['error'] = "Session expired. Please login again.";
+    header("Location: ../index.php");
+    exit();
+}
+
+// Update last activity time
+$_SESSION['last_activity'] = time();
+
+// ===========================
+// PATIENT DATA FETCH
+// ===========================
 $email = mysqli_real_escape_string($con, $_SESSION['patient']);
 $query = "SELECT * FROM patreg WHERE email='$email' LIMIT 1";
 $result = mysqli_query($con, $query);
@@ -74,7 +105,7 @@ while($row = mysqli_fetch_assoc($doctor_query)){
 }
 
 // ===========================
-// UPDATE PROFILE (FIXED)
+// UPDATE PROFILE
 // ===========================
 $profile_msg = "";
 if(isset($_POST['update_profile'])){
@@ -86,7 +117,6 @@ if(isset($_POST['update_profile'])){
     
     if(mysqli_query($con, $update_query)){
         $profile_msg = "<div class='alert alert-success'>✅ Profile updated successfully!</div>";
-        // Refresh patient data
         $query = "SELECT * FROM patreg WHERE email='$email' LIMIT 1";
         $result = mysqli_query($con, $query);
         $patient = mysqli_fetch_assoc($result);
@@ -97,7 +127,7 @@ if(isset($_POST['update_profile'])){
 }
 
 // ===========================
-// CHANGE PASSWORD (WITH VALIDATION)
+// CHANGE PASSWORD
 // ===========================
 $password_msg = "";
 if(isset($_POST['change_password'])){
@@ -105,7 +135,6 @@ if(isset($_POST['change_password'])){
     $new_password = mysqli_real_escape_string($con, $_POST['new_password']);
     $confirm_password = mysqli_real_escape_string($con, $_POST['confirm_password']);
     
-    // Verify current password
     if($current_password == $patient['password']){
         if($new_password === $confirm_password){
             if(strlen($new_password) >= 6){
@@ -151,7 +180,7 @@ if(isset($_POST['cancel_appointment'])){
 }
 
 // ===========================
-// BOOK APPOINTMENT (NEW - ADMIN STYLE WITH VALIDATION)
+// BOOK APPOINTMENT
 // ===========================
 $book_msg = "";
 if(isset($_POST['book_appointment'])){
@@ -160,19 +189,16 @@ if(isset($_POST['book_appointment'])){
     $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
     $reason = mysqli_real_escape_string($con, $_POST['reason'] ?? '');
     
-    // Check if appointment time is available
     $check_appointment = mysqli_query($con, "SELECT * FROM appointmenttb WHERE doctor='$doctor' AND appdate='$appdate' AND apptime='$apptime'");
     
     if(mysqli_num_rows($check_appointment) > 0){
         $book_msg = "<div class='alert alert-warning'>⚠️ This time slot is already booked. Please choose another time.</div>";
     } else {
-        // Get doctor fees
         $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
         if(mysqli_num_rows($doctor_query) > 0){
             $doctor_data = mysqli_fetch_assoc($doctor_query);
             $docFees = $doctor_data['docFees'];
             
-            // Insert appointment
             $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime, appointment_reason) 
                       VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
                               '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
@@ -181,7 +207,6 @@ if(isset($_POST['book_appointment'])){
             if(mysqli_query($con, $query)){
                 $appointment_id = mysqli_insert_id($con);
                 
-                // Create corresponding payment record
                 $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
                                   VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
                                           '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
@@ -210,7 +235,6 @@ if(isset($_POST['make_payment'])){
     $payment_id = mysqli_real_escape_string($con, $_POST['payment_id']);
     $method = mysqli_real_escape_string($con, $_POST['method']);
     
-    // Generate receipt number
     $receipt_no = 'REC' . date('Ymd') . str_pad($payment_id, 3, '0', STR_PAD_LEFT);
     
     $query = "UPDATE paymenttb SET 
@@ -228,7 +252,7 @@ if(isset($_POST['make_payment'])){
 }
 
 // ===========================
-// SEND FEEDBACK (NEW FEATURE)
+// SEND FEEDBACK
 // ===========================
 $feedback_msg = "";
 if(isset($_POST['send_feedback'])){
@@ -262,6 +286,8 @@ if(isset($_SESSION['error'])){
 } else {
     $error_msg = "";
 }
+
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -269,6 +295,11 @@ if(isset($_SESSION['error'])){
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Dashboard - Healthcare Hospital</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
     <style>
@@ -279,7 +310,6 @@ if(isset($_SESSION['error'])){
             padding: 0;
         }
 
-        /* Sidebar - Blue Theme */
         .sidebar {
             width: 250px;
             background: linear-gradient(180deg, #0077b6 0%, #0096c7 100%);
@@ -331,8 +361,6 @@ if(isset($_SESSION['error'])){
             text-align: center;
             margin-right: 10px;
         }
-
-        /* Main content */
         .main-content { 
             margin-left: 250px; 
             width: calc(100% - 250px); 
@@ -373,7 +401,6 @@ if(isset($_SESSION['error'])){
             font-size: 18px;
         }
 
-        /* Dashboard Cards with Images */
         .stats-card {
             border-radius: 15px;
             border: none;
@@ -386,15 +413,6 @@ if(isset($_SESSION['error'])){
         .stats-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        }
-        .card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 119, 182, 0.1);
-            z-index: 1;
         }
         .stats-icon {
             font-size: 40px;
@@ -419,29 +437,38 @@ if(isset($_SESSION['error'])){
             z-index: 2;
         }
         
-        /* Hospital Image Banner */
-        .hospital-banner {
-            background: linear-gradient(rgba(0, 119, 182, 0.8), rgba(0, 119, 182, 0.8)), url('images/hospital-bg.jpg');
-            background-size: cover;
-            background-position: center;
+        .welcome-banner {
+            background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%);
             color: white;
-            padding: 40px;
+            padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
         }
-        .hospital-banner h2 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        .welcome-banner:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            transform: translate(50%, -50%);
         }
-        .hospital-banner p {
-            font-size: 1.2rem;
-            opacity: 0.9;
+        .welcome-banner:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            transform: translate(-50%, 50%);
         }
-        
-        /* Image Cards for Quick Actions */
+
         .image-card {
             background: white;
             border-radius: 15px;
@@ -476,30 +503,6 @@ if(isset($_SESSION['error'])){
             padding: 20px;
         }
         
-        /* Quick Actions */
-        .quick-action-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-            cursor: pointer;
-            height: 100%;
-            border: 2px solid transparent;
-        }
-        .quick-action-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-            border-color: #0077b6;
-        }
-        .quick-action-card i {
-            font-size: 48px;
-            margin-bottom: 15px;
-            color: #0077b6;
-        }
-
-        /* Tables */
         .data-table {
             background: white;
             border-radius: 10px;
@@ -513,7 +516,6 @@ if(isset($_SESSION['error'])){
             border-radius: 10px 10px 0 0;
         }
 
-        /* Tabs Content */
         .tab-content {
             padding: 30px;
             animation: fadeIn 0.5s;
@@ -523,26 +525,6 @@ if(isset($_SESSION['error'])){
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Search and Filter */
-        .search-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-        .search-bar {
-            position: relative;
-        }
-        .search-icon {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-        }
-
-        /* Status Badges */
         .status-badge {
             padding: 5px 10px;
             border-radius: 20px;
@@ -566,7 +548,6 @@ if(isset($_SESSION['error'])){
             color: #0c5460;
         }
 
-        /* Form Cards */
         .form-card {
             background: white;
             border-radius: 10px;
@@ -582,7 +563,6 @@ if(isset($_SESSION['error'])){
             margin: -25px -25px 20px -25px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 width: 70px;
@@ -598,37 +578,12 @@ if(isset($_SESSION['error'])){
                 margin-left: 70px;
                 width: calc(100% - 70px);
             }
-            .hospital-banner {
-                padding: 20px;
-            }
-            .hospital-banner h2 {
-                font-size: 1.8rem;
-            }
         }
 
-        /* Additional Styles */
         .alert {
             border-radius: 10px;
             border: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: transform 0.3s;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-        
-        .card-header {
-            border-radius: 10px 10px 0 0 !important;
-            border: none;
-            font-weight: bold;
         }
         
         .btn {
@@ -643,80 +598,6 @@ if(isset($_SESSION['error'])){
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
-        .table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        
-        .table th {
-            background: #f8f9fa;
-            border: none;
-            font-weight: 600;
-            padding: 15px;
-        }
-        
-        .table td {
-            padding: 12px 15px;
-            vertical-align: middle;
-            border-top: 1px solid #eee;
-        }
-        
-        .table tr:hover {
-            background-color: rgba(0,119,182,0.05);
-        }
-        
-        .action-btn {
-            margin: 2px;
-            padding: 5px 10px;
-            font-size: 12px;
-            border-radius: 5px;
-        }
-        
-        /* Doctor Cards with Images */
-        .doctor-card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-            height: 100%;
-            border: 2px solid transparent;
-            text-align: center;
-        }
-        .doctor-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-color: #0077b6;
-        }
-        .doctor-avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: #0077b6;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            font-weight: bold;
-            margin: 0 auto 15px;
-            border: 4px solid #e9ecef;
-        }
-        
-        /* Feedback Stars */
-        .rating-stars {
-            font-size: 24px;
-            color: #ffc107;
-            cursor: pointer;
-        }
-        .rating-stars .star {
-            margin-right: 5px;
-        }
-        .rating-stars .star:hover {
-            transform: scale(1.2);
-        }
-        
-        /* Emergency Contact */
         .emergency-contact {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
@@ -731,38 +612,21 @@ if(isset($_SESSION['error'])){
             70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
             100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
         }
+
+        /* Logout button styling */
+        .logout-item {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+        }
         
-        /* Welcome Banner */
-        .welcome-banner {
-            background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            position: relative;
-            overflow: hidden;
+        .logout-btn {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid #ff4444 !important;
         }
-        .welcome-banner:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 200px;
-            height: 200px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            transform: translate(50%, -50%);
-        }
-        .welcome-banner:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 150px;
-            height: 150px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            transform: translate(-50%, 50%);
+        
+        .logout-btn:hover {
+            background: rgba(255, 0, 0, 0.2);
         }
     </style>
 </head>
@@ -794,8 +658,9 @@ if(isset($_SESSION['error'])){
             <li data-target="feedback-tab">
                 <i class="fas fa-comment-dots"></i> <span>Feedback</span>
             </li>
-            <li>
-                <a href="../logout.php" style="color: white; text-decoration: none; display: block;">
+            <!-- Logout Link with confirmation -->
+            <li class="logout-item">
+                <a href="logout.php" onclick="return confirmLogout()" style="color: white; text-decoration: none; display: block;" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
                 </a>
             </li>
@@ -815,6 +680,9 @@ if(isset($_SESSION['error'])){
                     <strong><?php echo htmlspecialchars($patient_name); ?></strong><br>
                     <small>Patient ID: <?php echo htmlspecialchars($patient['pid']); ?></small>
                 </div>
+                <button class="btn btn-sm btn-outline-light ml-3" onclick="confirmLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
 
@@ -840,12 +708,13 @@ if(isset($_SESSION['error'])){
                     </div>
                 <?php endif; ?>
                 
-                <!-- Welcome Banner with Hospital Image -->
+                <!-- Welcome Banner -->
                 <div class="welcome-banner">
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h2>Welcome back, <?php echo htmlspecialchars($patient['fname']); ?>!</h2>
                             <p class="mb-0">Your health is our priority. Access all your medical services in one place.</p>
+                            <small><i class="fas fa-clock mr-1"></i> Session active since: <?php echo date('H:i:s', $_SESSION['last_activity'] ?? time()); ?></small>
                         </div>
                         <div class="col-md-4 text-right">
                             <div class="user-avatar" style="width: 80px; height: 80px; font-size: 36px; margin-left: auto;">
@@ -855,11 +724,10 @@ if(isset($_SESSION['error'])){
                     </div>
                 </div>
 
-                <!-- Stats Cards with Images -->
+                <!-- Stats Cards -->
                 <div class="row">
                     <div class="col-lg-3 col-md-6">
-                        <div class="stats-card card border-left-primary shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/c:\xampp\htdocs\PR\images\bg.jpg') center/cover;">
-                            <div class="card-overlay"></div>
+                        <div class="stats-card card border-left-primary shadow h-100 py-2">
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
@@ -877,8 +745,7 @@ if(isset($_SESSION['error'])){
                     </div>
 
                     <div class="col-lg-3 col-md-6">
-                        <div class="stats-card card border-left-success shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/confirmed-bg.jpg') center/cover;">
-                            <div class="card-overlay"></div>
+                        <div class="stats-card card border-left-success shadow h-100 py-2">
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
@@ -896,8 +763,7 @@ if(isset($_SESSION['error'])){
                     </div>
 
                     <div class="col-lg-3 col-md-6">
-                        <div class="stats-card card border-left-warning shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/pending-bg.jpg') center/cover;">
-                            <div class="card-overlay"></div>
+                        <div class="stats-card card border-left-warning shadow h-100 py-2">
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
@@ -915,8 +781,7 @@ if(isset($_SESSION['error'])){
                     </div>
 
                     <div class="col-lg-3 col-md-6">
-                        <div class="stats-card card border-left-info shadow h-100 py-2" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('images/prescription-bg.jpg') center/cover;">
-                            <div class="card-overlay"></div>
+                        <div class="stats-card card border-left-info shadow h-100 py-2">
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
@@ -934,16 +799,16 @@ if(isset($_SESSION['error'])){
                     </div>
                 </div>
 
-                <!-- Image Cards for Quick Actions -->
+                <!-- Quick Services -->
                 <div class="row mt-4">
                     <div class="col-12 mb-3">
                         <h4>Quick Services</h4>
                     </div>
                     <div class="col-lg-3 col-md-6 mb-4">
                         <div class="image-card" onclick="showTab('appointments-tab')">
-                            <div class="card-image" style="background-image: url('images/book-appointment.jpg');">
+                            <div class="card-image" style="background: linear-gradient(135deg, #0077b6, #0096c7);">
                                 <div class="card-overlay-text">
-                                    <h5 class="mb-0">Book Appointment</h5>
+                                    <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Book Appointment</h5>
                                 </div>
                             </div>
                             <div class="card-content">
@@ -954,9 +819,9 @@ if(isset($_SESSION['error'])){
                     </div>
                     <div class="col-lg-3 col-md-6 mb-4">
                         <div class="image-card" onclick="showTab('prescriptions-tab')">
-                            <div class="card-image" style="background-image: url('images/view-prescriptions.jpg');">
+                            <div class="card-image" style="background: linear-gradient(135deg, #28a745, #20c997);">
                                 <div class="card-overlay-text">
-                                    <h5 class="mb-0">View Prescriptions</h5>
+                                    <h5 class="mb-0"><i class="fas fa-prescription mr-2"></i>View Prescriptions</h5>
                                 </div>
                             </div>
                             <div class="card-content">
@@ -967,9 +832,9 @@ if(isset($_SESSION['error'])){
                     </div>
                     <div class="col-lg-3 col-md-6 mb-4">
                         <div class="image-card" onclick="showTab('payments-tab')">
-                            <div class="card-image" style="background-image: url('images/make-payment.jpg');">
+                            <div class="card-image" style="background: linear-gradient(135deg, #17a2b8, #138496);">
                                 <div class="card-overlay-text">
-                                    <h5 class="mb-0">Make Payment</h5>
+                                    <h5 class="mb-0"><i class="fas fa-credit-card mr-2"></i>Make Payment</h5>
                                 </div>
                             </div>
                             <div class="card-content">
@@ -980,9 +845,9 @@ if(isset($_SESSION['error'])){
                     </div>
                     <div class="col-lg-3 col-md-6 mb-4">
                         <div class="image-card" onclick="showTab('doctors-tab')">
-                            <div class="card-image" style="background-image: url('images/our-doctors.jpg');">
+                            <div class="card-image" style="background: linear-gradient(135deg, #6f42c1, #6610f2);">
                                 <div class="card-overlay-text">
-                                    <h5 class="mb-0">Our Doctors</h5>
+                                    <h5 class="mb-0"><i class="fas fa-user-md mr-2"></i>Our Doctors</h5>
                                 </div>
                             </div>
                             <div class="card-content">
@@ -1068,7 +933,7 @@ if(isset($_SESSION['error'])){
                 <?php if($appointment_msg): echo $appointment_msg; endif; ?>
                 <?php if($book_msg): echo $book_msg; endif; ?>
                 
-                <!-- Book Appointment Form (Admin Panel Style) -->
+                <!-- Book Appointment Form -->
                 <div class="form-card mb-4 collapse show" id="bookAppointmentForm">
                     <div class="form-card-header">
                         <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Book New Appointment</h5>
@@ -1119,14 +984,11 @@ if(isset($_SESSION['error'])){
                     </form>
                 </div>
                 
-                <div class="search-container">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments by doctor or date..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
+                <!-- Appointments Table -->
                 <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="fas fa-list mr-2"></i>All Appointments</h5>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -1141,7 +1003,7 @@ if(isset($_SESSION['error'])){
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="appointments-table-body">
+                            <tbody>
                                 <?php if(count($appointments) > 0): ?>
                                     <?php foreach($appointments as $app): ?>
                                     <tr>
@@ -1184,14 +1046,10 @@ if(isset($_SESSION['error'])){
             <div class="tab-pane fade" id="prescriptions-tab">
                 <h3 class="mb-4"><i class="fas fa-prescription mr-2"></i>My Prescriptions</h3>
                 
-                <div class="search-container">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="prescription-search" placeholder="Search prescriptions..." onkeyup="filterTable('prescription-search', 'prescriptions-table-body')">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
                 <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="fas fa-list mr-2"></i>All Prescriptions</h5>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -1202,10 +1060,9 @@ if(isset($_SESSION['error'])){
                                     <th>Disease</th>
                                     <th>Allergy</th>
                                     <th>Status</th>
-                                    <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="prescriptions-table-body">
+                            <tbody>
                                 <?php if(count($prescriptions) > 0): ?>
                                     <?php foreach($prescriptions as $pres): ?>
                                     <tr>
@@ -1221,16 +1078,11 @@ if(isset($_SESSION['error'])){
                                                 <span class="status-badge status-pending">Not Sent</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
-                                            <button class="btn btn-sm btn-info action-btn" onclick="viewPrescription(<?php echo $pres['id']; ?>)">
-                                                <i class="fas fa-eye"></i> View
-                                            </button>
-                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" class="text-center">No prescriptions found</td>
+                                        <td colspan="6" class="text-center">No prescriptions found</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -1245,14 +1097,10 @@ if(isset($_SESSION['error'])){
                 
                 <?php if($payment_msg): echo $payment_msg; endif; ?>
                 
-                <div class="search-container">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="payment-search" placeholder="Search payments..." onkeyup="filterTable('payment-search', 'payments-table-body')">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
                 <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="fas fa-list mr-2"></i>All Payments</h5>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -1267,7 +1115,7 @@ if(isset($_SESSION['error'])){
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="payments-table-body">
+                            <tbody>
                                 <?php if(count($payments) > 0): ?>
                                     <?php foreach($payments as $pay): ?>
                                     <tr>
@@ -1308,34 +1156,29 @@ if(isset($_SESSION['error'])){
             <div class="tab-pane fade" id="doctors-tab">
                 <h3 class="mb-4"><i class="fas fa-user-md mr-2"></i>Our Doctors</h3>
                 
-                <div class="search-container">
-                    <div class="search-bar">
-                        <input type="text" class="form-control" id="doctor-search" placeholder="Search doctors by name or specialization..." onkeyup="filterCards('doctor-search', 'doctors-grid')">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
-                <div class="row" id="doctors-grid">
+                <div class="row">
                     <?php if(count($doctors) > 0): ?>
                         <?php foreach($doctors as $doc): ?>
                         <div class="col-lg-4 col-md-6 mb-4">
-                            <div class="doctor-card">
-                                <div class="doctor-avatar">
-                                    <?php echo strtoupper(substr($doc['username'], 0, 1)); ?>
+                            <div class="card doctor-card">
+                                <div class="card-body text-center">
+                                    <div class="doctor-avatar mb-3">
+                                        <?php echo strtoupper(substr($doc['username'], 0, 1)); ?>
+                                    </div>
+                                    <h5>Dr. <?php echo htmlspecialchars($doc['username']); ?></h5>
+                                    <p class="text-muted"><?php echo htmlspecialchars($doc['spec']); ?></p>
+                                    <div class="doctor-info">
+                                        <p><i class="fas fa-envelope mr-2"></i><?php echo htmlspecialchars($doc['email']); ?></p>
+                                        <p><i class="fas fa-phone mr-2"></i><?php echo htmlspecialchars($doc['contact']); ?></p>
+                                        <p class="text-primary font-weight-bold">
+                                            <i class="fas fa-money-bill-wave mr-2"></i>
+                                            Fee: Rs. <?php echo number_format($doc['docFees'], 2); ?>
+                                        </p>
+                                    </div>
+                                    <button class="btn btn-primary btn-block mt-3" onclick="bookDoctor('<?php echo $doc['username']; ?>')">
+                                        <i class="fas fa-calendar-plus mr-2"></i>Book Appointment
+                                    </button>
                                 </div>
-                                <h5 class="text-center">Dr. <?php echo htmlspecialchars($doc['username']); ?></h5>
-                                <p class="text-center text-muted"><?php echo htmlspecialchars($doc['spec']); ?></p>
-                                <div class="doctor-info text-center">
-                                    <p><i class="fas fa-envelope mr-2"></i><?php echo htmlspecialchars($doc['email']); ?></p>
-                                    <p><i class="fas fa-phone mr-2"></i><?php echo htmlspecialchars($doc['contact']); ?></p>
-                                    <p class="text-primary font-weight-bold">
-                                        <i class="fas fa-money-bill-wave mr-2"></i>
-                                        Fee: Rs. <?php echo number_format($doc['docFees'], 2); ?>
-                                    </p>
-                                </div>
-                                <button class="btn btn-primary btn-block mt-3" onclick="bookDoctor('<?php echo $doc['username']; ?>')">
-                                    <i class="fas fa-calendar-plus mr-2"></i>Book Appointment
-                                </button>
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -1458,7 +1301,7 @@ if(isset($_SESSION['error'])){
                 </div>
             </div>
 
-            <!-- Feedback Tab (NEW) -->
+            <!-- Feedback Tab -->
             <div class="tab-pane fade" id="feedback-tab">
                 <h3 class="mb-4"><i class="fas fa-comment-dots mr-2"></i>Send Feedback</h3>
                 
@@ -1545,18 +1388,23 @@ if(isset($_SESSION['error'])){
         </div>
     </div>
 
-    <!-- View Prescription Modal -->
-    <div class="modal fade" id="viewPrescriptionModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Prescription Details</h5>
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-sign-out-alt mr-2"></i>Confirm Logout</h5>
                     <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
                 </div>
-                <div class="modal-body" id="prescription-details">
-                    <!-- Prescription details will be loaded here -->
+                <div class="modal-body">
+                    <p>Are you sure you want to logout?</p>
+                    <p class="text-muted"><small>You will need to login again to access your dashboard.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <a href="logout.php" class="btn btn-danger">Yes, Logout</a>
                 </div>
             </div>
         </div>
@@ -1565,11 +1413,6 @@ if(isset($_SESSION['error'])){
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
-        let currentAppointmentId = null;
-        let currentPaymentId = null;
-        let currentRating = 0;
-        
         // Initialize on page load
         $(document).ready(function() {
             // Set up sidebar navigation
@@ -1615,27 +1458,32 @@ if(isset($_SESSION['error'])){
                 });
             });
             
-            // Hover effect for stars
-            $('.rating-stars .star').hover(
-                function() {
-                    const hoverValue = $(this).data('value');
-                    $('.rating-stars .star').each(function() {
-                        const starValue = $(this).data('value');
-                        if (starValue <= hoverValue) {
-                            $(this).css('transform', 'scale(1.1)');
-                        }
-                    });
-                },
-                function() {
-                    $('.rating-stars .star').css('transform', 'scale(1)');
-                }
-            );
-            
-            // Check URL hash
-            if(window.location.hash) {
-                const tabId = window.location.hash.substring(1);
-                showTab(tabId);
+            // Session timeout warning
+            let warningTimeout;
+            function startSessionTimer() {
+                // Show warning 2 minutes before timeout (28 minutes)
+                warningTimeout = setTimeout(function() {
+                    if(confirm('Your session will expire in 2 minutes. Do you want to extend your session?')) {
+                        // AJAX call to extend session
+                        $.ajax({
+                            url: 'extend_session.php',
+                            method: 'POST',
+                            success: function() {
+                                alert('Session extended!');
+                                startSessionTimer();
+                            }
+                        });
+                    }
+                }, 1680000); // 28 minutes
             }
+            
+            // Start session timer
+            startSessionTimer();
+            
+            // Clear timer on page unload
+            $(window).on('beforeunload', function() {
+                clearTimeout(warningTimeout);
+            });
         });
         
         // Function to show tab
@@ -1648,22 +1496,6 @@ if(isset($_SESSION['error'])){
             
             // Update URL hash
             window.location.hash = tabId;
-        }
-        
-        // Function to filter table rows
-        function filterTable(searchInputId, tableBodyId) {
-            const input = $('#' + searchInputId).val().toLowerCase();
-            $('#' + tableBodyId + ' tr').filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(input) > -1);
-            });
-        }
-        
-        // Function to filter cards
-        function filterCards(searchInputId, containerId) {
-            const input = $('#' + searchInputId).val().toLowerCase();
-            $('#' + containerId + ' .col-lg-4').filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(input) > -1);
-            });
         }
         
         // Function to cancel appointment
@@ -1697,23 +1529,6 @@ if(isset($_SESSION['error'])){
             $('#makePaymentModal').modal('show');
         }
         
-        // Function to view prescription
-        function viewPrescription(prescriptionId) {
-            // Load prescription details via AJAX
-            $.ajax({
-                url: 'get_prescription.php',
-                method: 'POST',
-                data: { prescription_id: prescriptionId },
-                success: function(response) {
-                    $('#prescription-details').html(response);
-                    $('#viewPrescriptionModal').modal('show');
-                },
-                error: function() {
-                    alert('Error loading prescription details');
-                }
-            });
-        }
-        
         // Function to book appointment with specific doctor
         function bookDoctor(doctorName) {
             showTab('appointments-tab');
@@ -1724,7 +1539,19 @@ if(isset($_SESSION['error'])){
             }, 500);
         }
         
-        // Form validation for password change
+        // Function to confirm logout
+        function confirmLogout() {
+            $('#logoutModal').modal('show');
+            return false;
+        }
+        
+        // Prevent back button after logout
+        history.pushState(null, null, document.URL);
+        window.addEventListener('popstate', function() {
+            history.pushState(null, null, document.URL);
+        });
+        
+        // Form validation
         $(document).ready(function() {
             $('form[name="change_password"]').submit(function(e) {
                 const newPassword = $('input[name="new_password"]').val();
