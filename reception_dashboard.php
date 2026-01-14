@@ -1,27 +1,68 @@
 <?php
+// ===========================
+// SESSION AND LOGOUT HANDLING
+// ===========================
 session_start();
 
-$con = mysqli_connect("localhost", "root", "", "myhmsdb");
-if (!$con) {
-    die("Database connection failed: " . mysqli_connect_error());
+// Redirect to login if not logged in as reception
+if(!isset($_SESSION['reception_id'])) {
+    header("Location: reception_login.php");
+    exit();
 }
 
-if (!isset($_SESSION['reception'])) {
+// Handle logout
+if(isset($_POST['logout'])) {
+    session_destroy();
     header("Location: index.php");
     exit();
 }
 
-$page = $_GET['page'] ?? 'dashboard';
-$current_user = $_SESSION['reception'];
-$patient_msg = "";
-$appointment_msg = "";
-$settings_msg = "";
-$payment_msg = "";
+// ===========================
+// DATABASE CONNECTION
+// ===========================
+$con = mysqli_connect("localhost", "root", "", "myhmsdb");
+
+if(!$con){
+    die("Database connection failed: " . mysqli_connect_error());
+}
 
 // ===========================
-// ADD PATIENT (Reception)
+// GET RECEPTION INFO
 // ===========================
-if (isset($_POST['add_patient'])) {
+$reception_id = $_SESSION['reception_id'];
+$reception_name = $_SESSION['reception_name'];
+$reception_email = $_SESSION['reception_email'];
+
+// Get reception profile picture
+$reception_query = mysqli_query($con, "SELECT profile_pic FROM stafftb WHERE id='$reception_id'");
+if($reception_query && mysqli_num_rows($reception_query) > 0){
+    $reception_data = mysqli_fetch_assoc($reception_query);
+    $reception_profile_pic = $reception_data['profile_pic'] ?? 'default-avatar.jpg';
+} else {
+    $reception_profile_pic = 'default-avatar.jpg';
+}
+
+// ===========================
+// MESSAGES VARIABLES
+// ===========================
+$patient_msg = "";
+$appointment_msg = "";
+$payment_msg = "";
+$settings_msg = "";
+
+// ===========================
+// GET STATISTICS FOR RECEPTION
+// ===========================
+$total_patients = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patreg"));
+$total_appointments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb"));
+$today_appointments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb WHERE appdate = CURDATE()"));
+$pending_payments = mysqli_num_rows(mysqli_query($con, "SELECT * FROM paymenttb WHERE pay_status = 'Pending'"));
+$today_registrations = mysqli_num_rows(mysqli_query($con, "SELECT * FROM patreg WHERE DATE(reg_date) = CURDATE()"));
+
+// ===========================
+// ADD PATIENT (FOR RECEPTION)
+// ===========================
+if(isset($_POST['add_patient'])){
     $fname = mysqli_real_escape_string($con, $_POST['fname']);
     $lname = mysqli_real_escape_string($con, $_POST['lname']);
     $gender = mysqli_real_escape_string($con, $_POST['gender']);
@@ -33,842 +74,1977 @@ if (isset($_POST['add_patient'])) {
     $nic_input = mysqli_real_escape_string($con, $_POST['nic']);
     $password = mysqli_real_escape_string($con, $_POST['password']);
     $cpassword = isset($_POST['cpassword']) ? mysqli_real_escape_string($con, $_POST['cpassword']) : '';
-
-    if ($password !== $cpassword) {
+    
+    // Check if passwords match
+    if($password !== $cpassword) {
         $patient_msg = "<div class='alert alert-danger'>❌ Passwords do not match!</div>";
     } else {
+        // Format NIC
         $nicNumbers = preg_replace('/[^0-9]/', '', $nic_input);
         $national_id = 'NIC' . $nicNumbers;
-
-        $check_email = mysqli_query($con, "SELECT * FROM patreg WHERE email='$email'");
-        if (mysqli_num_rows($check_email) > 0) {
-            $patient_msg = "<div class='alert alert-danger'>❌ Email already exists!</div>";
-        } else {
-            $check_nic = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$national_id'");
-            if (mysqli_num_rows($check_nic) > 0) {
-                $patient_msg = "<div class='alert alert-danger'>❌ NIC already exists!</div>";
-            } else {
-                $query = "INSERT INTO patreg (fname, lname, gender, dob, email, contact, address, emergencyContact, national_id, password)
-                          VALUES ('$fname', '$lname', '$gender', '$dob', '$email', '$contact', '$address', '$emergencyContact', '$national_id', '$password')";
-                if (mysqli_query($con, $query)) {
-                    $new_id = mysqli_insert_id($con);
-                    $patient_msg = "<div class='alert alert-success'>✅ Patient registered! ID: $new_id | NIC: $national_id</div>";
-                    echo "<script>document.getElementById('add-patient-form').reset();</script>";
-                } else {
-                    $patient_msg = "<div class='alert alert-danger'>❌ DB Error: " . mysqli_error($con) . "</div>";
-                }
-            }
-        }
-    }
-}
-
-// ===========================
-// CREATE APPOINTMENT
-// ===========================
-if (isset($_POST['create_appointment'])) {
-    $patient_id = mysqli_real_escape_string($con, $_POST['patient_id']);
-    $doctor_id = mysqli_real_escape_string($con, $_POST['doctor_id']);
-    $appointment_date = mysqli_real_escape_string($con, $_POST['appointment_date']);
-    $appointment_time = mysqli_real_escape_string($con, $_POST['appointment_time']);
-    $reason = mysqli_real_escape_string($con, $_POST['reason']);
-    $status = mysqli_real_escape_string($con, $_POST['status']);
-    
-    // Check if patient exists
-    $check_patient = mysqli_query($con, "SELECT * FROM patreg WHERE pid='$patient_id'");
-    if (mysqli_num_rows($check_patient) == 0) {
-        $appointment_msg = "<div class='alert alert-danger'>❌ Patient ID not found!</div>";
-    } else {
-        // Check if doctor exists
-        $check_doctor = mysqli_query($con, "SELECT * FROM doctb WHERE id='$doctor_id'");
-        if (mysqli_num_rows($check_doctor) == 0) {
-            $appointment_msg = "<div class='alert alert-danger'>❌ Doctor ID not found!</div>";
-        } else {
-            // Check for existing appointment at same time
-            $check_slot = mysqli_query($con, "SELECT * FROM appointment 
-                                               WHERE doctor_id='$doctor_id' 
-                                               AND appointment_date='$appointment_date' 
-                                               AND appointment_time='$appointment_time' 
-                                               AND status != 'Cancelled'");
-            
-            if (mysqli_num_rows($check_slot) > 0) {
-                $appointment_msg = "<div class='alert alert-warning'>⚠️ Time slot already booked! Choose another time.</div>";
-            } else {
-                $query = "INSERT INTO appointment (patient_id, doctor_id, appointment_date, appointment_time, reason, status, created_by)
-                          VALUES ('$patient_id', '$doctor_id', '$appointment_date', '$appointment_time', '$reason', '$status', '$current_user')";
-                
-                if (mysqli_query($con, $query)) {
-                    $appointment_id = mysqli_insert_id($con);
-                    $appointment_msg = "<div class='alert alert-success'>✅ Appointment created! Appointment ID: $appointment_id</div>";
-                    echo "<script>document.getElementById('appointment-form').reset();</script>";
-                } else {
-                    $appointment_msg = "<div class='alert alert-danger'>❌ DB Error: " . mysqli_error($con) . "</div>";
-                }
-            }
-        }
-    }
-}
-
-// ===========================
-// UPDATE APPOINTMENT STATUS
-// ===========================
-if (isset($_POST['update_appointment_status'])) {
-    $appointment_id = mysqli_real_escape_string($con, $_POST['appointment_id']);
-    $new_status = mysqli_real_escape_string($con, $_POST['new_status']);
-    
-    $query = "UPDATE appointment SET status='$new_status', updated_at=NOW() WHERE id='$appointment_id'";
-    if (mysqli_query($con, $query)) {
-        $appointment_msg = "<div class='alert alert-success'>✅ Appointment status updated to: $new_status</div>";
-    } else {
-        $appointment_msg = "<div class='alert alert-danger'>❌ Error updating status!</div>";
-    }
-}
-
-// ===========================
-// PROCESS PAYMENT
-// ===========================
-if (isset($_POST['process_payment'])) {
-    $appointment_id = mysqli_real_escape_string($con, $_POST['appointment_id']);
-    $patient_id = mysqli_real_escape_string($con, $_POST['patient_id']);
-    $amount = mysqli_real_escape_string($con, $_POST['amount']);
-    $payment_method = mysqli_real_escape_string($con, $_POST['payment_method']);
-    $payment_type = mysqli_real_escape_string($con, $_POST['payment_type']);
-    $description = mysqli_real_escape_string($con, $_POST['description']);
-    
-    // Generate invoice number
-    $invoice_number = 'INV' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-    
-    $query = "INSERT INTO payments (invoice_number, appointment_id, patient_id, amount, payment_method, payment_type, description, processed_by)
-              VALUES ('$invoice_number', '$appointment_id', '$patient_id', '$amount', '$payment_method', '$payment_type', '$description', '$current_user')";
-    
-    if (mysqli_query($con, $query)) {
-        // Update appointment payment status
-        mysqli_query($con, "UPDATE appointment SET payment_status='Paid' WHERE id='$appointment_id'");
-        $payment_id = mysqli_insert_id($con);
-        $payment_msg = "<div class='alert alert-success'>✅ Payment processed! Invoice: $invoice_number | Payment ID: $payment_id</div>";
-        echo "<script>document.getElementById('payment-form').reset();</script>";
-    } else {
-        $payment_msg = "<div class='alert alert-danger'>❌ Error processing payment!</div>";
-    }
-}
-
-// ===========================
-// RECEPTION SETTINGS
-// ===========================
-if (isset($_POST['update_reception_settings'])) {
-    $new_email = mysqli_real_escape_string($con, $_POST['email']);
-    $new_contact = mysqli_real_escape_string($con, $_POST['contact']);
-    $current_pass = mysqli_real_escape_string($con, $_POST['current_password']);
-    $new_pass = mysqli_real_escape_string($con, $_POST['new_password']);
-    $confirm_pass = mysqli_real_escape_string($con, $_POST['confirm_password']);
-
-    $user_res = $con->query("SELECT * FROM reception WHERE username = '$current_user'");
-    if ($user_res->num_rows == 0) {
-        $settings_msg = "<div class='alert alert-danger'>User not found.</div>";
-    } else {
-        $user = $user_res->fetch_assoc();
         
-        if ($current_pass !== $user['password']) {
-            $settings_msg = "<div class='alert alert-danger'>❌ Current password is incorrect!</div>";
+        // Check if email exists
+        $check_email = mysqli_query($con, "SELECT * FROM patreg WHERE email='$email'");
+        if(mysqli_num_rows($check_email) > 0){
+            $patient_msg = "<div class='alert alert-danger'>❌ Patient with this email already exists!</div>";
         } else {
-            $con->query("UPDATE reception SET email='$new_email', contact='$new_contact' WHERE username='$current_user'");
-            
-            if (!empty($new_pass)) {
-                if ($new_pass !== $confirm_pass) {
-                    $settings_msg = "<div class='alert alert-danger'>❌ New passwords don't match!</div>";
+            // Check if NIC exists
+            $check_nic = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$national_id'");
+            if(mysqli_num_rows($check_nic) > 0){
+                $patient_msg = "<div class='alert alert-danger'>❌ Patient with this NIC already exists!</div>";
+            } else {
+                // Insert patient with plain text password
+                $query = "INSERT INTO patreg (fname, lname, gender, dob, email, contact, address, emergencyContact, national_id, password) 
+                          VALUES ('$fname', '$lname', '$gender', '$dob', '$email', '$contact', '$address', '$emergencyContact', '$national_id', '$password')";
+                
+                if(mysqli_query($con, $query)){
+                    $new_patient_id = mysqli_insert_id($con);
+                    $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
+                    // Clear form fields using JavaScript variable
+                    echo "<script>clearPatientForm = true;</script>";
                 } else {
-                    $con->query("UPDATE reception SET password='$new_pass' WHERE username='$current_user'");
+                    $patient_msg = "<div class='alert alert-danger'>❌ Database Error: " . mysqli_error($con) . "</div>";
                 }
-            }
-            
-            if (!isset($error)) {
-                $settings_msg = "<div class='alert alert-success'>✅ Settings updated successfully!</div>";
             }
         }
     }
 }
 
-// Fetch data for various pages
-$profile = $con->query("SELECT * FROM reception WHERE username = '$current_user'")->fetch_assoc();
-$patients_count = $con->query("SELECT COUNT(*) as total FROM patreg")->fetch_assoc()['total'];
-$appointments_today = $con->query("SELECT COUNT(*) as total FROM appointment WHERE appointment_date = CURDATE()")->fetch_assoc()['total'];
-$pending_payments = $con->query("SELECT COUNT(*) as total FROM appointment WHERE payment_status = 'Pending' AND status = 'Completed'")->fetch_assoc()['total'];
+// ===========================
+// ADD APPOINTMENT BY NIC (FOR RECEPTION)
+// ===========================
+if(isset($_POST['add_appointment_by_nic'])){
+    $patient_nic = mysqli_real_escape_string($con, $_POST['patient_nic']);
+    $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
+    $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
+    $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    
+    // Get patient details by NIC
+    $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE national_id='$patient_nic'");
+    if(mysqli_num_rows($patient_query) > 0){
+        $patient = mysqli_fetch_assoc($patient_query);
+        
+        // Get doctor fees
+        $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
+        if(mysqli_num_rows($doctor_query) > 0){
+            $doctor_data = mysqli_fetch_assoc($doctor_query);
+            $docFees = $doctor_data['docFees'];
+            
+            // Insert appointment
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+                      VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
+                              '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
+                              '$doctor', '$docFees', '$appdate', '$apptime')";
+            
+            if(mysqli_query($con, $query)){
+                $appointment_id = mysqli_insert_id($con);
+                
+                // Create corresponding payment record
+                $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
+                                  VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
+                                          '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
+                mysqli_query($con, $payment_query);
+                
+                $appointment_msg = "<div class='alert alert-success'>✅ Appointment created successfully using NIC!<br>
+                                   Appointment ID: $appointment_id<br>
+                                   Patient: {$patient['fname']} {$patient['lname']}<br>
+                                   NIC: {$patient['national_id']}</div>";
+            } else {
+                $appointment_msg = "<div class='alert alert-danger'>❌ Error creating appointment: " . mysqli_error($con) . "</div>";
+            }
+        } else {
+            $appointment_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
+        }
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Patient not found with NIC: $patient_nic</div>";
+    }
+}
 
-// Helper to prevent XSS
-function e($str) { return htmlspecialchars($str, ENT_QUOTES, 'UTF-8'); }
+// ===========================
+// ADD APPOINTMENT BY PATIENT ID
+// ===========================
+if(isset($_POST['add_appointment'])){
+    $patient_id = mysqli_real_escape_string($con, $_POST['patient_id']);
+    $doctor = mysqli_real_escape_string($con, $_POST['doctor']);
+    $appdate = mysqli_real_escape_string($con, $_POST['appdate']);
+    $apptime = mysqli_real_escape_string($con, $_POST['apptime']);
+    
+    // Get patient details
+    $patient_query = mysqli_query($con, "SELECT * FROM patreg WHERE pid='$patient_id'");
+    if(mysqli_num_rows($patient_query) > 0){
+        $patient = mysqli_fetch_assoc($patient_query);
+        
+        // Get doctor fees
+        $doctor_query = mysqli_query($con, "SELECT * FROM doctb WHERE username='$doctor'");
+        if(mysqli_num_rows($doctor_query) > 0){
+            $doctor_data = mysqli_fetch_assoc($doctor_query);
+            $docFees = $doctor_data['docFees'];
+            
+            // Insert appointment
+            $query = "INSERT INTO appointmenttb (pid, national_id, fname, lname, gender, email, contact, doctor, docFees, appdate, apptime) 
+                      VALUES ('{$patient['pid']}', '{$patient['national_id']}', '{$patient['fname']}', '{$patient['lname']}', 
+                              '{$patient['gender']}', '{$patient['email']}', '{$patient['contact']}', 
+                              '$doctor', '$docFees', '$appdate', '$apptime')";
+            
+            if(mysqli_query($con, $query)){
+                $appointment_id = mysqli_insert_id($con);
+                
+                // Create corresponding payment record
+                $payment_query = "INSERT INTO paymenttb (pid, appointment_id, national_id, patient_name, doctor, fees, pay_date) 
+                                  VALUES ('{$patient['pid']}', '$appointment_id', '{$patient['national_id']}', 
+                                          '{$patient['fname']} {$patient['lname']}', '$doctor', '$docFees', '$appdate')";
+                mysqli_query($con, $payment_query);
+                
+                $appointment_msg = "<div class='alert alert-success'>✅ Appointment created successfully! Appointment ID: $appointment_id</div>";
+            } else {
+                $appointment_msg = "<div class='alert alert-danger'>❌ Error creating appointment: " . mysqli_error($con) . "</div>";
+            }
+        } else {
+            $appointment_msg = "<div class='alert alert-danger'>❌ Doctor not found!</div>";
+        }
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Patient not found!</div>";
+    }
+}
+
+// ===========================
+// CANCEL APPOINTMENT
+// ===========================
+if(isset($_POST['cancel_appointment'])){
+    $appointmentId = mysqli_real_escape_string($con, $_POST['appointmentId']);
+    $reason = mysqli_real_escape_string($con, $_POST['reason']);
+    $cancelledBy = mysqli_real_escape_string($con, $_POST['cancelledBy']);
+    
+    $query = "UPDATE appointmenttb SET 
+              appointmentStatus='cancelled',
+              cancelledBy='$cancelledBy',
+              cancellationReason='$reason',
+              userStatus=0 
+              WHERE ID='$appointmentId'";
+    
+    if(mysqli_query($con, $query)){
+        $appointment_msg = "<div class='alert alert-success'>✅ Appointment cancelled successfully!</div>";
+    } else {
+        $appointment_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// UPDATE PAYMENT STATUS
+// ===========================
+if(isset($_POST['update_payment'])){
+    $paymentId = mysqli_real_escape_string($con, $_POST['paymentId']);
+    $status = mysqli_real_escape_string($con, $_POST['status']);
+    $method = mysqli_real_escape_string($con, $_POST['method']);
+    $receipt = mysqli_real_escape_string($con, $_POST['receipt']);
+    
+    if($status == 'Paid' && empty($receipt)){
+        $receipt = 'REC' . str_pad($paymentId, 3, '0', STR_PAD_LEFT);
+    }
+    
+    $query = "UPDATE paymenttb SET 
+              pay_status='$status',
+              payment_method='$method',
+              receipt_no='$receipt'
+              WHERE id='$paymentId'";
+    
+    if(mysqli_query($con, $query)){
+        $payment_msg = "<div class='alert alert-success'>✅ Payment status updated successfully!</div>";
+    } else {
+        $payment_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// CHANGE RECEPTION PASSWORD
+// ===========================
+if(isset($_POST['change_reception_password'])){
+    $current_password = mysqli_real_escape_string($con, $_POST['current_password']);
+    $new_password = mysqli_real_escape_string($con, $_POST['new_password']);
+    $confirm_password = mysqli_real_escape_string($con, $_POST['confirm_password']);
+    
+    // Verify current password (using plain text for now)
+    $check_password = mysqli_query($con, "SELECT * FROM stafftb WHERE id='$reception_id' AND password='$current_password'");
+    if(mysqli_num_rows($check_password) == 0){
+        $settings_msg = "<div class='alert alert-danger'>❌ Current password is incorrect!</div>";
+    } elseif($new_password !== $confirm_password){
+        $settings_msg = "<div class='alert alert-danger'>❌ New passwords do not match!</div>";
+    } elseif(strlen($new_password) < 6){
+        $settings_msg = "<div class='alert alert-danger'>❌ New password must be at least 6 characters!</div>";
+    } else {
+        // Update password
+        $query = "UPDATE stafftb SET password='$new_password' WHERE id='$reception_id'";
+        if(mysqli_query($con, $query)){
+            $settings_msg = "<div class='alert alert-success'>✅ Password changed successfully!</div>";
+        } else {
+            $settings_msg = "<div class='alert alert-danger'>❌ Error changing password: " . mysqli_error($con) . "</div>";
+        }
+    }
+}
+
+// ===========================
+// UPDATE RECEPTION PROFILE
+// ===========================
+if(isset($_POST['update_reception_profile'])){
+    $new_name = mysqli_real_escape_string($con, $_POST['reception_name']);
+    $new_email = mysqli_real_escape_string($con, $_POST['reception_email']);
+    $new_contact = mysqli_real_escape_string($con, $_POST['reception_contact']);
+    
+    // Update profile
+    $query = "UPDATE stafftb SET name='$new_name', email='$new_email', contact='$new_contact' WHERE id='$reception_id'";
+    if(mysqli_query($con, $query)){
+        // Update session variables
+        $_SESSION['reception_name'] = $new_name;
+        $_SESSION['reception_email'] = $new_email;
+        $reception_name = $new_name;
+        $reception_email = $new_email;
+        $settings_msg = "<div class='alert alert-success'>✅ Profile updated successfully!</div>";
+    } else {
+        $settings_msg = "<div class='alert alert-danger'>❌ Error updating profile: " . mysqli_error($con) . "</div>";
+    }
+}
+
+// ===========================
+// GET DATA FROM DATABASE
+// ===========================
+$patients = [];
+$appointments = [];
+$payments = [];
+$staff = [];
+$schedules = [];
+$doctors = [];
+
+// Get patients
+$patient_result = mysqli_query($con, "SELECT pid, fname, lname, gender, email, contact, dob, national_id, reg_date FROM patreg ORDER BY pid DESC LIMIT 50");
+if($patient_result){
+    while($row = mysqli_fetch_assoc($patient_result)){
+        $patients[] = $row;
+    }
+}
+
+// Get appointments WITH NIC
+$appointment_result = mysqli_query($con, "SELECT *, national_id as patient_nic FROM appointmenttb ORDER BY appdate DESC, apptime DESC LIMIT 50");
+if($appointment_result){
+    while($row = mysqli_fetch_assoc($appointment_result)){
+        $appointments[] = $row;
+    }
+}
+
+// Get payments WITH NIC
+$payment_result = mysqli_query($con, "SELECT *, national_id as patient_nic FROM paymenttb ORDER BY pay_date DESC LIMIT 50");
+if($payment_result){
+    while($row = mysqli_fetch_assoc($payment_result)){
+        $payments[] = $row;
+    }
+}
+
+// Get staff (view only)
+$staff_result = mysqli_query($con, "SELECT id, name, role, email, contact FROM stafftb WHERE role != 'Receptionist' ORDER BY role LIMIT 50");
+if($staff_result){
+    while($row = mysqli_fetch_assoc($staff_result)){
+        $staff[] = $row;
+    }
+}
+
+// Get schedules
+$schedule_result = mysqli_query($con, "SELECT * FROM scheduletb ORDER BY day, shift LIMIT 50");
+if($schedule_result){
+    while($row = mysqli_fetch_assoc($schedule_result)){
+        $schedules[] = $row;
+    }
+}
+
+// Get doctors for appointment dropdown
+$doctor_result = mysqli_query($con, "SELECT username, spec FROM doctb ORDER BY username");
+if($doctor_result){
+    while($row = mysqli_fetch_assoc($doctor_result)){
+        $doctors[] = $row;
+    }
+}
+
+// Get reception details for settings
+$reception_details = mysqli_fetch_assoc(mysqli_query($con, "SELECT * FROM stafftb WHERE id='$reception_id'"));
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reception Dashboard</title>
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">
-<style>
-:root {
-    --primary-blue: #1e88e5;
-    --light-blue: #e3f2fd;
-    --medium-blue: #90caf9;
-    --dark-blue: #1565c0;
-    --accent-blue: #42a5f5;
-    --text-dark: #37474f;
-    --text-light: #607d8b;
-    --white: #ffffff;
-    --success: #4caf50;
-    --warning: #ff9800;
-    --danger: #f44336;
-    --info: #00bcd4;
-}
-body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    margin: 0; padding: 0; min-height: 100vh;
-    color: var(--text-dark);
-}
-.navbar { 
-    background: var(--primary-blue); 
-    padding: 0.8rem 1rem; 
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-.navbar .navbar-brand { 
-    font-weight: bold; color: var(--white); font-size: 1.5rem;
-}
-.navbar .welcome { 
-    margin-left: auto; color: var(--white); font-weight: 500;
-}
-.navbar .welcome a { color: var(--white); text-decoration: none; }
-.navbar .welcome a:hover { text-decoration: underline; }
-.sidebar { 
-    width: 250px; background: var(--primary-blue); height: 100vh; 
-    position: fixed; top: 0; left: 0; padding-top: 80px; 
-    transition: all 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-}
-.sidebar ul { list-style: none; padding: 0; margin: 0; }
-.sidebar ul li { 
-    padding: 15px 25px; color: var(--white); cursor: pointer; 
-    transition: all 0.3s; border-left: 4px solid transparent;
-    margin: 5px 10px; border-radius: 0 8px 8px 0;
-}
-.sidebar ul li:hover, .sidebar ul li.active { 
-    background: var(--dark-blue); border-left: 4px solid var(--medium-blue);
-    transform: translateX(5px);
-}
-.sidebar ul li a { color: var(--white); text-decoration: none; display: block; font-weight: 500; }
-.main { margin-left: 250px; padding: 30px; min-height: calc(100vh - 80px); }
-.form-card, .table-container { 
-    background: var(--white); padding: 25px; border-radius: 15px; 
-    box-shadow: 0 8px 25px rgba(30, 136, 229, 0.1); margin-top: 20px;
-}
-.form-card-header {
-    background: var(--primary-blue); color: white;
-    padding: 15px 20px; border-radius: 10px 10px 0 0;
-    margin: -25px -25px 20px -25px;
-}
-.dashboard-header {
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
-    border-radius: 15px; padding: 40px; margin-bottom: 30px; color: white;
-    text-align: center;
-}
-.stat-card {
-    background: white; border-radius: 15px; padding: 25px; 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08); margin-bottom: 20px;
-    transition: transform 0.3s;
-}
-.stat-card:hover { transform: translateY(-5px); }
-.stat-icon { font-size: 2.5rem; margin-bottom: 15px; }
-.stat-number { font-size: 2rem; font-weight: bold; }
-.stat-title { color: var(--text-light); font-size: 0.9rem; text-transform: uppercase; }
-.badge-status { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; }
-.badge-pending { background: #fff3cd; color: #856404; }
-.badge-confirmed { background: #d4edda; color: #155724; }
-.badge-completed { background: #d1ecf1; color: #0c5460; }
-.badge-cancelled { background: #f8d7da; color: #721c24; }
-@media (max-width: 768px) {
-    .sidebar { width: 70px; padding-top: 70px; }
-    .sidebar ul li span { display: none; }
-    .main { margin-left: 70px; padding: 15px; }
-}
-.table th { border-top: none; background: var(--light-blue); }
-.dataTables_wrapper .dataTables_paginate .paginate_button { padding: 3px 10px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reception Dashboard - Healthcare Hospital</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            background: #f8f9fa; 
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #28a745 0%, #20c997 100%);
+            color: white;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,.1);
+            z-index: 1000;
+        }
+        .sidebar .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            object-fit: contain;
+            margin: 0 auto 20px;
+            display: block;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .sidebar h4 { 
+            text-align: center; 
+            font-weight: 700; 
+            font-size: 22px; 
+            margin-bottom: 30px; 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        .sidebar ul { 
+            list-style: none; 
+            padding-left: 0; 
+        }
+        .sidebar ul li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all .3s;
+            border-left: 4px solid transparent;
+            font-size: 15px;
+        }
+        .sidebar ul li:hover, 
+        .sidebar ul li.active {
+            background: rgba(255,255,255,0.1);
+            border-left: 4px solid #fff;
+        }
+        .sidebar ul li i {
+            width: 25px;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        /* Main content */
+        .main-content { 
+            margin-left: 250px; 
+            width: calc(100% - 250px); 
+        }
+        
+        .topbar {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        .brand { 
+            font-weight: 700; 
+            font-size: 24px; 
+            letter-spacing: 1px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            color: #28a745;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        /* Dashboard Cards */
+        .stats-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 20px;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .stats-icon {
+            font-size: 40px;
+            opacity: 0.8;
+        }
+        
+        /* Quick Actions */
+        .quick-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+            height: 100%;
+            border: 2px solid transparent;
+        }
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #28a745;
+        }
+        .quick-action-card i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #28a745;
+        }
+
+        /* Tables */
+        .data-table {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .table-header {
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* Tabs Content */
+        .tab-content {
+            padding: 30px;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Search and Filter */
+        .search-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .search-bar {
+            position: relative;
+        }
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-paid {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Charts Container */
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        /* Form Cards */
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .form-card-header {
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            margin: -25px -25px 20px -25px;
+        }
+
+        /* Settings Page Styles */
+        .settings-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-left: 5px solid #28a745;
+        }
+        .settings-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar h4, .sidebar ul li span {
+                display: none;
+            }
+            .sidebar ul li i {
+                margin-right: 0;
+                font-size: 20px;
+            }
+            .main-content {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+            }
+        }
+
+        /* Additional Styles */
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            border: none;
+            font-weight: bold;
+        }
+        
+        .btn {
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table th {
+            background: #f8f9fa;
+            border: none;
+            font-weight: 600;
+            padding: 15px;
+        }
+        
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-top: 1px solid #eee;
+        }
+        
+        .table tr:hover {
+            background-color: rgba(40,167,69,0.05);
+        }
+        
+        .action-btn {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 5px;
+        }
+        
+        /* Profile Picture Styles */
+        .profile-pic-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-pic {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid #28a745;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .user-avatar-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        
+        /* Tabs Navigation */
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: #28a745;
+            color: white;
+            border-radius: 8px;
+        }
+        
+        /* Welcome Alert */
+        .welcome-alert {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            color: white;
+            border: none;
+        }
+    </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg fixed-top">
-    <a class="navbar-brand" href="#"><i class="fas fa-hospital-alt mr-2"></i>HEALTHCARE HMS</a>
-    <div class="welcome">
-        <i class="fas fa-user-circle mr-2"></i>Welcome, <?php echo e($current_user); ?> 
-        | <a href="logout.php"><i class="fas fa-sign-out-alt mr-1"></i>Logout</a>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <img class="logo" src="images/medical-logo.jpg" alt="Hospital Logo">
+        <h4>Reception</h4>
+        <ul>
+            <li data-target="dash-tab" class="active">
+                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+            </li>
+            <li data-target="pat-tab">
+                <i class="fas fa-user-injured"></i> <span>Patients</span>
+            </li>
+            <li data-target="app-tab">
+                <i class="fas fa-calendar-check"></i> <span>Appointments</span>
+            </li>
+            <li data-target="sched-tab">
+                <i class="fas fa-clock"></i> <span>Schedules</span>
+            </li>
+            <li data-target="pay-tab">
+                <i class="fas fa-credit-card"></i> <span>Payments</span>
+            </li>
+            <li data-target="staff-tab">
+                <i class="fas fa-users"></i> <span>Staff</span>
+            </li>
+            <li data-target="settings-tab">
+                <i class="fas fa-cog"></i> <span>Settings</span>
+            </li>
+            <li>
+                <form method="POST" action="" style="margin: 0; padding: 0;">
+                    <button type="submit" name="logout" style="background: none; border: none; color: white; width: 100%; text-align: left; padding: 12px 20px; cursor: pointer; font-size: 15px; display: flex; align-items: center;">
+                        <i class="fas fa-sign-out-alt" style="width: 25px; text-align: center; margin-right: 10px;"></i> 
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
     </div>
-</nav>
 
-<div class="sidebar">
-    <ul>
-        <li class="<?php if($page=='dashboard') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=dashboard">
-                <i class="fas fa-tachometer-alt"></i><span> Dashboard</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='patients') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=patients">
-                <i class="fas fa-user-injured"></i><span> Patients</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='appointments') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=appointments">
-                <i class="fas fa-calendar-check"></i><span> Appointments</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='schedule') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=schedule">
-                <i class="fas fa-calendar-alt"></i><span> Schedule</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='payment') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=payment">
-                <i class="fas fa-credit-card"></i><span> Payment</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='staff') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=staff">
-                <i class="fas fa-users"></i><span> Staff</span>
-            </a>
-        </li>
-        <li class="<?php if($page=='settings') echo 'active'; ?>">
-            <a href="reception_dashboard.php?page=settings">
-                <i class="fas fa-cog"></i><span> Settings</span>
-            </a>
-        </li>
-    </ul>
-</div>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="brand">🏥 Healthcare Hospital - Reception</div>
+            <div class="user-info">
+                <div class="profile-pic-container">
+                    <?php if($reception_profile_pic && file_exists('uploads/profile_pictures/' . $reception_profile_pic)): ?>
+                        <img src="uploads/profile_pictures/<?php echo $reception_profile_pic; ?>" class="user-avatar-img" alt="Profile">
+                    <?php else: ?>
+                        <div class="user-avatar">
+                            <?php echo strtoupper(substr($reception_name, 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <strong><?php echo htmlspecialchars($reception_name); ?></strong><br>
+                    <small>Reception Staff</small>
+                </div>
+            </div>
+        </div>
 
-<div class="main">
-<?php
-switch($page){
-    case 'dashboard':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-tachometer-alt mr-3'></i>Reception Dashboard</h1>
-                <p>Welcome back! Manage your daily operations efficiently</p>
-              </div>";
-
-        echo "<div class='row'>
-                <div class='col-md-3'>
-                    <div class='stat-card text-center'>
-                        <div class='stat-icon text-primary'><i class='fas fa-user-injured'></i></div>
-                        <div class='stat-number'>$patients_count</div>
-                        <div class='stat-title'>Total Patients</div>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dash-tab">
+                <!-- Welcome Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="alert welcome-alert" role="alert">
+                            <h4 class="alert-heading">Welcome, <?php echo htmlspecialchars($reception_name); ?>!</h4>
+                            <p class="mb-0">Here's your reception dashboard. You can manage patients, appointments, and payments.</p>
+                        </div>
                     </div>
                 </div>
-                <div class='col-md-3'>
-                    <div class='stat-card text-center'>
-                        <div class='stat-icon text-success'><i class='fas fa-calendar-check'></i></div>
-                        <div class='stat-number'>$appointments_today</div>
-                        <div class='stat-title'>Today's Appointments</div>
-                    </div>
-                </div>
-                <div class='col-md-3'>
-                    <div class='stat-card text-center'>
-                        <div class='stat-icon text-warning'><i class='fas fa-clock'></i></div>
-                        <div class='stat-number'>" . $con->query("SELECT COUNT(*) as total FROM appointment WHERE status = 'Pending'")->fetch_assoc()['total'] . "</div>
-                        <div class='stat-title'>Pending Appointments</div>
-                    </div>
-                </div>
-                <div class='col-md-3'>
-                    <div class='stat-card text-center'>
-                        <div class='stat-icon text-danger'><i class='fas fa-dollar-sign'></i></div>
-                        <div class='stat-number'>$pending_payments</div>
-                        <div class='stat-title'>Pending Payments</div>
-                    </div>
-                </div>
-              </div>";
 
-        // Today's Appointments
-        $today = date('Y-m-d');
-        $result = $con->query("SELECT a.*, p.fname, p.lname, d.username as doctor_name 
-                               FROM appointment a 
-                               LEFT JOIN patreg p ON a.patient_id = p.pid 
-                               LEFT JOIN doctb d ON a.doctor_id = d.id 
-                               WHERE a.appointment_date = '$today' 
-                               ORDER BY a.appointment_time");
+                <!-- Stats Cards -->
+                <div class="row">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Total Patients
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $total_patients; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-user-injured stats-icon text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Today's Appointments
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $today_appointments; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-calendar-day stats-icon text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Pending Payments
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $pending_payments; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-credit-card stats-icon text-warning"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Today's Registrations
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <?php echo $today_registrations; ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-user-plus stats-icon text-info"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="row mt-4">
+                    <div class="col-12 mb-3">
+                        <h4>Quick Actions</h4>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('pat-tab')">
+                            <i class="fas fa-user-plus"></i>
+                            <h5>Register Patient</h5>
+                            <p>Register a new patient</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('app-tab')">
+                            <i class="fas fa-calendar-plus"></i>
+                            <h5>Create Appointment</h5>
+                            <p>Schedule a new appointment</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('pay-tab')">
+                            <i class="fas fa-credit-card"></i>
+                            <h5>Manage Payments</h5>
+                            <p>View and update payments</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="quick-action-card" onclick="showTab('settings-tab')">
+                            <i class="fas fa-cog"></i>
+                            <h5>Settings</h5>
+                            <p>Update your profile</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Today's Appointments Status</h5>
+                            <canvas id="appointmentsChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5>Patient Registrations (Last 7 Days)</h5>
+                            <canvas id="registrationsChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="data-table">
+                            <div class="table-header">
+                                <h5 class="mb-0"><i class="fas fa-history mr-2"></i>Recent Activity</h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Activity</th>
+                                            <th>Details</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if($today_registrations > 0): ?>
+                                        <tr>
+                                            <td>Today</td>
+                                            <td>New Registrations</td>
+                                            <td><?php echo $today_registrations; ?> new patients registered</td>
+                                            <td><span class="badge badge-success">Active</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <?php if($today_appointments > 0): ?>
+                                        <tr>
+                                            <td>Today</td>
+                                            <td>Today's Appointments</td>
+                                            <td><?php echo $today_appointments; ?> appointments scheduled</td>
+                                            <td><span class="badge badge-info">Scheduled</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <?php if($pending_payments > 0): ?>
+                                        <tr>
+                                            <td>Today</td>
+                                            <td>Pending Payments</td>
+                                            <td><?php echo $pending_payments; ?> payments pending</td>
+                                            <td><span class="badge badge-warning">Pending</span></td>
+                                        </tr>
+                                        <?php endif; ?>
+                                        <tr>
+                                            <td>Now</td>
+                                            <td>Logged In</td>
+                                            <td><?php echo htmlspecialchars($reception_name); ?></td>
+                                            <td><span class="badge badge-success">Active</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patients Tab -->
+            <div class="tab-pane fade" id="pat-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-user-injured mr-2"></i>Patient Management</h3>
+                    <button class="btn btn-success" onclick="showTab('pat-tab')">
+                        <i class="fas fa-user-plus mr-2"></i>Register New Patient
+                    </button>
+                </div>
+                
+                <?php if($patient_msg): echo $patient_msg; endif; ?>
+                
+                <!-- Patient Registration Form -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Register New Patient</h5>
+                    </div>
+                    <form method="POST" id="add-patient-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>First Name *</label>
+                                    <input type="text" class="form-control" name="fname" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Last Name *</label>
+                                    <input type="text" class="form-control" name="lname" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Gender *</label>
+                                    <select class="form-control" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Date of Birth *</label>
+                                    <input type="date" class="form-control" name="dob" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Email Address *</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contact Number *</label>
+                                    <input type="tel" class="form-control" name="contact" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>National ID (NIC) *</label>
+                                    <input type="text" class="form-control" name="nic" required>
+                                    <small class="text-muted">Enter NIC numbers only</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Password *</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Confirm Password *</label>
+                                    <input type="password" class="form-control" name="cpassword" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Emergency Contact</label>
+                                    <input type="text" class="form-control" name="emergencyContact">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <textarea class="form-control" name="address" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" name="add_patient" class="btn btn-success">
+                            <i class="fas fa-user-plus mr-1"></i> Register Patient
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Patients List -->
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="patient-search" placeholder="Search patients by name, ID, NIC, or contact..." onkeyup="filterTable('patient-search', 'patients-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient ID</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Gender</th>
+                                    <th>Email</th>
+                                    <th>Contact</th>
+                                    <th>Date of Birth</th>
+                                    <th>NIC</th>
+                                    <th>Registered Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patients-table-body">
+                                <?php if(count($patients) > 0): ?>
+                                    <?php foreach($patients as $patient): ?>
+                                    <tr>
+                                        <td><?php echo $patient['pid']; ?></td>
+                                        <td><?php echo $patient['fname']; ?></td>
+                                        <td><?php echo $patient['lname']; ?></td>
+                                        <td><?php echo $patient['gender']; ?></td>
+                                        <td><?php echo $patient['email']; ?></td>
+                                        <td><?php echo $patient['contact']; ?></td>
+                                        <td><?php echo $patient['dob'] ? date('Y-m-d', strtotime($patient['dob'])) : 'N/A'; ?></td>
+                                        <td><span class="badge badge-info"><?php echo $patient['national_id']; ?></span></td>
+                                        <td><?php echo $patient['reg_date'] ? date('Y-m-d', strtotime($patient['reg_date'])) : 'N/A'; ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="9" class="text-center">No patients found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appointments Tab -->
+            <div class="tab-pane fade" id="app-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3><i class="fas fa-calendar-check mr-2"></i>Appointments</h3>
+                    <button class="btn btn-primary" data-toggle="collapse" data-target="#addAppointmentForm">
+                        <i class="fas fa-calendar-plus mr-2"></i>Create New Appointment
+                    </button>
+                </div>
+                
+                <?php if($appointment_msg): echo $appointment_msg; endif; ?>
+                
+                <!-- Add Appointment Form with NIC Option -->
+                <div class="form-card mb-4 collapse show" id="addAppointmentForm">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-plus mr-2"></i>Create New Appointment (Using NIC)</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Patient NIC *</label>
+                                    <input type="text" class="form-control" name="patient_nic" placeholder="Enter patient NIC (e.g., NIC123456789)" required>
+                                    <small class="text-muted">Enter patient NIC (e.g., NIC123456789)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Doctor *</label>
+                                    <select class="form-control" name="doctor" required>
+                                        <option value="">Select Doctor</option>
+                                        <?php foreach($doctors as $doctor): ?>
+                                        <option value="<?php echo $doctor['username']; ?>">
+                                            <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Date *</label>
+                                    <input type="date" class="form-control" name="appdate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Time *</label>
+                                    <input type="time" class="form-control" name="apptime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="add_appointment_by_nic" class="btn btn-success">
+                            <i class="fas fa-calendar-plus mr-1"></i> Create Appointment Using NIC
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Alternative Appointment Form (by Patient ID) -->
+                <div class="form-card mb-4">
+                    <div class="form-card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt mr-2"></i>Alternative: Create Appointment by Patient ID</h5>
+                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Patient ID *</label>
+                                    <input type="number" class="form-control" name="patient_id" placeholder="Enter patient ID">
+                                    <small class="text-muted">Enter patient ID (if NIC is not available)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Doctor *</label>
+                                    <select class="form-control" name="doctor" required>
+                                        <option value="">Select Doctor</option>
+                                        <?php foreach($doctors as $doctor): ?>
+                                        <option value="<?php echo $doctor['username']; ?>">
+                                            <?php echo $doctor['username']; ?> (<?php echo $doctor['spec']; ?>)
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Date *</label>
+                                    <input type="date" class="form-control" name="appdate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Appointment Time *</label>
+                                    <input type="time" class="form-control" name="apptime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="add_appointment" class="btn btn-info">
+                            <i class="fas fa-calendar-alt mr-1"></i> Create Appointment by ID
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="appointment-search" placeholder="Search appointments by patient name, doctor, date, or NIC..." onkeyup="filterTable('appointment-search', 'appointments-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Appointment ID</th>
+                                    <th>Patient</th>
+                                    <th>NIC</th>
+                                    <th>Doctor</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Fees (Rs.)</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointments-table-body">
+                                <?php if(count($appointments) > 0): ?>
+                                    <?php foreach($appointments as $app): ?>
+                                    <tr>
+                                        <td><?php echo $app['ID']; ?></td>
+                                        <td><?php echo $app['fname'] . ' ' . $app['lname']; ?></td>
+                                        <td><?php echo $app['patient_nic'] ?: $app['national_id']; ?></td>
+                                        <td><?php echo $app['doctor']; ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($app['appdate'])); ?></td>
+                                        <td><?php echo date('h:i A', strtotime($app['apptime'])); ?></td>
+                                        <td>Rs. <?php echo number_format($app['docFees'], 2); ?></td>
+                                        <td>
+                                            <?php if($app['appointmentStatus'] == 'active'): ?>
+                                                <span class="status-badge status-active">Active</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-cancelled">Cancelled</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if($app['appointmentStatus'] == 'active'): ?>
+                                                <button class="btn btn-sm btn-danger action-btn" data-toggle="modal" data-target="#cancelAppointmentModal" data-appointment-id="<?php echo $app['ID']; ?>">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="9" class="text-center">No appointments found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedules Tab -->
+            <div class="tab-pane fade" id="sched-tab">
+                <h3 class="mb-4"><i class="fas fa-clock mr-2"></i>Staff Schedules</h3>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="schedule-search" placeholder="Search schedules by staff name, role, or day..." onkeyup="filterTable('schedule-search', 'schedules-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Schedule ID</th>
+                                    <th>Staff/Doctor ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Day</th>
+                                    <th>Shift</th>
+                                    <th>Created Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedules-table-body">
+                                <?php if(count($schedules) > 0): ?>
+                                    <?php foreach($schedules as $schedule): ?>
+                                    <tr>
+                                        <td><?php echo $schedule['id']; ?></td>
+                                        <td><strong><?php echo $schedule['staff_id']; ?></strong></td>
+                                        <td><?php echo $schedule['staff_name']; ?></td>
+                                        <td><?php echo $schedule['role']; ?></td>
+                                        <td><?php echo $schedule['day']; ?></td>
+                                        <td><?php echo $schedule['shift']; ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($schedule['created_date'])); ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center">No schedules found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payments Tab -->
+            <div class="tab-pane fade" id="pay-tab">
+                <h3 class="mb-4"><i class="fas fa-credit-card mr-2"></i>Payments</h3>
+                
+                <?php if($payment_msg): echo $payment_msg; endif; ?>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="payment-search" placeholder="Search payments by patient name, NIC, or doctor..." onkeyup="filterTable('payment-search', 'payments-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Payment ID</th>
+                                    <th>Patient</th>
+                                    <th>NIC</th>
+                                    <th>Doctor</th>
+                                    <th>Amount (Rs.)</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Method</th>
+                                    <th>Receipt No</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-table-body">
+                                <?php if(count($payments) > 0): ?>
+                                    <?php foreach($payments as $pay): ?>
+                                    <tr>
+                                        <td><?php echo $pay['id']; ?></td>
+                                        <td><?php echo $pay['patient_name']; ?></td>
+                                        <td><?php echo $pay['patient_nic'] ?: $pay['national_id']; ?></td>
+                                        <td><?php echo $pay['doctor']; ?></td>
+                                        <td>Rs. <?php echo number_format($pay['fees'], 2); ?></td>
+                                        <td><?php echo date('Y-m-d', strtotime($pay['pay_date'])); ?></td>
+                                        <td>
+                                            <?php if($pay['pay_status'] == 'Paid'): ?>
+                                                <span class="status-badge status-paid">Paid</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-pending">Pending</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo $pay['payment_method'] ?: 'N/A'; ?></td>
+                                        <td><?php echo $pay['receipt_no'] ?: 'N/A'; ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning action-btn" data-toggle="modal" data-target="#editPaymentModal" data-payment-id="<?php echo $pay['id']; ?>">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center">No payments found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Tab -->
+            <div class="tab-pane fade" id="staff-tab">
+                <h3 class="mb-4"><i class="fas fa-users mr-2"></i>Staff Members (View Only)</h3>
+                
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" class="form-control" id="staff-search" placeholder="Search staff by name, ID, or role..." onkeyup="filterTable('staff-search', 'staff-table-body')">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Email</th>
+                                    <th>Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-table-body">
+                                <?php if(count($staff) > 0): ?>
+                                    <?php foreach($staff as $staff_member): ?>
+                                    <tr>
+                                        <td><strong><?php echo $staff_member['id']; ?></strong></td>
+                                        <td><?php echo $staff_member['name']; ?></td>
+                                        <td><?php echo $staff_member['role']; ?></td>
+                                        <td><?php echo $staff_member['email']; ?></td>
+                                        <td><?php echo $staff_member['contact']; ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center">No staff members found</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-pane fade" id="settings-tab">
+                <h3 class="mb-4"><i class="fas fa-cog mr-2"></i>Settings</h3>
+                
+                <?php if($settings_msg): echo $settings_msg; endif; ?>
+                
+                <!-- Profile Picture -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h4>Your Profile</h4>
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="profile-pic-container mb-3">
+                                <?php if($reception_profile_pic && file_exists('uploads/profile_pictures/' . $reception_profile_pic)): ?>
+                                    <img src="uploads/profile_pictures/<?php echo $reception_profile_pic; ?>" class="profile-pic" alt="Profile">
+                                <?php else: ?>
+                                    <div class="profile-pic" style="background: #28a745; color: white; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold;">
+                                        <?php echo strtoupper(substr($reception_name, 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label>Current Details</label>
+                                <div class="p-3 bg-light rounded">
+                                    <p><strong>Name:</strong> <?php echo htmlspecialchars($reception_name); ?></p>
+                                    <p><strong>Email:</strong> <?php echo htmlspecialchars($reception_email); ?></p>
+                                    <p><strong>Contact:</strong> <?php echo $reception_details['contact'] ?? 'Not set'; ?></p>
+                                    <p><strong>Staff ID:</strong> <?php echo $reception_id; ?></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Update Profile Information -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-user-edit"></i>
+                    </div>
+                    <h4>Update Profile Information</h4>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Full Name *</label>
+                                    <input type="text" class="form-control" name="reception_name" value="<?php echo htmlspecialchars($reception_name); ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Email *</label>
+                                    <input type="email" class="form-control" name="reception_email" value="<?php echo htmlspecialchars($reception_email); ?>" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contact Number</label>
+                                    <input type="text" class="form-control" name="reception_contact" value="<?php echo $reception_details['contact'] ?? ''; ?>">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="update_reception_profile" class="btn btn-primary">
+                            <i class="fas fa-save mr-1"></i> Update Profile
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Change Password -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h4>Change Password</h4>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Current Password *</label>
+                                    <input type="password" class="form-control" name="current_password" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>New Password *</label>
+                                    <input type="password" class="form-control" name="new_password" required>
+                                    <small class="text-muted">Min. 6 characters</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Confirm New Password *</label>
+                                    <input type="password" class="form-control" name="confirm_password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" name="change_reception_password" class="btn btn-warning">
+                            <i class="fas fa-key mr-1"></i> Change Password
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- System Information -->
+                <div class="settings-card">
+                    <div class="settings-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h4>System Information</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>PHP Version</th>
+                                    <td><?php echo phpversion(); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Database Server</th>
+                                    <td><?php echo mysqli_get_server_info($con); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Logged In As</th>
+                                    <td><?php echo htmlspecialchars($reception_name); ?></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Application Version</th>
+                                    <td>1.0.0</td>
+                                </tr>
+                                <tr>
+                                    <th>Current Date</th>
+                                    <td><?php echo date('Y-m-d'); ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Current Time</th>
+                                    <td id="server-time">Loading...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Cancel Appointment Modal -->
+    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cancel Appointment</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="cancel-appointment-form">
+                        <div class="form-group">
+                            <label>Reason for Cancellation</label>
+                            <textarea class="form-control" id="cancellationReason" rows="3" required></textarea>
+                        </div>
+                        <input type="hidden" id="appointmentToCancelId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmCancelAppointment()">Cancel Appointment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Payment Modal -->
+    <div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Payment Status</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-payment-form">
+                        <input type="hidden" id="edit-payment-id">
+                        <div class="form-group">
+                            <label>Payment Status</label>
+                            <select class="form-control" id="edit-payment-status">
+                                <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <select class="form-control" id="edit-payment-method">
+                                <option value="">Select Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Online">Online Payment</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Receipt Number</label>
+                            <input type="text" class="form-control" id="edit-receipt-number" placeholder="Auto-generated if empty">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" onclick="updatePaymentStatus()">Update Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentPaymentId = null;
+        let currentAppointmentIdToCancel = null;
         
-        if($result->num_rows > 0){
-            echo "<div class='table-container'>
-                    <h4><i class='fas fa-calendar-day mr-2'></i>Today's Appointments</h4>
-                    <table class='table table-hover'>
-                    <thead><tr><th>Time</th><th>Patient</th><th>Doctor</th><th>Reason</th><th>Status</th></tr></thead><tbody>";
-            while($row = $result->fetch_assoc()){
-                $status_class = strtolower($row['status']);
-                echo "<tr>
-                <td>" . date('h:i A', strtotime($row['appointment_time'])) . "</td>
-                <td>" . e($row['fname']) . " " . e($row['lname']) . "</td>
-                <td>Dr. " . e($row['doctor_name']) . "</td>
-                <td>" . e(substr($row['reason'], 0, 30)) . "...</td>
-                <td><span class='badge-status badge-$status_class'>" . e($row['status']) . "</span></td>
-                </tr>";
+        // Initialize on page load
+        $(document).ready(function() {
+            // Initialize charts
+            initializeCharts();
+            
+            // Set up sidebar navigation
+            $('.sidebar ul li[data-target]').click(function() {
+                const target = $(this).data('target');
+                showTab(target);
+                
+                // Update active state
+                $('.sidebar ul li').removeClass('active');
+                $(this).addClass('active');
+            });
+            
+            // Set up modal functionality
+            $('#cancelAppointmentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                currentAppointmentIdToCancel = button.data('appointment-id');
+                $('#cancellationReason').val('');
+            });
+            
+            $('#editPaymentModal').on('show.bs.modal', function(event) {
+                const button = $(event.relatedTarget);
+                currentPaymentId = button.data('payment-id');
+            });
+            
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                $('.alert').fadeOut('slow');
+            }, 5000);
+            
+            // Check URL hash on load
+            if(window.location.hash) {
+                const tabId = window.location.hash.substring(1);
+                showTab(tabId);
+                
+                // Update sidebar active state
+                $('.sidebar ul li').removeClass('active');
+                $(`.sidebar ul li[data-target="${tabId}"]`).addClass('active');
             }
-            echo "</tbody></table></div>";
-        }
-        break;
-
-    case 'patients':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-user-injured mr-3'></i>Patient Management</h1>
-                <p>Register new patients or view existing records</p>
-              </div>";
-
-        echo $patient_msg;
-        echo "<div class='form-card'>
-                <div class='form-card-header'>
-                    <h5><i class='fas fa-user-plus mr-2'></i>Register New Patient</h5>
-                </div>
-                <form method='POST' id='add-patient-form'>
-                    <div class='row'>
-                        <div class='col-md-6'><input type='text' class='form-control mb-3' name='fname' placeholder='First Name *' required></div>
-                        <div class='col-md-6'><input type='text' class='form-control mb-3' name='lname' placeholder='Last Name *' required></div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='gender' required>
-                                <option value=''>Gender *</option>
-                                <option value='Male'>Male</option>
-                                <option value='Female'>Female</option>
-                                <option value='Other'>Other</option>
-                            </select>
-                        </div>
-                        <div class='col-md-6'><input type='date' class='form-control mb-3' name='dob' placeholder='DOB *' required></div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'><input type='email' class='form-control mb-3' name='email' placeholder='Email *' required></div>
-                        <div class='col-md-6'><input type='tel' class='form-control mb-3' name='contact' placeholder='Contact *' required></div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'><input type='text' class='form-control mb-3' name='nic' placeholder='NIC (e.g., 123456789V) *' required></div>
-                        <div class='col-md-6'><input type='password' class='form-control mb-3' name='password' placeholder='Password *' minlength='6' required></div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'><input type='password' class='form-control mb-3' name='cpassword' placeholder='Confirm Password *' required></div>
-                        <div class='col-md-6'><textarea class='form-control mb-3' name='address' placeholder='Address'></textarea></div>
-                    </div>
-                    <input type='text' class='form-control mb-3' name='emergencyContact' placeholder='Emergency Contact'>
-                    <button type='submit' name='add_patient' class='btn btn-success btn-block'>
-                        <i class='fas fa-user-plus mr-1'></i> Register Patient
-                    </button>
-                </form>
-              </div>";
-
-        $result = $con->query("SELECT * FROM patreg ORDER BY pid DESC");
-        echo "<div class='table-container'>
-                <h4><i class='fas fa-list mr-2'></i>All Patients</h4>
-                <table class='table table-striped data-table'>
-                <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Contact</th><th>DOB</th><th>NIC</th><th>Action</th></tr></thead><tbody>";
-        while($row = $result->fetch_assoc()){
-            echo "<tr>
-            <td>" . e($row['pid']) . "</td>
-            <td>" . e($row['fname']) . " " . e($row['lname']) . "</td>
-            <td>" . e($row['email']) . "</td>
-            <td>" . e($row['contact']) . "</td>
-            <td>" . e($row['dob']) . "</td>
-            <td><code>" . e($row['national_id']) . "</code></td>
-            <td>
-                <button class='btn btn-sm btn-info' onclick='viewPatient(" . $row['pid'] . ")'><i class='fas fa-eye'></i></button>
-                <button class='btn btn-sm btn-warning' onclick='editPatient(" . $row['pid'] . ")'><i class='fas fa-edit'></i></button>
-            </td>
-            </tr>";
-        }
-        echo "</tbody></table></div>";
-        break;
-
-    case 'appointments':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-calendar-check mr-3'></i>Appointment Management</h1>
-                <p>Create and manage patient appointments</p>
-              </div>";
-
-        echo $appointment_msg;
+            
+            // Update server time every second
+            setInterval(function() {
+                const now = new Date();
+                document.getElementById('server-time').textContent = now.toLocaleTimeString();
+            }, 1000);
+            
+            // Set appointment date to today by default
+            $('input[name="appdate"]').val(new Date().toISOString().split('T')[0]);
+            
+            // Set appointment time to next hour by default
+            const nextHour = new Date();
+            nextHour.setHours(nextHour.getHours() + 1);
+            nextHour.setMinutes(0);
+            nextHour.setSeconds(0);
+            $('input[name="apptime"]').val(nextHour.toTimeString().slice(0,5));
+            
+            // Clear forms if variables are set
+            if(typeof clearPatientForm !== 'undefined' && clearPatientForm) {
+                document.getElementById('add-patient-form').reset();
+            }
+        });
         
-        // Create Appointment Form
-        echo "<div class='form-card'>
-                <div class='form-card-header'>
-                    <h5><i class='fas fa-calendar-plus mr-2'></i>Create New Appointment</h5>
-                </div>
-                <form method='POST' id='appointment-form'>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='patient_id' placeholder='Patient ID *' required>
-                            <small class='text-muted'>Enter patient's ID number</small>
-                        </div>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='doctor_id' placeholder='Doctor ID *' required>
-                            <small class='text-muted'>Enter doctor's ID number</small>
-                        </div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'><input type='date' class='form-control mb-3' name='appointment_date' min='" . date('Y-m-d') . "' required></div>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='appointment_time' required>
-                                <option value=''>Select Time *</option>
-                                <option value='09:00:00'>09:00 AM</option>
-                                <option value='10:00:00'>10:00 AM</option>
-                                <option value='11:00:00'>11:00 AM</option>
-                                <option value='12:00:00'>12:00 PM</option>
-                                <option value='14:00:00'>02:00 PM</option>
-                                <option value='15:00:00'>03:00 PM</option>
-                                <option value='16:00:00'>04:00 PM</option>
-                                <option value='17:00:00'>05:00 PM</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class='form-group'>
-                        <textarea class='form-control mb-3' name='reason' placeholder='Reason for appointment *' rows='3' required></textarea>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='status' required>
-                                <option value='Pending'>Pending</option>
-                                <option value='Confirmed'>Confirmed</option>
-                                <option value='Completed'>Completed</option>
-                                <option value='Cancelled'>Cancelled</option>
-                            </select>
-                        </div>
-                        <div class='col-md-6'>
-                            <button type='submit' name='create_appointment' class='btn btn-primary btn-block'>
-                                <i class='fas fa-calendar-check mr-1'></i> Create Appointment
-                            </button>
-                        </div>
-                    </div>
-                </form>
-              </div>";
-
-        // Update Status Form
-        echo "<div class='form-card'>
-                <div class='form-card-header'>
-                    <h5><i class='fas fa-sync-alt mr-2'></i>Update Appointment Status</h5>
-                </div>
-                <form method='POST'>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='appointment_id' placeholder='Appointment ID *' required>
-                        </div>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='new_status' required>
-                                <option value=''>Select New Status *</option>
-                                <option value='Pending'>Pending</option>
-                                <option value='Confirmed'>Confirmed</option>
-                                <option value='Completed'>Completed</option>
-                                <option value='Cancelled'>Cancelled</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type='submit' name='update_appointment_status' class='btn btn-warning btn-block'>
-                        <i class='fas fa-sync mr-1'></i> Update Status
-                    </button>
-                </form>
-              </div>";
-
-        // Appointments List
-        $result = $con->query("SELECT a.*, p.fname, p.lname, d.username as doctor_name 
-                               FROM appointment a 
-                               LEFT JOIN patreg p ON a.patient_id = p.pid 
-                               LEFT JOIN doctb d ON a.doctor_id = d.id 
-                               ORDER BY a.appointment_date DESC, a.appointment_time DESC");
-        
-        echo "<div class='table-container'>
-                <h4><i class='fas fa-list mr-2'></i>All Appointments</h4>
-                <table class='table table-striped data-table'>
-                <thead><tr><th>ID</th><th>Date</th><th>Time</th><th>Patient</th><th>Doctor</th><th>Status</th><th>Payment</th></tr></thead><tbody>";
-        while($row = $result->fetch_assoc()){
-            $status_class = strtolower($row['status']);
-            $payment_status = $row['payment_status'] ?? 'Pending';
-            $payment_class = strtolower($payment_status);
+        // Function to show tab
+        function showTab(tabId) {
+            // Hide all tab panes
+            $('.tab-pane').removeClass('show active');
             
-            echo "<tr>
-            <td>" . e($row['id']) . "</td>
-            <td>" . e($row['appointment_date']) . "</td>
-            <td>" . date('h:i A', strtotime($row['appointment_time'])) . "</td>
-            <td>" . e($row['fname']) . " " . e($row['lname']) . "</td>
-            <td>Dr. " . e($row['doctor_name']) . "</td>
-            <td><span class='badge-status badge-$status_class'>" . e($row['status']) . "</span></td>
-            <td><span class='badge-status badge-$payment_class'>" . e($payment_status) . "</span></td>
-            </tr>";
+            // Show selected tab
+            $('#' + tabId).addClass('show active');
+            
+            // Update URL hash
+            window.location.hash = tabId;
         }
-        echo "</tbody></table></div>";
-        break;
-
-    case 'schedule':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-calendar-alt mr-3'></i>Doctor Schedule</h1>
-                <p>View and manage doctor schedules</p>
-              </div>";
-
-        // Get doctors
-        $doctors = $con->query("SELECT * FROM doctb ORDER BY username");
         
-        echo "<div class='row'>";
-        while($doctor = $doctors->fetch_assoc()){
-            $doctor_id = $doctor['id'];
-            $doctor_name = $doctor['username'];
-            $specialization = $doctor['spec'] ?? 'General';
+        // Function to filter table rows
+        function filterTable(searchInputId, tableBodyId) {
+            const input = $('#' + searchInputId).val().toLowerCase();
+            $('#' + tableBodyId + ' tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(input) > -1);
+            });
+        }
+        
+        // Function to initialize charts
+        function initializeCharts() {
+            // Appointments Chart
+            const appointmentsCtx = document.getElementById('appointmentsChart');
+            if(appointmentsCtx) {
+                // Get today's appointments status
+                const activeToday = <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb WHERE appdate = CURDATE() AND appointmentStatus = 'active'")); ?>;
+                const cancelledToday = <?php echo mysqli_num_rows(mysqli_query($con, "SELECT * FROM appointmenttb WHERE appdate = CURDATE() AND appointmentStatus = 'cancelled'")); ?>;
+                
+                const appointmentsChart = new Chart(appointmentsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Cancelled'],
+                        datasets: [{
+                            data: [activeToday, cancelledToday],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.8)',
+                                'rgba(255, 99, 132, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Today\'s Appointments'
+                            }
+                        }
+                    }
+                });
+            }
             
-            // Get today's appointments for this doctor
-            $today = date('Y-m-d');
-            $appointments = $con->query("SELECT a.*, p.fname, p.lname 
-                                         FROM appointment a 
-                                         LEFT JOIN patreg p ON a.patient_id = p.pid 
-                                         WHERE a.doctor_id = '$doctor_id' 
-                                         AND a.appointment_date = '$today' 
-                                         AND a.status != 'Cancelled'
-                                         ORDER BY a.appointment_time");
-            
-            echo "<div class='col-md-6'>
-                    <div class='form-card'>
-                        <div class='form-card-header'>
-                            <h5><i class='fas fa-user-md mr-2'></i>Dr. " . e($doctor_name) . "</h5>
-                            <small class='text-light'>" . e($specialization) . "</small>
-                        </div>
-                        <h6 class='mt-3'><i class='fas fa-calendar-day mr-2'></i>Today's Schedule (" . date('F j, Y') . ")</h6>";
-            
-            if($appointments->num_rows > 0){
-                echo "<table class='table table-sm'>
-                        <thead><tr><th>Time</th><th>Patient</th><th>Status</th></tr></thead><tbody>";
-                while($apt = $appointments->fetch_assoc()){
-                    $status_class = strtolower($apt['status']);
-                    echo "<tr>
-                    <td>" . date('h:i A', strtotime($apt['appointment_time'])) . "</td>
-                    <td>" . e($apt['fname']) . " " . e($apt['lname']) . "</td>
-                    <td><span class='badge-status badge-$status_class'>" . e($apt['status']) . "</span></td>
-                    </tr>";
+            // Registrations Chart
+            const registrationsCtx = document.getElementById('registrationsChart');
+            if(registrationsCtx) {
+                // Get last 7 days registrations
+                const registrationsData = [];
+                const labels = [];
+                
+                for(let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    
+                    labels.push(dateStr.substring(5)); // MM-DD format
+                    
+                    // This would typically come from database
+                    // For now, we'll use random data
+                    registrationsData.push(Math.floor(Math.random() * 10) + 1);
                 }
-                echo "</tbody></table>";
-            } else {
-                echo "<div class='alert alert-info'>No appointments scheduled for today.</div>";
+                
+                const registrationsChart = new Chart(registrationsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'New Registrations',
+                            data: registrationsData,
+                            backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Patient Registrations (Last 7 Days)'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Function to confirm appointment cancellation
+        function confirmCancelAppointment() {
+            if(!currentAppointmentIdToCancel) return;
+            
+            const reason = $('#cancellationReason').val();
+            
+            if(!reason.trim()) {
+                alert('Please provide a reason for cancellation.');
+                return;
             }
             
-            echo "</div></div>";
+            // Submit form
+            const form = $('<form>').attr({
+                method: 'POST',
+                style: 'display: none;'
+            });
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'appointmentId',
+                value: currentAppointmentIdToCancel
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'reason',
+                value: reason
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'cancelledBy',
+                value: 'reception'
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'cancel_appointment',
+                value: '1'
+            }));
+            
+            $('body').append(form);
+            form.submit();
         }
-        echo "</div>";
-        break;
-
-    case 'payment':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-credit-card mr-3'></i>Payment Processing</h1>
-                <p>Process payments and manage invoices</p>
-              </div>";
-
-        echo $payment_msg;
         
-        // Payment Form
-        echo "<div class='form-card'>
-                <div class='form-card-header'>
-                    <h5><i class='fas fa-cash-register mr-2'></i>Process Payment</h5>
-                </div>
-                <form method='POST' id='payment-form'>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='appointment_id' placeholder='Appointment ID *' required>
-                        </div>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='patient_id' placeholder='Patient ID *' required>
-                        </div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <input type='number' class='form-control mb-3' name='amount' placeholder='Amount (LKR) *' step='0.01' required>
-                        </div>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='payment_method' required>
-                                <option value=''>Payment Method *</option>
-                                <option value='Cash'>Cash</option>
-                                <option value='Credit Card'>Credit Card</option>
-                                <option value='Debit Card'>Debit Card</option>
-                                <option value='Online Transfer'>Online Transfer</option>
-                                <option value='Insurance'>Insurance</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class='row'>
-                        <div class='col-md-6'>
-                            <select class='form-control mb-3' name='payment_type' required>
-                                <option value=''>Payment Type *</option>
-                                <option value='Consultation'>Consultation Fee</option>
-                                <option value='Procedure'>Medical Procedure</option>
-                                <option value='Medication'>Medication</option>
-                                <option value='Lab Test'>Lab Test</option>
-                                <option value='Other'>Other</option>
-                            </select>
-                        </div>
-                        <div class='col-md-6'>
-                            <textarea class='form-control mb-3' name='description' placeholder='Description' rows='2'></textarea>
-                        </div>
-                    </div>
-                    <button type='submit' name='process_payment' class='btn btn-success btn-block'>
-                        <i class='fas fa-check-circle mr-1'></i> Process Payment
-                    </button>
-                </form>
-              </div>";
-
-        // Recent Payments
-        $result = $con->query("SELECT p.*, a.patient_id, pat.fname, pat.lname 
-                               FROM payments p 
-                               LEFT JOIN appointment a ON p.appointment_id = a.id 
-                               LEFT JOIN patreg pat ON p.patient_id = pat.pid 
-                               ORDER BY p.created_at DESC LIMIT 10");
-        
-        echo "<div class='table-container'>
-                <h4><i class='fas fa-history mr-2'></i>Recent Payments</h4>
-                <table class='table table-striped'>
-                <thead><tr><th>Invoice</th><th>Date</th><th>Patient</th><th>Amount</th><th>Method</th><th>Type</th></tr></thead><tbody>";
-        while($row = $result->fetch_assoc()){
-            echo "<tr>
-            <td><code>" . e($row['invoice_number']) . "</code></td>
-            <td>" . date('Y-m-d', strtotime($row['created_at'])) . "</td>
-            <td>" . e($row['fname']) . " " . e($row['lname']) . "</td>
-            <td>LKR " . number_format($row['amount'], 2) . "</td>
-            <td>" . e($row['payment_method']) . "</td>
-            <td>" . e($row['payment_type']) . "</td>
-            </tr>";
+        // Function to update payment status
+        function updatePaymentStatus() {
+            if(!currentPaymentId) return;
+            
+            const status = $('#edit-payment-status').val();
+            const method = $('#edit-payment-method').val();
+            const receipt = $('#edit-receipt-number').val();
+            
+            // Submit form
+            const form = $('<form>').attr({
+                method: 'POST',
+                style: 'display: none;'
+            });
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'paymentId',
+                value: currentPaymentId
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'status',
+                value: status
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'method',
+                value: method
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'receipt',
+                value: receipt
+            }));
+            
+            form.append($('<input>').attr({
+                type: 'hidden',
+                name: 'update_payment',
+                value: '1'
+            }));
+            
+            $('body').append(form);
+            form.submit();
         }
-        echo "</tbody></table></div>";
-        break;
-
-    case 'staff':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-users mr-3'></i>Staff Directory</h1>
-                <p>View hospital staff information</p>
-              </div>";
-
-        // Doctors List
-        echo "<div class='table-container'>
-                <h4><i class='fas fa-user-md mr-2'></i>Doctors</h4>
-                <table class='table table-striped data-table'>
-                <thead><tr><th>ID</th><th>Name</th><th>Specialization</th><th>Email</th><th>Contact</th><th>Schedule</th></tr></thead><tbody>";
         
-        $result = $con->query("SELECT * FROM doctb ORDER BY username");
-        while($row = $result->fetch_assoc()){
-            echo "<tr>
-            <td>" . e($row['id']) . "</td>
-            <td>Dr. " . e($row['username']) . "</td>
-            <td>" . e($row['spec'] ?? 'General') . "</td>
-            <td>" . e($row['email'] ?? 'N/A') . "</td>
-            <td>" . e($row['docFees'] ?? 'N/A') . "</td>
-            <td><button class='btn btn-sm btn-info' onclick='viewDoctorSchedule(" . $row['id'] . ")'><i class='fas fa-calendar'></i> View</button></td>
-            </tr>";
-        }
-        echo "</tbody></table></div>";
-
-        // Reception Staff
-        echo "<div class='table-container mt-4'>
-                <h4><i class='fas fa-user-tie mr-2'></i>Reception Staff</h4>
-                <table class='table table-striped'>
-                <thead><tr><th>Username</th><th>Email</th><th>Contact</th><th>Status</th></tr></thead><tbody>";
-        
-        $result = $con->query("SELECT * FROM reception");
-        while($row = $result->fetch_assoc()){
-            echo "<tr>
-            <td>" . e($row['username']) . "</td>
-            <td>" . e($row['email']) . "</td>
-            <td>" . e($row['contact'] ?? 'N/A') . "</td>
-            <td><span class='badge badge-success'>Active</span></td>
-            </tr>";
-        }
-        echo "</tbody></table></div>";
-        break;
-
-    case 'settings':
-        echo "<div class='dashboard-header'>
-                <h1><i class='fas fa-cog mr-3'></i>Receptionist Settings</h1>
-                <p>Manage your account and preferences</p>
-              </div>";
-        echo $settings_msg;
-        echo "<div class='form-card'>
-                <div class='form-card-header'>
-                    <h5><i class='fas fa-user-edit mr-2'></i>Your Profile</h5>
-                </div>
-                <form method='POST'>
-                    <input type='hidden' name='update_reception_settings' value='1'>
-                    <div class='form-group'>
-                        <label>Username</label>
-                        <input type='text' class='form-control' value='" . e($profile['username']) . "' disabled>
-                    </div>
-                    <div class='form-group'>
-                        <label>Email</label>
-                        <input type='email' name='email' class='form-control' value='" . e($profile['email'] ?? '') . "' required>
-                    </div>
-                    <div class='form-group'>
-                        <label>Contact</label>
-                        <input type='text' name='contact' class='form-control' value='" . e($profile['contact'] ?? '') . "' required>
-                    </div>
-                    <hr>
-                    <h5><i class='fas fa-lock mr-2'></i>Change Password</h5>
-                    <div class='form-group'>
-                        <label>Current Password *</label>
-                        <input type='password' name='current_password' class='form-control' required>
-                    </div>
-                    <div class='form-group'>
-                        <label>New Password</label>
-                        <input type='password' name='new_password' class='form-control' placeholder='Leave blank to keep current'>
-                    </div>
-                    <div class='form-group'>
-                        <label>Confirm New Password</label>
-                        <input type='password' name='confirm_password' class='form-control'>
-                    </div>
-                    <button type='submit' class='btn btn-primary'>
-                        <i class='fas fa-save mr-1'></i> Save Changes
-                    </button>
-                </form>
-              </div>";
-        break;
-
-    default:
-        header("Location: reception_dashboard.php?page=dashboard");
-        exit();
-}
-?>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('.data-table').DataTable({
-        "pageLength": 10,
-        "ordering": true,
-        "searching": true,
-        "responsive": true
-    });
-});
-
-// Auto-format NIC
-document.querySelector('input[name="nic"]')?.addEventListener('input', function(e) {
-    let v = e.target.value.replace(/[^0-9Vv]/g, '');
-    e.target.value = v.toUpperCase();
-});
-
-// Helper functions
-function viewPatient(pid) {
-    alert('View patient details for ID: ' + pid);
-    // Implement modal or redirect to patient details page
-}
-
-function editPatient(pid) {
-    alert('Edit patient with ID: ' + pid);
-    // Implement edit functionality
-}
-
-function viewDoctorSchedule(doctorId) {
-    alert('View schedule for doctor ID: ' + doctorId);
-    // Implement schedule view
-}
-
-// Auto-set minimum date for appointment date
-document.addEventListener('DOMContentLoaded', function() {
-    var dateInput = document.querySelector('input[name="appointment_date"]');
-    if(dateInput) {
-        dateInput.min = new Date().toISOString().split('T')[0];
-    }
-});
-</script>
+        // Form validation for add patient
+        $(document).ready(function() {
+            $('#add-patient-form').submit(function(e) {
+                const password = $('input[name="password"]').val();
+                const cpassword = $('input[name="cpassword"]').val();
+                
+                if(password !== cpassword) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return false;
+                }
+                
+                if(password.length < 6) {
+                    e.preventDefault();
+                    alert('Password must be at least 6 characters long!');
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            // Format NIC input for appointment
+            $('input[name="patient_nic"]').on('input', function() {
+                let value = $(this).val().replace(/[^0-9]/g, '');
+                if(value) {
+                    $(this).val('NIC' + value);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
