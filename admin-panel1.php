@@ -1,8 +1,19 @@
 <?php
 // ===========================
-// DATABASE CONNECTION
+// SESSION AND LOGOUT HANDLING
 // ===========================
 session_start();
+
+// Handle logout
+if(isset($_POST['logout'])) {
+    session_destroy();
+    header("Location: index.php"); // Change this to your login page URL
+    exit();
+}
+
+// ===========================
+// DATABASE CONNECTION
+// ===========================
 $con = mysqli_connect("localhost", "root", "", "myhmsdb");
 
 if(!$con){
@@ -102,8 +113,8 @@ if(isset($_POST['add_patient'])){
                     $new_patient_id = mysqli_insert_id($con);
                     $patient_msg = "<div class='alert alert-success'>✅ Patient registered successfully! Patient ID: $new_patient_id, NIC: $national_id</div>";
                     $_SESSION['success'] = "Patient added successfully!";
-                    // Clear form fields
-                    echo "<script>document.getElementById('add-patient-form').reset();</script>";
+                    // Clear form fields using JavaScript variable
+                    echo "<script>clearPatientForm = true;</script>";
                 } else {
                     $patient_msg = "<div class='alert alert-danger'>❌ Database Error: " . mysqli_error($con) . "</div>";
                 }
@@ -187,7 +198,7 @@ if(isset($_POST['add_doctor'])){
         if(mysqli_query($con, $query)){
             $doctor_msg = "<div class='alert alert-success'>✅ Doctor added successfully! Doctor ID: $doctorId</div>";
             $_SESSION['success'] = "Doctor added successfully!";
-            echo "<script>document.getElementById('add-doctor-form').reset();</script>";
+            echo "<script>clearDoctorForm = true;</script>";
         } else {
             $doctor_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
@@ -291,7 +302,7 @@ if(isset($_POST['add_staff'])){
         if(mysqli_query($con, $query)){
             $staff_msg = "<div class='alert alert-success'>✅ Staff member added successfully! Staff ID: $staffId</div>";
             $_SESSION['success'] = "Staff added successfully!";
-            echo "<script>document.getElementById('add-staff-form').reset();</script>";
+            echo "<script>clearStaffForm = true;</script>";
         } else {
             $staff_msg = "<div class='alert alert-danger'>❌ Error: " . mysqli_error($con) . "</div>";
         }
@@ -1921,9 +1932,12 @@ if(isset($_SESSION['error'])){
                 <i class="fas fa-cog"></i> <span>Settings</span>
             </li>
             <li>
-                <a href="logout1.php" style="color: white; text-decoration: none; display: block;">
-                    <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
-                </a>
+                <form method="POST" action="" style="margin: 0; padding: 0;">
+                    <button type="submit" name="logout" style="background: none; border: none; color: white; width: 100%; text-align: left; padding: 12px 20px; cursor: pointer; font-size: 15px; display: flex; align-items: center;">
+                        <i class="fas fa-sign-out-alt" style="width: 25px; text-align: center; margin-right: 10px;"></i> 
+                        <span>Logout</span>
+                    </button>
+                </form>
             </li>
         </ul>
     </div>
@@ -4173,6 +4187,19 @@ if(isset($_SESSION['error'])){
             nextHour.setMinutes(0);
             nextHour.setSeconds(0);
             $('input[name="apptime"]').val(nextHour.toTimeString().slice(0,5));
+            
+            // Clear forms if variables are set
+            if(typeof clearPatientForm !== 'undefined' && clearPatientForm) {
+                document.getElementById('add-patient-form').reset();
+            }
+            
+            if(typeof clearDoctorForm !== 'undefined' && clearDoctorForm) {
+                document.getElementById('add-doctor-form').reset();
+            }
+            
+            if(typeof clearStaffForm !== 'undefined' && clearStaffForm) {
+                document.getElementById('add-staff-form').reset();
+            }
         });
         
         // Function to show tab
@@ -4693,4 +4720,4 @@ if(isset($_SESSION['error'])){
         });
     </script>
 </body>
-</html> 
+</html>log
