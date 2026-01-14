@@ -1562,7 +1562,7 @@ if($settings_result){
                                 <option value="Pending">Pending</option>
                                 <option value="Paid">Paid</option>
                                 <option value="Cancelled">Cancelled</option>
-                                </select>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Payment Method</label>
@@ -1595,7 +1595,7 @@ if($settings_result){
         let currentPaymentId = null;
         let currentAppointmentIdToCancel = null;
         
-        // Initialize on page loa
+        // Initialize on page load
         $(document).ready(function() {
             // Set up sidebar navigation
             $('.sidebar ul li[data-target]').click(function() {
